@@ -41,10 +41,11 @@ function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileu
            
            uTags <- sTags[sTags$duplicated == FALSE,]
            uTags <- uTags[order(uTags$start, uTags$end),]
+           uTags <- uTags[uTags$count > 0,, drop = FALSE]
            
            dTags <- sTags[sTags$duplicated == TRUE,]
            dTags <- dTags[order(dTags$start, dTags$end),]
-
+           dTags <- dTags[dTags$count > 0,, drop = FALSE]
       
            if(plotType == "pileup")
              {

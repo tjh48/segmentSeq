@@ -11,10 +11,9 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
     replicates <- aD@replicates
     tagData <- aD@data
 
-    segInfo <- NULL
-    data <- NULL
-
     if(is.null(maxloclen)) maxloclen <- Inf
+
+    tD <- new("segData", segInfo = data.frame(), data = matrix(nrow = 0, ncol = length(replicates)), libsizes = libsizes, replicates = replicates)
     
     for(cc in 1:length(chrs))
       {
@@ -37,8 +36,8 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
                 chrSS <- chrSS[order(chrSS[,1L], chrSS[,2L]),]
                 chrmax <- apply(chrSS, 2, cummax)
                 ch <- which(chrmax[-1L,1L] > chrmax[-nrow(chrmax),2L] + 1)
-                startstop <- cbind(starts = as.numeric(c(min(chrmax[,1L]), chrmax[ch + 1L,1L])),
-                                   ends = as.numeric(c(chrmax[ch,2L], max(chrmax[,2L]))))
+                startstop <- cbind(starts = as.integer(c(min(chrmax[,1L]), chrmax[ch + 1L,1L])),
+                                   ends = as.integer(c(chrmax[ch,2L], max(chrmax[,2L]))))
               } else if(nrow(chrSS) == 1) startstop <- cbind(starts = chrSS$start, ends = chrSS$end) else startstop <- matrix(nrow = 0, ncol = 0)
             
             gaps <- c(which(startstop[-nrow(startstop),2L] < startstop[-1L, 1L] - maxgaplen), nrow(startstop))
@@ -46,48 +45,48 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
             if(verbose)
               message("Defining potential subsegments...", appendLF = FALSE)
             gapped <- lapply(1:nrow(startstop), function(x) x:min(gaps[gaps >= x]))
-            csegs <- cbind(start = rep(startstop[,1L], lapply(gapped, length)), end = unlist(lapply(gapped, function(x) startstop[x,2L])))
+            csegs <- data.frame(start = rep(startstop[,1L], lapply(gapped, length)), end = unlist(lapply(gapped, function(x) startstop[x,2L])))
 
             if(any(csegs[,2L] - csegs[,1L] + 1L > maxloclen))
               {
-                rsegs <- csegs[csegs[,2L] - csegs[,1L] + 1 <= maxloclen,]
-                rsegs <- rbind(rsegs, startstop[(!(startstop[,1L] %in% rsegs[,1L])),])
-              } else rsegs <- csegs
-            
-            rsegs <- rsegs[order(rsegs[,1L], rsegs[,2L]),,drop = FALSE]
+                csegs <- csegs[csegs[,2L] - csegs[,1L] + 1 <= maxloclen,]
+                csegs <- rbind(csegs, startstop[(!(startstop[,1L] %in% csegs[,1L])),])
+              }
+
+            csegs <- csegs[order(csegs[,1L], csegs[,2L]),,drop = FALSE]
 
             if(verbose){
-              message(".", nrow(rsegs), " found.")
+              message(".", nrow(csegs), " found.")
               message("Getting count data for each potential subsegment...", appendLF = FALSE)
             }
             
             winsize <- 1e5
             
-            countSegs <- matrix(unlist(lapply(1:ceiling(nrow(rsegs) / winsize), function(rr)
+            tD@data <- rbind(tD@data, matrix(as.integer(unlist(lapply(1:ceiling(nrow(csegs) / winsize), function(rr)
                                 {
-                                  winSegs <- rsegs[((rr - 1) * winsize + 1):min(rr * winsize, nrow(rsegs)),,drop = FALSE]
+                                  winSegs <- csegs[((rr - 1) * winsize + 1):min(rr * winsize, nrow(csegs)),,drop = FALSE]
                                   seltags <- which(chrTags$start <= max(winSegs) & chrTags$end >= min(winSegs))
                                   winTags <- chrTags[seltags,,drop = FALSE]
                                   winTagData <- chrTagData[seltags,,drop = FALSE]
                                   
                                   t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
                                             aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates),                                      cl = cl))
-                                })), nrow = nrow(rsegs), byrow = TRUE)
+                                }))), nrow = nrow(csegs), byrow = TRUE))
             
             if(verbose)
               message("done!")
-
-            rsegs <- cbind(rsegs,
-                           leftSpace = (rsegs[,1L] - c(0L, startstop[,2])[findInterval(rsegs[,1L], startstop[,2L]) + 1L]) - 1L,
-                           rightSpace = c(startstop[,1L], chrlens[cc] + 1L)[findInterval(rsegs[,2L], startstop[,1L]) + 1L] - rsegs[,2L] - 1L)
-            rownames(rsegs) <- rep("", nrow(rsegs))
-            segInfo <- rbind(segInfo, data.frame(chr = I(chrs[cc]), rsegs))
-            data <- rbind(data, countSegs)
+            
+            csegs <- cbind(csegs,
+                           leftSpace = (csegs[,1L] - c(0L, startstop[,2])[findInterval(csegs[,1L], startstop[,2L]) + 1L]) - 1L,
+                           rightSpace = c(startstop[,1L], chrlens[cc] + 1L)[findInterval(csegs[,2L], startstop[,1L]) + 1L] - csegs[,2L] - 1L)
+            tD@segInfo <- rbind(tD@segInfo, data.frame(chr = I(chrs[cc]), csegs))
           } else if(verbose) message("No tags found for this chromosome.")
       }
-
-    colnames(data) <- aD@libnames
+      
+    colnames(tD@data) <- aD@libnames
     
-    new("segData", segInfo = segInfo, data = data, libsizes = libsizes, replicates = aD@replicates)
+    rownames(tD@segInfo) <- rownames(tD@data) <- 1:nrow(tD@data)
+
+    tD
   }
 

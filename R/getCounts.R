@@ -49,15 +49,15 @@ function(segments, aD, cl)
                                      ordTags <- order(nondupTags$start, nondupTags$end)
                                      droTags <- order(nondupTags$end, nondupTags$start)
                                      
-                                     cens <- rbind(0, apply(nondupData[droTags,,drop = FALSE], 2, cumsum))
+                                     cens <- rbind(0L, apply(nondupData[droTags,,drop = FALSE], 2, cumsum))
                                      
                                      endsBelow <- findInterval(chrsegs$end, nondupTags$end[droTags])
-                                     csts <- rbind(0, apply(nondupData[ordTags,,drop = FALSE], 2, cumsum))
+                                     csts <- rbind(0L, apply(nondupData[ordTags,,drop = FALSE], 2, cumsum))
                                      startsBelow <- findInterval(chrsegs[,1] - 0.5, nondupTags$start[ordTags])
                                      
                                      chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
                                      chrUC[chrUC < 0] <- 0
-                                   } else chrUC <- matrix(0, ncol = ncol(cdata), nrow = nrow(chrsegs))
+                                   } else chrUC <- matrix(0L, ncol = ncol(cdata), nrow = nrow(chrsegs))
                                  
                                  dupTags <- subset(chralignments, subset = chralignments$duplicated == TRUE, select = c(start, end, tag))
                                  dupData <- cdata[chralignments$duplicated == TRUE,, drop = FALSE]
@@ -81,14 +81,14 @@ function(segments, aD, cl)
                                          tags <- dupTags[seltags,, drop = FALSE]
                                          seltags <- seltags[tags$start <= chrsegs$end[segii] & tags$end >= chrsegs$start[segii]]
                                          seltags <- seltags[!duplicated(dupTags$tag[seltags])]
-                                         colSums(dupData[seltags,,drop = FALSE])
+                                         as.integer(colSums(dupData[seltags,,drop = FALSE]))
                                        }
                                      
                                      if(!is.null(cl))
                                        environment(countNonUniques) <- getCountEnv
                                      
                                      if(!is.null(cl)) chrNC <- parSapply(cl, 1:nrow(chrsegs), countNonUniques) else  chrNC <- sapply(1:nrow(chrsegs), countNonUniques)
-                                   } else chrNC <- matrix(0, nrow = ncol(cdata), ncol = nrow(chrsegs))
+                                   } else chrNC <- matrix(0L, nrow = ncol(cdata), ncol = nrow(chrsegs))
                                  
                                  t(cbind(which(segments$chr == cc), chrUC + t(chrNC)))
                                }))

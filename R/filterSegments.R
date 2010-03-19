@@ -43,7 +43,7 @@ filterSegments <- function(segs, orderOn, ...)
                                 
                                 chrfil <- chrfilter(rodsegs, suborderOn, ...)
                                 which(chrsamp)[rod[chrfil]]
-                              }, orderOn = orderOn))
+                              }, orderOn = orderOn, ...))
     
     filtlist
   }

@@ -60,7 +60,7 @@ function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileu
                    rectcpd <- cbind(start(cpd), 0, end(cpd), runValue(cpd))
                  } else rectcpd <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
                maxscale <- max(c(log(rectcpu[,4]), log(rectcpd[,4]), log(2))) * 2
-               
+
                rect(rectcpu[rectcpu[,4] > 0,1], uu, rectcpu[rectcpu[,4] > 0,3], uu + log(rectcpu[rectcpu[,4] > 0,4]) / maxscale, col = "black")
                rect(rectcpd[rectcpd[,4] > 0,1], uu, rectcpd[rectcpd[,4] > 0,3], uu - log(rectcpd[rectcpd[,4] > 0,4]) / maxscale, col = "black")
              }

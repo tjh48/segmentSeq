@@ -18,7 +18,7 @@ filterSegments <- function(segs, orderOn, ...)
         while(length(filtsegs) > 0)
           {
             chsam <- filtsegs[ss:min(ss + winsize -1, length(filtsegs))]
-            oL <- sapply(chsam, function(x) setdiff((fIns[x,1L]:fIns[x,2L])[segs$end[fIns[x,1L]:fIns[x,2L]] >= segs$start[x] & segs$start[fIns[x,1L]:fIns[x,2L]] <= segs$end[x]], x))
+            oL <- lapply(chsam, function(x) setdiff((fIns[x,1L]:fIns[x,2L])[segs$end[fIns[x,1L]:fIns[x,2L]] >= segs$start[x] & segs$start[fIns[x,1L]:fIns[x,2L]] <= segs$end[x]], x))
             if(any(chsam %in% unlist(oL))) accsam <- !chsam %in% unlist(oL) else accsam <- rep(TRUE, length(chsam))
             accsam[1L] <- TRUE
             

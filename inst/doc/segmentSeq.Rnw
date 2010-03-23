@@ -65,7 +65,7 @@ Having found estimates of the prior parameters of the data, we can then segment 
 
 <<>>=
 
-segD <- segmentSequences(sDP, pcut = 0.1, estimatePriors = FALSE, cl = cl)
+segD <- segmentSequences(sDP, pcut = 0.1, estimatePriors = FALSE, verbose = TRUE, cl = cl)
 @ 
 
 We finally acquire an annotated \verb'countData' object, with the annotations describing the co-ordinates of each segment.

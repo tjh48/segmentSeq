@@ -17,7 +17,7 @@ function(sDP,
       }
 
     priorType <- sDP@priorType
-    priors <- sDP@priors$priors[[1]]
+    priors <- sDP@priors
     data <- sDP@data
     replicates <- sDP@replicates
 
@@ -25,9 +25,10 @@ function(sDP,
 
     chrs <- unique(sDP@segInfo$chr)
 
-    pSames <- function(rep,...)
+    probSames <- function(rep,...)
       {
-        if(verbose) message("Replicate group:", rep, appendLF = FALSE)
+        if(verbose) message("Replicate group: ", rep, appendLF = FALSE)
+        
         countL <- new("countData",
                       data = cbind(matrix(0, ncol = sum(replicates == rep), nrow = nrow(data)), data[,replicates == rep, drop = FALSE]),
                       seglens = cbind(matrix(sDP@segInfo$leftSpace, ncol = sum(replicates == rep), nrow = nrow(data)),
@@ -35,10 +36,9 @@ function(sDP,
                       libsizes = rep(sDP@libsizes[replicates == rep], 2),
                       groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
                       priorType = priorType,
-                      priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        leftLike <- getLikelihoods(countL, prs = c(0.9, 0.1), pET = "none", subset = which(rowSums(countL@seglens != 0) == ncol(countL@seglens)), ..., cl = cl)
-            
-
+                      priors = list(priors = list(NDE = list(priors[[2]][[rep]]), DE = list(priors[[2]][[rep]], priors[[1]][[rep]])), sampled = sDP@priors$sampled))
+        leftLike <- getLikelihoods(countL, prs = c(0.9, 0.1), pET = "none", subset = which(rowSums(countL@seglens != 0) == ncol(countL@seglens)), verbose = FALSE, ..., cl = cl)
+                
         if(verbose) message(".", appendLF = FALSE)
         
         countR <- new("countData",
@@ -48,33 +48,32 @@ function(sDP,
                       libsizes = rep(sDP@libsizes[replicates == rep], 2),
                       groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
                       priorType = priorType,
-                      priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        rightLike <- getLikelihoods(countR, prs = c(0.9, 0.1), pET = "none", subset = which(rowSums(countR@seglens != 0) == ncol(countR@seglens)),..., cl = cl)
+                      priors = list(priors = list(NDE = list(priors[[2]][[rep]]), DE = list(priors[[2]][[rep]], priors[[1]][[rep]])), sampled = sDP@priors$sampled))
+        rightLike <- getLikelihoods(countR, prs = c(0.9, 0.1), pET = "none", subset = which(rowSums(countR@seglens != 0) == ncol(countR@seglens)), verbose = FALSE, ..., cl = cl)
 
-        if(verbose) cat(".")
-        
+        if(verbose) message(".", appendLF = FALSE)
+                
         countN <- new("countData",
-                      data = cbind(matrix(0, ncol = sum(replicates == rep), nrow = nrow(data)), data[,replicates == rep, drop = FALSE]),
+                      data = data[,replicates == rep, drop = FALSE],
                       seglens = seglens,
-                      libsizes = rep(sDP@libsizes[replicates == rep], 2),
-                      groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
+                      libsizes = sDP@libsizes[replicates == rep],
+                      groups = list(c(rep(1, sum(replicates == rep))), c(rep(1, sum(replicates == rep)))),
                       priorType = priorType,
-                      priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        nullLike <- getLikelihoods(countN, prs = c(0.9, 0.1), pET = "none", ..., cl = cl)
-
-
-        if(estimatePriors)
-          {
-            filleft <- filterSegments(segs = subset(sD@segInfo, select = c(chr, start, end)), orderOn = leftLike@posteriors[,1], decreasing = FALSE)
-            leftLike <- getLikelihoods(countL, prs = colSums(exp(leftLike@posteriors), na.rm = TRUE) / sum(exp(leftLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countL@seglens != 0) == ncol(countL@seglens)), priorSubset = filleft, ..., cl = cl)
-            filright <- filterSegments(segs = subset(sD@segInfo, select = c(chr, start, end)), orderOn = rightLike@posteriors[,1], decreasing = FALSE)
-            rightLike <- getLikelihoods(countR, prs = colSums(exp(rightLike@posteriors), na.rm = TRUE) / sum(exp(rightLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countR@seglens != 0) == ncol(countR@seglens)), priorSubset = filright, ..., cl = cl)
-            filnull <- filterSegments(segs = subset(sD@segInfo, select = c(chr, start, end)), orderOn = nullLike@posteriors[,1], decreasing = FALSE)
-            nullLike <- getLikelihoods(countN, prs = colSums(exp(nullLike@posteriors), na.rm = TRUE) / sum(exp(nullLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countN@seglens != 0) == ncol(countN@seglens)), priorSubset = filnull, ..., cl = cl)
-          }
+                      priors = list(priors = list(null = list(priors[[1]][[rep]]), loc = list(priors[[2]][[rep]])), sampled = sDP@priors$sampled))
+        nullLike <- getLikelihoods(countN, prs = c(0.1, 0.9), pET = "none", verbose = FALSE, ..., cl = cl)
 
         if(verbose) message(".")
-
+        
+        if(estimatePriors)
+          {
+            filleft <- filterSegments(segs = subset(sDP@segInfo, select = c(chr, start, end)), orderOn = leftLike@posteriors[,1], decreasing = FALSE)
+            leftLike <- getLikelihoods(countL, prs = colSums(exp(leftLike@posteriors), na.rm = TRUE) / sum(exp(leftLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countL@seglens != 0) == ncol(countL@seglens)), priorSubset = filleft, verbose = FALSE, ..., cl = cl)
+            filright <- filterSegments(segs = subset(sDP@segInfo, select = c(chr, start, end)), orderOn = rightLike@posteriors[,1], decreasing = FALSE)
+            rightLike <- getLikelihoods(countR, prs = colSums(exp(rightLike@posteriors), na.rm = TRUE) / sum(exp(rightLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countR@seglens != 0) == ncol(countR@seglens)), priorSubset = filright, verbose = FALSE, ..., cl = cl)
+            filnull <- filterSegments(segs = subset(sDP@segInfo, select = c(chr, start, end)), orderOn = nullLike@posteriors[,1], decreasing = FALSE)
+            nullLike <- getLikelihoods(countN, prs = colSums(exp(nullLike@posteriors), na.rm = TRUE) / sum(exp(nullLike@posteriors), na.rm = TRUE), pET = "BIC", subset = which(rowSums(countN@seglens != 0) == ncol(countN@seglens)), priorSubset = filnull, verbose = FALSE, ..., cl = cl)
+          }
+        
         if(is.null(cl))
           {
             sumSame <- apply(cbind(nullLike@posteriors[,1L], leftLike@posteriors[,1L], rightLike@posteriors[,1L], nullLike@posteriors[,1L] + leftLike@posteriors[,1L] + rightLike@posteriors[,1L]), 1, logsum)
@@ -83,13 +82,14 @@ function(sDP,
             sumSame <- parRapply(cl = cl, cbind(nullLike@posteriors[,1L], leftLike@posteriors[,1L], rightLike@posteriors[,1L], nullLike@posteriors[,1L] + leftLike@posteriors[,1L] + rightLike@posteriors[,1L]), logsum)
             minSame <- parRapply(cl = cl, cbind(nullLike@posteriors[,1L] + leftLike@posteriors[,1L], nullLike@posteriors[,1L] + rightLike@posteriors[,1L], leftLike@posteriors[,1L] + rightLike@posteriors[,1L]), logsum)
           }
-            
+        
         PSames <- sumSame + log(1 - exp(minSame - sumSame))
+        PSames
       }
 
     if(verbose) message("Evaluating likelihoods of similarity for each segment...")
     
-    pSames <- sapply(unique(replicates), pSames, ...)
+    pSames <- sapply(unique(replicates), probSames, ...)
     sSames <- rowSums(pSames)
 
     if(verbose) message("Filtering loci...", appendLF = FALSE)
@@ -97,9 +97,9 @@ function(sDP,
     ssDP <- sDP[exp(sSames) < pcut,]
     sSames <- sSames[exp(sSames) < pcut]
 
-    if(nrow(sDP) > 0)
+    if(nrow(sDP) > 0) {
       filsegs <- filterSegments(segs = subset(ssDP@segInfo, select = c(chr, start, end)), orderOn = sSames, decreasing = FALSE)
-    else filsegs <- NULL
+    } else filsegs <- NULL
     
     if(verbose) message("done!")
     

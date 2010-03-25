@@ -9,7 +9,7 @@ setMethod("[", "alignmentData", function(x, i, j, ..., drop = FALSE) {
     {
       x@libnames <- x@libnames[j]
       x@libsizes <- x@libsizes[j]
-      x@replicates <- x@replicates[j]
+      x@replicates <- as.integer(x@replicates[j])
       x@data <- x@data[,j,drop = FALSE]
     }
   x

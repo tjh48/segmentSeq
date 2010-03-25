@@ -7,7 +7,7 @@ setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
 
   if(!missing(j))
     {
-      x@replicates <- x@replicates[j]
+      x@replicates <- as.integer(x@replicates[j])
       x@data <- x@data[,j,drop = FALSE]
       x@libsizes <- x@libsizes[j]
     }

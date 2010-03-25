@@ -39,7 +39,7 @@ There is a convenience function, \verb'processTags' which is able to read in tab
 
 datadir <- system.file("data", package = "segmentSeq")
 libfiles <- dir(datadir, pattern = ".txt", full.names = TRUE)
-libnames <- c("SL10", "SL26", "SL32", "SL9")
+libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
 aD <- processTags(libfiles, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)

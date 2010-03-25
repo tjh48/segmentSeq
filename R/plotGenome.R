@@ -17,16 +17,19 @@ function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileu
     {
       breakpoints <- sD@annotation
       brlims <- which(breakpoints$chr == chr & breakpoints$start <= limits[2] & breakpoints$end >= limits[1])
-      bps <- breakpoints[brlims,]
-      bps$start <- sapply(bps$start, max, limits[1])
-      bps$end <- sapply(bps$end, min, limits[2])
-            
-      brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                    (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                    (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
-      
-      rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 2, brcols, angle = 0:5 * 180/7)
-      text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")
+      if(length(brlims) > 0)
+        {
+          bps <- breakpoints[brlims,]
+          bps$start <- sapply(bps$start, max, limits[1])
+          bps$end <- sapply(bps$end, min, limits[2])
+          
+          brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                        (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                        (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
+          
+          rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 2, brcols, angle = 0:5 * 180/7)
+          text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")
+        }
     }
       
   segments(limits[1], samples, limits[2], samples, col = "cyan", lwd = 1)

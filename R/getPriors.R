@@ -23,7 +23,7 @@ getPriors <- function(sD, type = "Pois", verbose = TRUE, ...)
                           list(priors = cD@priors$priors[[1]], priorType = cD@priorType)
                         }, ...)        
                       
-    sD@priors <- list(lapply(reppriors, function(x) x$priors[[1]]))
+    sD@priors <- lapply(reppriors, function(x) x$priors[[1]])
     sD@priorType <- unique(sapply(reppriors, function(x) x$priorType))
 
     sD

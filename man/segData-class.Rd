@@ -19,7 +19,14 @@ Objects can be created by calls of the form \code{new("segData", ...,
 \section{Slots}{
   \describe{
     \item{\code{data}:}{Object of class \code{"matrix"}. Contains the
-      number of counts observed for each sample in each potential segment.}
+      number of counts observed for each sample in each potential
+      segment.}
+    \item{\code{leftData}:}{Object of class \code{"matrix"}. Contains
+      the number of counts observed for the region to the left of the
+      potential segment.}
+    \item{\code{rightData}:}{Object of class \code{"matrix"}. Contains
+      the number of counts observed for the region to the right of the
+      potential segment.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes for each sample.}
     \item{\code{replicates}:}{Object of class \code{"numeric"}. The

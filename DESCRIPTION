@@ -1,7 +1,7 @@
 Package: segmentSeq
 Type: Package
 Title: Takes high-throughput sequencing data and uses it to define segments of the genome to which a high density of reads align.
-Version: 0.0.16
+Version: 0.0.17
 Date: 2010-01-20
 Author: Thomas J. Hardcastle
 Maintainer: Thomas J. Hardcastle <tjh48@cam.ac.uk>

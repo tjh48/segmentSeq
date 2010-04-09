@@ -8,7 +8,8 @@ This function takes the 'segData' object and produces a set of segments
 on the genome based on the data contained within it.
 }
 \usage{
-segmentSequences(sDP, pcut = 0.5, estimatePriors = FALSE, verbose =
+segmentSequences(sDP, pcut = 0.5, estimatePriors = FALSE, priorDE =
+1e-2, verbose =
 TRUE, ..., cl)
 }
 
@@ -22,8 +23,8 @@ TRUE, ..., cl)
     of the potential segment. See Details.
   }
   \item{estimatePriors}{Should the prior probabilities be estimated by
-  bootstrap from the data? Defaults to FALSE. See Details.}
-
+    bootstrap from the data? Defaults to FALSE. See Details.}
+  \item{priorDE}{Prior likelihood of similarity.}
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }

@@ -61,24 +61,29 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
             }
             
             winsize <- 1e5
+
+            csegs <- cbind(csegs,
+                           leftSpace = (csegs[,1L] - c(0L, startstop[,2])[findInterval(csegs[,1L], startstop[,2L]) + 1L]) - 1L,
+                           rightSpace = c(startstop[,1L], chrlens[cc] + 1L)[findInterval(csegs[,2L], startstop[,1L]) + 1L] - csegs[,2L] - 1L)
+
+            windowCount <- function(rr, segs)
+              {
+                winSegs <- segs[((rr - 1) * winsize + 1):min(rr * winsize, nrow(segs)),,drop = FALSE]
+                seltags <- which(chrTags$start <= max(winSegs) & chrTags$end >= min(winSegs))
+                winTags <- chrTags[seltags,,drop = FALSE]
+                winTagData <- chrTagData[seltags,,drop = FALSE]
+                
+                t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
+                            aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates),                                      cl = cl))
+              }
             
-            tD@data <- rbind(tD@data, matrix(as.integer(unlist(lapply(1:ceiling(nrow(csegs) / winsize), function(rr)
-                                {
-                                  winSegs <- csegs[((rr - 1) * winsize + 1):min(rr * winsize, nrow(csegs)),,drop = FALSE]
-                                  seltags <- which(chrTags$start <= max(winSegs) & chrTags$end >= min(winSegs))
-                                  winTags <- chrTags[seltags,,drop = FALSE]
-                                  winTagData <- chrTagData[seltags,,drop = FALSE]
-                                  
-                                  t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
-                                            aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates),                                      cl = cl))
-                                }))), nrow = nrow(csegs), byrow = TRUE))
+            tD@data <- rbind(tD@data, matrix(as.integer(unlist(lapply(1:ceiling(nrow(csegs) / winsize), windowCount, segs = csegs))), nrow = nrow(csegs), byrow = TRUE))
             
             if(verbose)
               message("done!")
             
-            csegs <- cbind(csegs,
-                           leftSpace = (csegs[,1L] - c(0L, startstop[,2])[findInterval(csegs[,1L], startstop[,2L]) + 1L]) - 1L,
-                           rightSpace = c(startstop[,1L], chrlens[cc] + 1L)[findInterval(csegs[,2L], startstop[,1L]) + 1L] - csegs[,2L] - 1L)
+            rightData <- getCounts
+            
             tD@segInfo <- rbind(tD@segInfo, data.frame(chr = I(chrs[cc]), csegs))
           } else if(verbose) message("No tags found for this chromosome.")
       }

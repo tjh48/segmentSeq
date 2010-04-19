@@ -1,5 +1,6 @@
+%\VignetteIndexEntry{segmentSeq}
+
 \documentclass[a4paper]{article}
-% \VignetteIndexEntry{baySeq}
 
 \title{segmentSeq}
 \author{Thomas J. Hardcastle}

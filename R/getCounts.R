@@ -38,11 +38,12 @@ function(segments, aD, cl)
                                  
                                  chrsegs <- data.frame(start = rodsegs$start, end = rodsegs$end)[segments$chr == cc,,drop = FALSE]
                                  chralignments <- subset(alignments, subset = alignments$chr == cc, select = c(start, end, tag))
+                                 chrdata <- subset(cdata, subset = alignments$chr == cc)
                                  
                                  chralignments <- cbind(chralignments, duplicated = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
                                  
                                  nondupTags <- subset(chralignments, subset = chralignments$duplicated == FALSE, select = c(start, end))
-                                 nondupData <- cdata[chralignments$duplicated == FALSE,,drop = FALSE]
+                                 nondupData <- chrdata[chralignments$duplicated == FALSE,,drop = FALSE]
                                  
                                  if(nrow(nondupTags) > 0)
                                    {
@@ -57,10 +58,10 @@ function(segments, aD, cl)
                                      
                                      chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
                                      chrUC[chrUC < 0] <- 0
-                                   } else chrUC <- matrix(0L, ncol = ncol(cdata), nrow = nrow(chrsegs))
+                                   } else chrUC <- matrix(0L, ncol = ncol(chrdata), nrow = nrow(chrsegs))
                                  
                                  dupTags <- subset(chralignments, subset = chralignments$duplicated == TRUE, select = c(start, end, tag))
-                                 dupData <- cdata[chralignments$duplicated == TRUE,, drop = FALSE]
+                                 dupData <- chrdata[chralignments$duplicated == TRUE,, drop = FALSE]
                                  
                                  if(nrow(dupTags) > 0)
                                    {
@@ -88,7 +89,7 @@ function(segments, aD, cl)
                                        environment(countNonUniques) <- getCountEnv
                                      
                                      if(!is.null(cl)) chrNC <- parSapply(cl, 1:nrow(chrsegs), countNonUniques) else  chrNC <- sapply(1:nrow(chrsegs), countNonUniques)
-                                   } else chrNC <- matrix(0L, nrow = ncol(cdata), ncol = nrow(chrsegs))
+                                   } else chrNC <- matrix(0L, nrow = ncol(chrdata), ncol = nrow(chrsegs))
                                  
                                  t(cbind(which(segments$chr == cc), chrUC + t(chrNC)))
                                }))

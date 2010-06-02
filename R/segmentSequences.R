@@ -1,6 +1,6 @@
 segmentSequences <-
 function(sDP,
-                             pcut = 0.5, priorDE = 1e-2, verbose = TRUE, ...,
+                             pcut = 0.5, priorDE = 1e-2, verbose = TRUE, topOnly = FALSE, ...,
                              cl)
   {
     logsum <- function(x) {
@@ -28,69 +28,45 @@ function(sDP,
         
         if(verbose) message("Replicate group: ", rep, appendLF = FALSE)
 
-        if(nrow(sDP@leftData) == 0) {
-          sideData <- matrix(0, ncol = sum(replicates == rep), nrow = nrow(data))
-          smallerThan <- TRUE
-        } else {
-          sideData <- sDP@leftData[,replicates == rep,drop = FALSE]
-          smallerThan <- colSums(t(sideData / sDP@segInfo$leftSpace) / sDP@libsizes[replicates == rep]) <= colSums(t(sDP@data[,replicates == rep, drop = FALSE] / seglens) / sDP@libsizes[replicates == rep])
-        }
-        
-        countL <- new("countData",
-                      data = cbind(sideData, data[,replicates == rep, drop = FALSE]),
-                      seglens = cbind(matrix(sDP@segInfo$leftSpace, ncol = sum(replicates == rep), nrow = nrow(data)),
-                        matrix(seglens, ncol = sum(replicates == rep), nrow = nrow(data))),
-                      libsizes = rep(sDP@libsizes[replicates == rep], 2),
-                      groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
-                      priorType = priorType,
-                      priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        if(any(smallerThan & rowSums(countL@seglens == 0) == 0))
+        sideSame <- function(sideData, sideSpace)
           {
-            countL <- getLikelihoods(countL, prs = c(1-priorDE, priorDE), pET = "none",
-                                     subset = which(smallerThan & rowSums(countL@seglens == 0) == 0),
-                                     verbose = FALSE, cl = cl)
-          } else countL@posteriors <- matrix(c(0, -Inf), nrow = nrow(countL@data), ncol = 2, byrow = TRUE)
-        
-        if(any(!smallerThan[!is.na(smallerThan)]))
-          {
-            countL@posteriors[!smallerThan,1] <- 0
-            countL@posteriors[!smallerThan,2] <- -Inf
-          }
-
-        
-        if(verbose) message(".", appendLF = FALSE)
-
-        if(nrow(sDP@rightData) == 0) {
-          sideData <- matrix(0, ncol = sum(replicates == rep), nrow = nrow(data))
-          smallerThan <- TRUE
-        } else {
-          sideData <- sDP@rightData[,replicates == rep, drop = FALSE]
-          smallerThan <- colSums(t(sideData / sDP@segInfo$rightSpace) / sDP@libsizes[replicates == rep]) <= colSums(t(sDP@data[,replicates == rep, drop = FALSE] / seglens) / sDP@libsizes[replicates == rep])
-        }
-        
-        countR <- new("countData",
-                      data = cbind(sideData, data[,replicates == rep, drop = FALSE]),
-                      seglens = cbind(matrix(sDP@segInfo$rightSpace, ncol = sum(replicates == rep), nrow = nrow(data)),
-                        matrix(seglens, ncol = sum(replicates == rep), nrow = nrow(data))),
-                      libsizes = rep(sDP@libsizes[replicates == rep], 2),
-                      groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
-                      priorType = priorType,
-                      priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        if(any(smallerThan & rowSums(countR@seglens == 0) == 0))
-          {
-            countR <-
-              getLikelihoods(countR, prs = c(1-priorDE, priorDE), pET = "none",
-                             subset = which(smallerThan & rowSums(countR@seglens == 0) == 0),
-                             verbose = FALSE, cl = cl)
-          } else countR@posteriors <- matrix(c(0, -Inf), nrow = nrow(countR@data), ncol = 2, byrow = TRUE)
+            if(nrow(sideData) == 0) {
+              sideData <- matrix(0, ncol = sum(replicates == rep), nrow = nrow(data))
+              smallerThan <- TRUE
+            } else {
+              sideData <- sideData[,replicates == rep,drop = FALSE]
+              smallerThan <- colSums(t(sideData / sideSpace) / sDP@libsizes[replicates == rep]) <= colSums(t(sDP@data[,replicates == rep, drop = FALSE] / seglens) / sDP@libsizes[replicates == rep])
+            }
             
-        
-        if(any(!smallerThan[!is.na(smallerThan)]))
-          {
-            countR@posteriors[!smallerThan,1] <- 0
-            countR@posteriors[!smallerThan,2] <- -Inf
+            countSide <- new("countData",
+                             data = cbind(sideData, data[,replicates == rep, drop = FALSE]),
+                             seglens = cbind(matrix(sideSpace, ncol = sum(replicates == rep), nrow = nrow(data)),
+                               matrix(seglens, ncol = sum(replicates == rep), nrow = nrow(data))),
+                             libsizes = rep(sDP@libsizes[replicates == rep], 2),
+                             groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
+                             priorType = priorType,
+                             priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
+            if(any(smallerThan & rowSums(countSide@seglens == 0) == 0))
+              {
+                countSide <- getLikelihoods(countSide, prs = c(1-priorDE, priorDE), pET = "none",
+                                            subset = which(smallerThan & rowSums(countSide@seglens == 0) == 0),
+                                            verbose = FALSE, cl = cl)
+              } else countSide@posteriors <- matrix(c(0, -Inf), nrow = nrow(countSide@data), ncol = 2, byrow = TRUE)
+            
+            if(any(!smallerThan[!is.na(smallerThan)]))
+              {
+                countSide@posteriors[!smallerThan,1] <- 0
+                countSide@posteriors[!smallerThan,2] <- -Inf
+              }
+            
+            if(verbose) message(".", appendLF = FALSE)
+
+            countSide@posteriors
           }
 
+        countL <- sideSame(sDP@leftData, sDP@segInfo$leftSpace)
+        countR <- sideSame(sDP@rightData, sDP@segInfo$rightSpace)
+        
         if(verbose) message(".", appendLF = FALSE)
         
         countN <- new("countData",
@@ -100,17 +76,17 @@ function(sDP,
                       groups = list(c(rep(1, sum(replicates == rep) * 2)), c(rep(1, sum(replicates == rep)), rep(2, sum(replicates == rep)))),
                       priorType = priorType,
                       priors = list(priors = list(NDE = list(priors[[rep]]), DE = list(priors[[rep]], priors[[rep]])), sampled = sDP@priors$sampled))
-        nullLike <- getLikelihoods(countN, prs = c(0.9, 0.1), pET = "none", verbose = FALSE, cl = cl)
+        nullLike <- getLikelihoods(countN, prs = c(0.9, 0.1), pET = "none", verbose = FALSE, cl = cl)@posteriors
         
         if(verbose) message(".")
 
         if(is.null(cl))
           {
-            sumSame <- apply(cbind(nullLike@posteriors[,1L], countL@posteriors[,1L], countR@posteriors[,1L], nullLike@posteriors[,1L] + countL@posteriors[,1L] + countR@posteriors[,1L]), 1, logsum)
-            minSame <- apply(cbind(nullLike@posteriors[,1L] + countL@posteriors[,1L], nullLike@posteriors[,1L] + countR@posteriors[,1L], countL@posteriors[,1L] + countR@posteriors[,1L]), 1, logsum)
+            sumSame <- apply(cbind(nullLike[,1L], countL[,1L], countL[,1L], nullLike[,1L] + countL[,1L] + countR[,1L]), 1, logsum)
+            minSame <- apply(cbind(nullLike[,1L] + countL[,1L], nullLike[,1L] + countR[,1L], countL[,1L] + countR[,1L]), 1, logsum)
           } else {
-            sumSame <- parRapply(cl = cl, cbind(nullLike@posteriors[,1L], countL@posteriors[,1L], countR@posteriors[,1L], nullLike@posteriors[,1L] + countL@posteriors[,1L] + countR@posteriors[,1L]), logsum)
-            minSame <- parRapply(cl = cl, cbind(nullLike@posteriors[,1L] + countL@posteriors[,1L], nullLike@posteriors[,1L] + countR@posteriors[,1L], countL@posteriors[,1L] + countR@posteriors[,1L]), logsum)
+            sumSame <- parRapply(cl = cl, cbind(nullLike[,1L], countL[,1L], countR[,1L], nullLike[,1L] + countL[,1L] + countR[,1L]), logsum)
+            minSame <- parRapply(cl = cl, cbind(nullLike[,1L] + countL[,1L], nullLike[,1L] + countR[,1L], countL[,1L] + countR[,1L]), logsum)
           }
         
         PSames <- sumSame + log(1 - exp(minSame - sumSame))
@@ -130,7 +106,7 @@ function(sDP,
       
     
     if(nrow(ssDP) > 0) {
-      filsegs <- filterSegments(segs = subset(ssDP@segInfo, select = c(chr, start, end)), orderOn = sSames, decreasing = FALSE)
+      if(topOnly) filsegs <- which.min(sSames) else filsegs <- filterSegments(segs = subset(ssDP@segInfo, select = c(chr, start, end)), orderOn = sSames, decreasing = FALSE)
     } else filsegs <- NULL
     
     if(verbose) message("done!")

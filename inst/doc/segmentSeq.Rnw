@@ -37,7 +37,7 @@ if("snow" %in% installed.packages()[,1])
 There is a convenience function, \verb'processTags' which is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries 'SL10' and 'SL26' are replicates, as are 'SL32' and 'SL9'.
 
 <<>>=
-  chrlens <- c(1e6, 5e5)
+chrlens <- c(1e6, 5e5)
 
 datadir <- system.file("data", package = "segmentSeq")
 libfiles <- dir(datadir, pattern = ".txt", full.names = TRUE)
@@ -66,7 +66,6 @@ We then try and estimate prior parameters on the data with the \verb'getPriors' 
 Having found estimates of the prior parameters of the data, we can then segment the genome based on the information in the \verb'segData' object. The function compares, for each replicate group, the likelihood that the number of alignments matching in a segment is similar to background, or that it is similar to the regions to the left and right of the segment. It then evaluates the likelihood that this similarity occurs in all replicate groups, and ranks all the potential segments in order of decreasing likelihood of similarity. Any segment with a likelihood of similarity greater than the \verb'pcut' argument is discarded at this point. The function then filters the potential segments to form a non-overlapping set of segments by choosing the segment with the lowest likelihood of similarity and discarding any segments which overlap with this. By iteratively discarding overlapping segments, we form a non-overlapping set of segments which have a low likelihood of being similar to background (and are thus regions corresponding to a high density of aligned sequences).
 
 <<>>=
-
 segD <- segmentSequences(sDP, pcut = 0.1, estimatePriors = FALSE, verbose = TRUE, cl = cl)
 @ 
 

@@ -8,9 +8,8 @@ This function takes the 'segData' object and produces a set of segments
 on the genome based on the data contained within it.
 }
 \usage{
-segmentSequences(sDP, pcut = 0.5, priorDE =
-1e-2, verbose =
-TRUE, ..., cl)
+segmentSequences(sDP, pcut = 0.5, priorDE = 1e-2, verbose = TRUE,
+topOnly = FALSE, ..., cl)
 }
 
 \arguments{
@@ -26,6 +25,8 @@ TRUE, ..., cl)
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }
+  \item{topOnly}{If TRUE, then only the potential segment with the
+  lowest likelihood of similarity is returned. Defaults to FALSE.}
 
 \item{...}{Additional parameters to be passed to the
   \code{\link[baySeq:getLikelihoods]{getLikelihoods}} function of the

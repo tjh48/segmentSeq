@@ -45,6 +45,7 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
             if(verbose)
               message("Defining potential subsegments...", appendLF = FALSE)
             gapped <- lapply(1:nrow(startstop), function(x) x:min(gaps[gaps >= x]))
+
             csegs <- data.frame(start = rep(startstop[,1L], lapply(gapped, length)), end = unlist(lapply(gapped, function(x) startstop[x,2L])))
 
             if(any(csegs[,2L] - csegs[,1L] + 1L > maxloclen))
@@ -72,17 +73,21 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
                 seltags <- which(chrTags$start <= max(winSegs) & chrTags$end >= min(winSegs))
                 winTags <- chrTags[seltags,,drop = FALSE]
                 winTagData <- chrTagData[seltags,,drop = FALSE]
+
+                message(date())
                 
-                t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
-                            aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates),                                      cl = cl))
+                x <- t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
+                                 aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates), cl = cl))
+                
               }
             
-            tD@data <- rbind(tD@data, matrix(as.integer(unlist(lapply(1:ceiling(nrow(csegs) / winsize), windowCount, segs = csegs))), nrow = nrow(csegs), byrow = TRUE))
+            tD@data <- rbind(tD@data, matrix(as.integer(unlist(
+                                                               lapply(1:ceiling(nrow(csegs) / winsize), windowCount, segs = csegs)
+                                                        )),
+                                             nrow = nrow(csegs), byrow = TRUE))
             
             if(verbose)
               message("done!")
-            
-            rightData <- getCounts
             
             tD@segInfo <- rbind(tD@segInfo, data.frame(chr = I(chrs[cc]), csegs))
           } else if(verbose) message("No tags found for this chromosome.")

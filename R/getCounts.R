@@ -16,13 +16,19 @@ function(segments, aD, cl)
         environment(clusterAssign) <- getCountEnv
       }
 
+    print(date())
+    
     alignments <- aD@alignments
     alignments$tag <- as.numeric(as.factor(alignments$tag))
     cdata <- aD@data
-    
-    rodsegs <- segments[order(segments$chr, segments$start, segments$end),, drop = FALSE]
-        
-    countsmat <- unlist(lapply(unique(segments$chr), function(cc)
+
+    rodering <- order(segments$chr, segments$start, segments$end)
+    rodsegs <- segments[rodering,, drop = FALSE]
+    dup <- which(!duplicated(rodsegs))
+    reps <- c(dup[-1], nrow(rodsegs) + 1) - c(dup)
+    redsegs <- rodsegs[dup,]
+
+    countsmat <- unlist(lapply(unique(redsegs$chr), function(cc)
                                {
                                  createIntervals <- function(inCluster = FALSE)
                                    {
@@ -36,7 +42,7 @@ function(segments, aD, cl)
                                    }
 
                                  
-                                 chrsegs <- data.frame(start = rodsegs$start, end = rodsegs$end)[segments$chr == cc,,drop = FALSE]
+                                 chrsegs <- data.frame(start = redsegs$start, end = redsegs$end)[redsegs$chr == cc,,drop = FALSE]
                                  chralignments <- subset(alignments, subset = alignments$chr == cc, select = c(start, end, tag))
                                  chrdata <- subset(cdata, subset = alignments$chr == cc)
                                  
@@ -91,11 +97,10 @@ function(segments, aD, cl)
                                      if(!is.null(cl)) chrNC <- parSapply(cl, 1:nrow(chrsegs), countNonUniques) else  chrNC <- sapply(1:nrow(chrsegs), countNonUniques)
                                    } else chrNC <- matrix(0L, nrow = ncol(chrdata), ncol = nrow(chrsegs))
                                  
-                                 t(cbind(which(segments$chr == cc), chrUC + t(chrNC)))
+                                 t(chrUC + t(chrNC))
                                }))
-    countsmat <- matrix(countsmat, nrow = nrow(segments), ncol = length(aD@replicates) + 1, byrow = TRUE)
-    counts <- matrix(NA, ncol = length(aD@replicates), nrow = nrow(segments))
-    counts[countsmat[,1L],] <- countsmat[,-1L]
-    counts
+    countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
+    countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
+    countsmat[order(rodering),, drop = FALSE]
   }
 

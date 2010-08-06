@@ -87,7 +87,7 @@ function(files, replicates, libnames, chrs, chrlens,
     data <- matrix(unlist(lapply(Tags, function(x) x$count)), ncol = length(sampleNumbers), nrow = nrow(uniqueTags))
     rordtags <- order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end)
 
-    data <- data[rordtags,]
+    data <- data[rordtags,, drop = FALSE]
     alignments <- data.frame(uniqueTags, duplicated = uniqueTags$tag %in% uniqueTags$tag[duplicated(uniqueTags$tag)])[rordtags,]
     
 

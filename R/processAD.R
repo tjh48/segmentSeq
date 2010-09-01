@@ -3,7 +3,7 @@ processAD <-
 function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
   {    
     cTags <- aD@alignments
-    cTags$tag <- as.numeric(as.factor(cTags$tag))
+    if("tag" %in% aD@alignments) cTags$tag <- as.numeric(as.factor(cTags$tag)) else cTags$tag <- 1:nrow(cTags)
     chrs <- aD@chrs
     chrlens <- aD@chrlens
     libnames <- aD@libnames
@@ -61,7 +61,7 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
               message("Getting count data for each potential subsegment...", appendLF = FALSE)
             }
             
-            winsize <- 1e5
+            winsize <- 5e5
 
             csegs <- cbind(csegs,
                            leftSpace = (csegs[,1L] - c(0L, startstop[,2])[findInterval(csegs[,1L], startstop[,2L]) + 1L]) - 1L,
@@ -74,7 +74,7 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
                 winTags <- chrTags[seltags,,drop = FALSE]
                 winTagData <- chrTagData[seltags,,drop = FALSE]
 
-                message(date())
+                message(".")
                 
                 x <- t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
                                  aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates), cl = cl))

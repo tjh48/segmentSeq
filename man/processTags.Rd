@@ -68,6 +68,15 @@ chromosome information, the second column contained the tag information,
 'cols' is missing and 'header = FALSE' then it is assumed that the
 data takes the form described in the example above.
 
+The \code{'tag'} and \code{'count'} columns may optionally be
+omitted from either the file column headers or the 'cols' argument. If
+the \code{'tag'} column is omitted, then the data will not account for
+duplicated sequences when estimating the number of counts in loci. If
+the \code{'count'} column is omitted, the \code{'processTags'} function
+will assume that the file contains non-redundant data. The unique
+alignments will be identified and the number of sequence tags aligning
+to each position will be calculated.
+
 The \code{replicates} argument should take the form of a vector of
 integers such that if and only if the ith library is a replicate of the
 jth library then \code{@replicates[i] == @replicates[j]}. In addition,

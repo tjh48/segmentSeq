@@ -1,3 +1,4 @@
+
 getCounts <-
 function(segments, aD, cl)
   {     
@@ -16,17 +17,19 @@ function(segments, aD, cl)
         environment(clusterAssign) <- getCountEnv
       }
 
-    print(date())
-    
     alignments <- aD@alignments
-    alignments$tag <- as.numeric(as.factor(alignments$tag))
+    if("tag" %in% names(alignments)) alignments$tag <- as.integer(as.factor(alignments$tag)) else alignments$tag <- 1:nrow(alignments)
     cdata <- aD@data
+    
+    segnas <- is.na(segments$chr) | is.na(segments$start) | is.na(segments$end)
+    segments <- segments[!segnas,]
 
     rodering <- order(segments$chr, segments$start, segments$end)
     rodsegs <- segments[rodering,, drop = FALSE]
     dup <- which(!duplicated(rodsegs))
     reps <- c(dup[-1], nrow(rodsegs) + 1) - c(dup)
     redsegs <- rodsegs[dup,]
+    
 
     countsmat <- unlist(lapply(unique(redsegs$chr), function(cc)
                                {
@@ -102,5 +105,10 @@ function(segments, aD, cl)
     countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
     countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
     countsmat[order(rodering),, drop = FALSE]
+
+    countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))
+    countsnas[!segnas,] <- countsmat
+
+    countsnas
   }
 

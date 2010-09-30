@@ -41,6 +41,8 @@ function(files, replicates, libnames, chrs, chrlens,
         countcol <- 3L
         startcol <- 4L
         endcol <- 5L
+        tagPresent <- TRUE
+        countPresent <- TRUE
       } else {
         chrcol <- cols[names(cols) == "chr"]
         if(tagPresent) tagcol <- cols[names(cols) == "tag"] else tagcol <- NA          
@@ -63,25 +65,27 @@ function(files, replicates, libnames, chrs, chrlens,
     Tags <- lapply(sampleNumbers, function(ii, cols, header, ...) {
       filetags <- read.table(files[ii], header = header, as.is = TRUE, ...)
       if(header & missing(cols))
-        if(all(c("chr", "start", "end") %in% names(filetags)))
-          {
-            chrcol <- which(names(filetags) == "chr")
-            startcol <- which(names(filetags) == "start")
-            endcol <- which(names(filetags) == "end")
-          } else stop(paste("Couldn't find appropriate column names (and columns were not specified) in file:", files[ii]))
-      if("tag" %in% names(filetags))
         {
-          tagcol <- which(names(filetags) == "tag")
-        } else {
-          tagPresent <- FALSE
-          warning("No 'tag' column found in file; the 'alignData' object will omit sequence information.")
-        }
-      if("count" %in% names(filetags))
-        {
-            countcol <- which(names(filetags) == "count")
-        } else {
-          countPresent <- FALSE
-          warning("No 'count' column found in file; 'processTags' will assume that the file contains non-redundant reads")
+          if(all(c("chr", "start", "end") %in% names(filetags)))
+            {
+              chrcol <- which(names(filetags) == "chr")
+              startcol <- which(names(filetags) == "start")
+              endcol <- which(names(filetags) == "end")
+            } else stop(paste("Couldn't find appropriate column names (and columns were not specified) in file:", files[ii]))
+          if("tag" %in% names(filetags))
+            {
+              tagcol <- which(names(filetags) == "tag")
+            } else {
+              tagPresent <- FALSE
+              warning("No 'tag' column found in file; the 'alignData' object will omit sequence information.")
+            }
+          if("count" %in% names(filetags))
+            {
+              countcol <- which(names(filetags) == "count")
+            } else {
+              countPresent <- FALSE
+              warning("No 'count' column found in file; 'processTags' will assume that the file contains non-redundant reads")
+            }
         }
       
       chrtags <- which(filetags[,chrcol] %in% chrs)

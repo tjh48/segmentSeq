@@ -51,7 +51,7 @@ Thomas J. Hardcastle
 }
 
 \seealso{
-\code{\linkS4class{alignmentData-class}}, \code{\link{segmentSequences}}
+\code{\linkS4class{alignmentData}}, \code{\link{segmentSequences}}
 }
 \examples{
 

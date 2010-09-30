@@ -43,8 +43,7 @@ Additional arguments can be passed to whichever function is being used
 via the \code{'...'} argument.
 }
 \value{
-  A \code{\linkS4class{segData}} object with a \code{\linkS4class{priorData}}
-  structure in the \code{'@priors'} slot.
+  A \code{\linkS4class{segData}} object.
 }
 \references{
 Hardcastle T.J., and Kelly, K.A. (2010). Genome Segmentation from

@@ -1,5 +1,5 @@
-\name{segmentSequences}
-\alias{segmentSequences}
+\name{similaritySeg}
+\alias{similaritySeg}
 
 \title{Takes the 'segData' object and uses it to define segments on the genome.
 }
@@ -8,7 +8,7 @@ This function takes the 'segData' object and produces a set of segments
 on the genome based on the data contained within it.
 }
 \usage{
-segmentSequences(sDP, pcut = 0.5, priorDE = 1e-2, verbose = TRUE,
+similaritySeg(sDP, pcut = 0.5, priorDE = 1e-2, verbose = TRUE,
 topOnly = FALSE, ..., cl)
 }
 
@@ -118,7 +118,7 @@ sDP <- getPriors(sD, type = "Pois", samplesize = 100, perSE = 0.1, maxit
 
 # Use the segData object to produce a segmentation of the genome.
 
-segD <- segmentSequences(sDP, pcut = 0.1, cl = NULL)
+segD <- similaritySeg(sDP, pcut = 0.1, cl = NULL)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

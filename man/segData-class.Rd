@@ -98,7 +98,7 @@ sDP <- getPriors(sD, type = "Pois", samplesize = 100, perSE = 0.1, maxit
 
 # Use the segData object to produce a segmentation of the genome.
 
-segD <- segmentSequences(sDP, pcut = 0.1, cl = NULL)
+segD <- similaritySeg(sDP, pcut = 0.1, cl = NULL)
 
 
 }

@@ -73,7 +73,7 @@ Thomas J. Hardcastle
 \seealso{
   \code{\link{getCounts}}, which produces the count data for each
   potential segment.
-  \code{\link{segmentSequences}}, which segments the genome based on the
+  \code{\link{similaritySeg}}, which segments the genome based on the
   \code{segData} object produced.
   \code{\linkS4class{segData}}
   \code{\linkS4class{alignmentData}}

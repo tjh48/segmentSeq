@@ -18,8 +18,7 @@
 \format{A set of tab-delimited files containing data from four
   sequencing experiments.}
 \source{In-house Illumina sequencing experiments}
-\seealso{}
-\references{}
+
 
 \keyword{datasets}
     

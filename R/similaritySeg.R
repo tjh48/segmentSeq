@@ -1,4 +1,10 @@
-segmentSequences <-
+segmentSeq <- function(...)
+{
+  warning("This function has been renamed to 'similaritySeg'. This is to avoid confusion with the alternative approach developed in the function 'classifySeg'. Passing arguments to the 'similaritySeg' function now.")
+  similaritySeg
+}
+
+similaritySeg <-
 function(sDP,
                              pcut = 0.5, priorDE = 1e-2, verbose = TRUE, topOnly = FALSE, ...,
                              cl)

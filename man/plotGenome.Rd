@@ -19,7 +19,7 @@ plotType = "pileup", ...)
   }
   \item{sD}{
     A \code{\linkS4class{countData}} object (produced by the
-    \code{\link{segmentSequences}} function and therefore) containing
+    \code{\link{similaritySeg}} function and therefore) containing
     appropriate annotation information. Can be omitted if this
     annotation is not known/required.
   }
@@ -51,7 +51,7 @@ Thomas J. Hardcastle
 }
 
 \seealso{
-\code{\linkS4class{alignmentData}}, \code{\link{segmentSequences}}
+\code{\linkS4class{alignmentData}}, \code{\link{similaritySeg}}
 }
 \examples{
 

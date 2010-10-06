@@ -11,13 +11,16 @@ This function takes files in a text format with defined columns
 
 }
 \usage{
-processTags(files, replicates, libnames, chrs, chrlens, cols, header =
+processTags(files, dir = ".", replicates, libnames, chrs, chrlens, cols, header =
 TRUE, verbose = TRUE, ...)
 }
 \arguments{
   \item{files}{
     Filenames of the files to be read in.
-}
+  }
+  \item{dir}{
+    Directory (or directories) in which the files can be found.
+  }
   \item{replicates}{
     Replicate information on the libraries. See Details. 
 }
@@ -104,16 +107,16 @@ chrlens <- c(2e6, 1e6)
 # Define the files containing sample information.
 
 datadir <- system.file("data", package = "segmentSeq")
-libfiles <- dir(datadir, pattern = ".txt", full.names = TRUE)
+libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 
 # Establish the library names and replicate structure.
 
-libnames <- c("SL10", "SL26", "SL32", "SL9")
+libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
 
 }
 \keyword{files}

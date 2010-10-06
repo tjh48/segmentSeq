@@ -1,5 +1,5 @@
 processTags <-
-function(files, replicates, libnames, chrs, chrlens,
+function(files, dir = ".", replicates, libnames, chrs, chrlens,
          cols, header = TRUE, verbose = TRUE, ...)
   {
     fastUniques <- function(x)
@@ -15,44 +15,29 @@ function(files, replicates, libnames, chrs, chrlens,
 
     countPresent <- TRUE
     tagPresent <- TRUE
+
+    if(missing(cols)) cols <- NULL
     
-    if(!missing(cols))
+    if(!is.null(cols))
       {
         if(!(all(c("chr", "start", "end") %in% names(cols))))
-          stop("'cols' argument must contain named values for 'chr', 'tag', 'count', 'start', 'end' or be NULL")
+          stop("'cols' argument must contain named values for 'chr', 'start', 'end' or be NULL")
         if(any(c(!("count" %in% names(cols)), is.na(cols[names(cols) == "count"]))))
           {
             countPresent <- FALSE
-            warning("No 'count' column specified; 'processTags' will assume that the file contains non-redundant reads")
+            warning("No 'count' column specified in 'cols' argument; 'processTags' will assume that the file contains non-redundant reads")
           }
         if(any(c(!("tag" %in% names(cols)), is.na(cols[names(cols) == "tag"]))))
           {
             tagPresent <- FALSE
-            warning("No 'tag' column specified; the 'alignData' object will omit sequence information.")
+            warning("No 'tag' column specified in 'cols' argument; the 'alignData' object will omit sequence information.")
           }
-      }
-
-    if(missing(cols))
-      {
-        if(!header)
-          warning("No 'cols' argument supplied and 'header = FALSE'. Using default values for columns")
-        chrcol <- 1L
-        tagcol <- 2L
-        countcol <- 3L
-        startcol <- 4L
-        endcol <- 5L
-        tagPresent <- TRUE
-        countPresent <- TRUE
-      } else {
-        chrcol <- cols[names(cols) == "chr"]
-        if(tagPresent) tagcol <- cols[names(cols) == "tag"] else tagcol <- NA          
-        if(countPresent) countcol <- cols[names(cols) == "count"] else countcol <- NA
-        startcol <- cols[names(cols) == "start"]
-        endcol <- cols[names(cols) == "end"]
-      }
+      } else if(is.null(cols) & header == FALSE) warning("No 'cols' argument supplied and 'header = FALSE'. Using default values for columns")
 
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
+
+    files <- paste(dir, files, sep = "/")
 
     if(class(chrs) != "character")
       stop("'chrs' must be of type 'character'.")
@@ -64,7 +49,7 @@ function(files, replicates, libnames, chrs, chrlens,
     
     Tags <- lapply(sampleNumbers, function(ii, cols, header, ...) {
       filetags <- read.table(files[ii], header = header, as.is = TRUE, ...)
-      if(header & missing(cols))
+      if(header & is.null(cols))
         {
           if(all(c("chr", "start", "end") %in% names(filetags)))
             {
@@ -86,7 +71,22 @@ function(files, replicates, libnames, chrs, chrlens,
               countPresent <- FALSE
               warning("No 'count' column found in file; 'processTags' will assume that the file contains non-redundant reads")
             }
-        }
+        } else if(!header & is.null(cols))
+          {
+            chrcol <- 1L
+            tagcol <- 2L
+            countcol <- 3L
+            startcol <- 4L
+            endcol <- 5L
+            tagPresent <- TRUE
+            countPresent <- TRUE
+          } else if(!is.null(cols)) {
+            chrcol <- cols[names(cols) == "chr"]
+            if(tagPresent) tagcol <- cols[names(cols) == "tag"] else tagcol <- NA          
+            if(countPresent) countcol <- cols[names(cols) == "count"] else countcol <- NA
+            startcol <- cols[names(cols) == "start"]
+            endcol <- cols[names(cols) == "end"]
+          }
       
       chrtags <- which(filetags[,chrcol] %in% chrs)
       
@@ -97,35 +97,36 @@ function(files, replicates, libnames, chrs, chrlens,
         alndups <- fastUniques(aln)
         aln <- data.frame(aln[alndups,], count = as.integer(diff(c(which(alndups), length(alndups) + 1))))
       } else aln <- data.frame(aln, count = as.integer(filetags[chrtags, countcol]))
-
+      
       aln
-    }, cols = cols, header = header, ...)
-
+    }, cols = cols, header = header)
+    
     uniqueTags <- NULL
     for(ii in 1:length(Tags))
       {
         uniqueTags <- rbind(uniqueTags, Tags[[ii]][,which(colnames(Tags[[ii]]) != "count"), drop = FALSE])
-        uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, decreasing = TRUE),]
+        uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, as.factor(uniqueTags$tag), decreasing = TRUE),]
         uniqueTags <- uniqueTags[fastUniques(uniqueTags),]
         message(".", appendLF = FALSE)
       }
-
+    
     Tags <- lapply(Tags, function(tagSet)
                    {
                      tagSet <- rbind(tagSet, data.frame(uniqueTags, count = 0))
-                     tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, tagSet$count, decreasing = TRUE),]
-                     tagSet <- tagSet[fastUniques(tagSet[colnames(tagSet) != "count"]),]
+                     tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, as.factor(tagSet$tag), tagSet$count, decreasing = TRUE),]
+                     tagSet <- tagSet[fastUniques(tagSet[,colnames(tagSet) != "count"]),]
                      tagSet
                    })
-
+    
     libsizes <- sapply(Tags, function(tagSet) if(tagPresent) return(sum(tagSet$count[!duplicated(tagSet$tag)])) else return(sum(tagSet$count)))
     
     data <- matrix(unlist(lapply(Tags, function(x) x$count)), ncol = length(sampleNumbers), nrow = nrow(uniqueTags))
+
     rordtags <- order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end)
     uniqueTags <- uniqueTags[rordtags,,drop = FALSE]
-
     data <- data[rordtags,, drop = FALSE]
-    if(tagPresent) alignments <- data.frame(uniqueTags, duplicated = uniqueTags$tag %in% uniqueTags$tag[duplicated(uniqueTags$tag)])[rordtags,] else alignments <- data.frame(uniqueTags, duplicated = FALSE)
+
+    if(tagPresent) alignments <- data.frame(uniqueTags, duplicated = uniqueTags$tag %in% uniqueTags$tag[duplicated(uniqueTags$tag)]) else alignments <- data.frame(uniqueTags, duplicated = FALSE)
     
     sapply(chrs, function(x) if(any(alignments$end[alignments$chr == x] > chrlens[chrs == x]))
            warning(paste("Chromosome", x, "has tags which extend over the given chromsome length.")))

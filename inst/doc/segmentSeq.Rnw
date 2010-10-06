@@ -42,11 +42,11 @@ There is a convenience function, \verb'processTags' which is able to read in tab
 chrlens <- c(1e6, 5e5)
 
 datadir <- system.file("data", package = "segmentSeq")
-libfiles <- dir(datadir, pattern = ".txt", full.names = TRUE)
+libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
-aD <- processTags(libfiles, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+aD <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
 
 aD
 @ 
@@ -68,19 +68,19 @@ We then try and estimate prior parameters on the data with the \verb'getPriors' 
 Having found estimates of the prior parameters of the data, we can then segment the genome based on the information in the \verb'segData' object. The function compares, for each replicate group, the likelihood that the number of alignments matching in a segment is similar to background, or that it is similar to the regions to the left and right of the segment. It then evaluates the likelihood that this similarity occurs in all replicate groups, and ranks all the potential segments in order of decreasing likelihood of similarity. Any segment with a likelihood of similarity greater than the \verb'pcut' argument is discarded at this point. The function then filters the potential segments to form a non-overlapping set of segments by choosing the segment with the lowest likelihood of similarity and discarding any segments which overlap with this. By iteratively discarding overlapping segments, we form a non-overlapping set of segments which have a low likelihood of being similar to background (and are thus regions corresponding to a high density of aligned sequences).
 
 <<>>=
-segD <- similaritySeg(sDP, pcut = 0.1, estimatePriors = FALSE, verbose = TRUE, cl = cl)
+simSegs <- similaritySeg(sDP, pcut = 0.1, estimatePriors = FALSE, verbose = TRUE, cl = cl)
 @ 
 
 We finally acquire an annotated \verb'countData' object, with the annotations describing the co-ordinates of each segment.
 
 <<>>=
-  segD
+  simSegs
 @ 
 
 We can use this \verb'countData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
 
-<<fig = FALSE, label=segPlot, height = 10, width = 12>>=  
-plotGenome(aD, segD, chr = ">Chr1", limits = c(1, 1e5))
+<<fig = FALSE, label=segPlot, height = 10, width = 12>>=
+plotGenome(aD, simSegs, chr = ">Chr1", limits = c(1, 1e5))
 @
 
 \begin{figure}[!ht]

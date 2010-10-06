@@ -74,7 +74,17 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+datadir <- system.file("data", package = "segmentSeq")
+libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
+
+# Establish the library names and replicate structure.
+
+libnames <- c("SL9", "SL10", "SL26", "SL32")
+replicates <- c(1,1,2,2)
+
+# Process the files to produce an 'alignmentData' object.
+
+alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
 
 # Process the alignmentData object to produce a 'segData' object.
 

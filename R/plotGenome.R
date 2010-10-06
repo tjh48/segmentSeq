@@ -5,6 +5,8 @@ function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileu
   cTags <- aD@alignments
   cdata <- aD@data
 
+  if(!(chr %in% aD@chrs)) stop(paste("Chromosome", chr, "is not defined in the 'aD@chrs' slot."))
+  
   samples <- 1:ncol(aD@data)
 
   libnames = aD@libnames[samples]

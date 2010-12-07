@@ -1,5 +1,5 @@
 plotGenome <-
-function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileup", ...)
+function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", ...)
 {  
   libsizes = aD@libsizes
   cTags <- aD@alignments
@@ -24,12 +24,23 @@ function(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL, plotType = "pileu
           bps <- breakpoints[brlims,]
           bps$start <- sapply(bps$start, max, limits[1])
           bps$end <- sapply(bps$end, min, limits[2])
+
+          if(!is.null(sD@posteriors) & all(dim(sD@posteriors) != 0)) {
+            sapply(1:ncol(sD), function(ss) {
+              alpha = (exp(sD@posteriors[brlims,sD@replicates[ss]]))^4
+              alpha[is.na(alpha)] <- 0
+              brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                            (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                            (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = alpha)
+              rect(bps[,2], -.5 + ss, bps[,3], ss + .5, density = 2, brcols, angle = 0:5 * 180 / 7)
+            })
+          } else {
+            brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                          (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                          (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
+            rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 2, brcols, angle = 0:5 * 180/7)
+          }
           
-          brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                        (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                        (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
-          
-          rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 2, brcols, angle = 0:5 * 180/7)
           text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")
         }
     }

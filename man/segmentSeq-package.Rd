@@ -77,15 +77,6 @@ alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens,
 
 sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
 
-# Estimate prior parameters for the segData object.
-
-sDP <- getPriors(sD, type = "Pois", samplesize = 100, perSE = 0.1, maxit
-= 1000, cl = NULL)
-
-# Use the segData object to produce a segmentation of the genome.
-
-segD <- similaritySeg(sDP, pcut = 0.1, cl = NULL)
-
 }
 
 

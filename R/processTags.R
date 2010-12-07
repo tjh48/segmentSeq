@@ -105,7 +105,10 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     for(ii in 1:length(Tags))
       {
         uniqueTags <- rbind(uniqueTags, Tags[[ii]][,which(colnames(Tags[[ii]]) != "count"), drop = FALSE])
-        uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, as.factor(uniqueTags$tag), decreasing = TRUE),]
+        if(tagPresent) {
+          uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, as.factor(uniqueTags$tag), decreasing = TRUE),]
+        } else uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, decreasing = TRUE),]
+        
         uniqueTags <- uniqueTags[fastUniques(uniqueTags),]
         message(".", appendLF = FALSE)
       }
@@ -113,7 +116,9 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     Tags <- lapply(Tags, function(tagSet)
                    {
                      tagSet <- rbind(tagSet, data.frame(uniqueTags, count = 0))
-                     tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, as.factor(tagSet$tag), tagSet$count, decreasing = TRUE),]
+                     if(tagPresent) {
+                       tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, as.factor(tagSet$tag), tagSet$count, decreasing = TRUE),]
+                     } else tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, tagSet$count, decreasing = TRUE),]
                      tagSet <- tagSet[fastUniques(tagSet[,colnames(tagSet) != "count"]),]
                      tagSet
                    })

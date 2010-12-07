@@ -28,7 +28,7 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 
 <<results = hide, eval = FALSE>>=
   library(snow)
-cl <- makeCluster(4, "SOCK")
+cl <- makeCluster(8, "SOCK")
 @
 
 If \verb'snow' is not present, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
@@ -47,7 +47,6 @@ libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
 aD <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
-
 aD
 @ 
 
@@ -59,28 +58,40 @@ sD <- processAD(aD, maxgaplen = 500, cl = cl)
 sD
 @ 
 
-We then try and estimate prior parameters on the data with the \verb'getPriors' function. This function constructs a random sample of non-overlapping segments from the segData object \verb'sD' and uses the prior estimation functions from the package \verb'baySeq' to construct a set of prior parameters on the data. At present only the Poisson-Gamma method of prior estimation implemented by \verb'baySeq' is supported as alternative methods require excessive computational time. Additional options can be given to the \verb'getPriors' function to be passed on to the \verb'getPriors.Pois' method of the \verb'baySeq' library.
+We can now construct a segment map from these potential segments.
+
+\subsection*{Segmentation by Clustering}
+
+A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
 
 <<>>=
-  sDP <- getPriors(sD, type = "Pois", samplesize = 100, perSE = 0.5, maxit = 1000, cl = cl)
+clustSegs <- clustSeg(sD = sD, aD = aD, cl = cl)
+clustSegs
 @ 
 
-Having found estimates of the prior parameters of the data, we can then segment the genome based on the information in the \verb'segData' object. The function compares, for each replicate group, the likelihood that the number of alignments matching in a segment is similar to background, or that it is similar to the regions to the left and right of the segment. It then evaluates the likelihood that this similarity occurs in all replicate groups, and ranks all the potential segments in order of decreasing likelihood of similarity. Any segment with a likelihood of similarity greater than the \verb'pcut' argument is discarded at this point. The function then filters the potential segments to form a non-overlapping set of segments by choosing the segment with the lowest likelihood of similarity and discarding any segments which overlap with this. By iteratively discarding overlapping segments, we form a non-overlapping set of segments which have a low likelihood of being similar to background (and are thus regions corresponding to a high density of aligned sequences).
+\subsection*{Segmentation by Classification}
+
+A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'clustSegs' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identifying all
+potential segments in the with a posterior likelihood of being a segment
+greater than some value 'locsens' and containing no subregion with a posterior
+likelihood of being a null greater than 'nulsens'. We then greedily
+select the longest segments satisfying these criteria that do not
+overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-simSegs <- similaritySeg(sDP, pcut = 0.1, estimatePriors = FALSE, verbose = TRUE, cl = cl)
+classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, cl = cl)
+classSegs
 @ 
 
-We finally acquire an annotated \verb'countData' object, with the annotations describing the co-ordinates of each segment.
+By one of these methods, we finally acquire an annotated \verb'countData' object, with the annotations describing the co-ordinates of each segment.
 
-<<>>=
-  simSegs
-@ 
 
 We can use this \verb'countData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
 
 <<fig = FALSE, label=segPlot, height = 10, width = 12>>=
-plotGenome(aD, simSegs, chr = ">Chr1", limits = c(1, 1e5))
+  par(mfrow = c(2,1))
+plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 3e5))
+plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 3e5))
 @
 
 \begin{figure}[!ht]
@@ -94,12 +105,16 @@ plotGenome(aD, simSegs, chr = ">Chr1", limits = c(1, 1e5))
 \end{center}
 \end{figure}
 
-This \verb'countData' object can also be examined for differential expression with the \verb'baySeq' package.
+This \verb'countData' object can now be examined for differential expression with the \verb'baySeq' package.
 
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2010} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{Empirical Bayesian Methods For Identifying Patterns of Differential Expression in Count Data}. In submission. 2010.
-\bibitem{Hardcastle:2010a} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{Genome Segmentation From High-Throughput Sequencing Data.}. In submission. 2010.
+\bibitem{Hardcastle:2010a} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{Genome Segmentation From High-Throughput Sequencing Data.}. In preparation. 2010.
 
 \end{thebibliography}
 
 \end{document}
+
+
+
+

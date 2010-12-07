@@ -9,7 +9,7 @@
   \code{countData} object containing segment information.
 }
 \usage{
-plotGenome(aD, sD, chr = 1, limits = c(0, 10^4), samples = NULL,
+plotGenome(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL,
 plotType = "pileup", ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -19,7 +19,7 @@ plotType = "pileup", ...)
   }
   \item{sD}{
     A \code{\linkS4class{countData}} object (produced by the
-    \code{\link{similaritySeg}} function and therefore) containing
+    \code{\link{clustSeg}} or \code{\link{classifySeg}} function and therefore) containing
     appropriate annotation information. Can be omitted if this
     annotation is not known/required.
   }
@@ -51,7 +51,7 @@ Thomas J. Hardcastle
 }
 
 \seealso{
-\code{\linkS4class{alignmentData}}, \code{\link{similaritySeg}}
+\code{\linkS4class{alignmentData}}, \code{\link{clustSeg}}, \code{\link{classifySeg}}
 }
 \examples{
 

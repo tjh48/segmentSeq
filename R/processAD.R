@@ -74,7 +74,7 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
                 winTags <- chrTags[seltags,,drop = FALSE]
                 winTagData <- chrTagData[seltags,,drop = FALSE]
 
-                message(".")
+                message(".", appendLF = FALSE)
                 
                 x <- t(getCounts(segments = data.frame(chr = chrs[cc], start = winSegs[,1L], end = winSegs[,2L]),
                                  aD = new("alignmentData", libnames = libnames, libsizes = libsizes, alignments = winTags, data = winTagData, chrs = chrs[cc], chrlens = chrlens[cc], replicates = replicates), cl = cl))
@@ -87,7 +87,7 @@ function(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
                                              nrow = nrow(csegs), byrow = TRUE))
             
             if(verbose)
-              message("done!")
+              message("...done!")
             
             tD@segInfo <- rbind(tD@segInfo, data.frame(chr = I(chrs[cc]), csegs))
           } else if(verbose) message("No tags found for this chromosome.")

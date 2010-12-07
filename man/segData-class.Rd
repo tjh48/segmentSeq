@@ -51,8 +51,7 @@ Objects can be created by calls of the form \code{new("segData", ...,
   the \code{@data} slot.
 
   In almost all cases objects of this class should be produced by the
-  \code{\link{processAD}} function. The slot '@priors' should be filled
-  by using the \code{\link{getPriors}} function.
+  \code{\link{processAD}} function.
 }
 
 \section{Methods}{
@@ -64,8 +63,9 @@ Objects can be created by calls of the form \code{new("segData", ...,
 \seealso{
 \code{\link{processAD}}, the function that will most often be used to
 create objects of this class.
-\code{\link{getPriors}}, a function for filling the '@priors' slot of
-objects of this class.
+\code{\link{classifySeg}}, an empirical Bayesian method for defining a
+segmentation based on a segData object.
+
 }
 \examples{
 
@@ -92,14 +92,6 @@ alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens,
 sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
 
 # Estimate prior parameters for the segData object.
-
-sDP <- getPriors(sD, type = "Pois", samplesize = 100, perSE = 0.1, maxit
-= 1000, cl = NULL)
-
-# Use the segData object to produce a segmentation of the genome.
-
-segD <- similaritySeg(sDP, pcut = 0.1, cl = NULL)
-
 
 }
 \keyword{classes}

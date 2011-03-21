@@ -8,7 +8,8 @@
   for each replicate group.
 }
 \usage{
-lociLikelihoods(cD, aD, bootStraps = 5, inferNulls = TRUE, cl)
+lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 5, inferNulls = TRUE, nasZero =
+FALSE, cl)
 }
 \arguments{
   \item{cD}{
@@ -18,11 +19,16 @@ lociLikelihoods(cD, aD, bootStraps = 5, inferNulls = TRUE, cl)
   \item{aD}{
     An \code{\linkS4class{alignmentData}} object.
   }
+  \item{newCounts}{Should new counts be evaluated for the segmentation
+    map in 'cD' before calculating loci likelihoods? Defaults to FALSE}
   \item{bootStraps}{What level of bootstrapping should be carried out on
     the inference of posterior likelihoods? See
     \code{\link[baySeq:getLikelihoods.NB]{getLikelihoods.NB}}.}
   \item{inferNulls}{Should null regions be inferred from the gaps
     between segments defined by the 'cD' object?}
+  \item{nasZero}{If FALSE, any locus with a posterior likelihood 'NA' in
+    the existing segmentation map is treated as a null region for the
+    first bootstrap; If TRUE, it is ignored for the first bootstrap.}
   \item{cl}{
     A SNOW cluster object, or NULL. See Details.
 }
@@ -56,17 +62,18 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Process the alignmentData object to produce a 'segData' object.
 
-sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
+sD <- processAD(alignData, cl = NULL)
 
 # Use the segData object to produce a segmentation of the genome, but
 # without evaluating posterior likelihoods.
 
-segD <- clustSeg(sD = sD, aD = alignData, subRegion = data.frame(chr = ">Chr1", start =
-1, end = 1e5), getLikes = FALSE, cl = NULL)
+segD <- heuristicSeg(sD = sD, aD = alignData, subRegion = data.frame(chr = ">Chr1", start = 1, end = 1e5), getLikes = FALSE, cl = NULL)
 
 # Use the postSeg function to evaluate the posterior likelihoods directly.
 

@@ -28,7 +28,7 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 
 <<results = hide, eval = FALSE>>=
   library(snow)
-cl <- makeCluster(8, "SOCK")
+cl <- makeCluster(7, "MPI")
 @
 
 If \verb'snow' is not present, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
@@ -46,14 +46,14 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
-aD <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+aD <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE, gap = 200)
 aD
 @ 
 
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
 
 <<>>=
-sD <- processAD(aD, maxgaplen = 500, cl = cl)
+sD <- processAD(aD, cl = cl)
 
 sD
 @ 
@@ -65,7 +65,7 @@ We can now construct a segment map from these potential segments.
 A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
 
 <<>>=
-clustSegs <- clustSeg(sD = sD, aD = aD, cl = cl)
+clustSegs <- heuristicSeg(sD = sD, aD = aD, bimodality = TRUE, getLikes = TRUE, cl = cl)
 clustSegs
 @ 
 
@@ -79,7 +79,8 @@ select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, cl = cl)
+classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, cl = cl, lociCutoff = 0.9, nullCutoff = 0.9)
+classSegsLR <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, lR = TRUE, cl = cl)
 classSegs
 @ 
 

@@ -5,7 +5,7 @@
 \description{A function for extracting count data from an
   \code{'alignmentData'} object given a set of segments defined on the genome.}
 \usage{
-getCounts(segments, aD, cl)
+getCounts(segments, aD, preFiltered = FALSE, cl)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -16,6 +16,9 @@ getCounts(segments, aD, cl)
   \item{aD}{
     An \code{\link{alignmentData}} object.
   }
+  \item{preFiltered}{The function internally cleans the data; however,
+  this may not be needed and omitting these steps may save computational
+  time. See Details.}
   \item{cl}{A SNOW cluster object, or NULL. See Details.}
     
 }
@@ -26,10 +29,16 @@ getCounts(segments, aD, cl)
   places in that segment (and thus appears multiple times in the
   \code{alignmentData} object should count it only once.
 
+  If 'preFiltered = FALSE' then the function allows for missing (NA)
+  data in the segments, unordered segments and duplicated segments. If
+  the segment list has no missing data, is already ordered, and contains
+  no duplications, then computational time can be saved by setting
+  'preFiltered = TRUE'.
+  
   A \code{'cluster'} object (package: snow) is recommended for
   parallelisation of this function when using large data sets.
   Passing NULL to this variable will cause the function to run in non-parallel mode.
-
+  
   In general, this function will probably not be accessed by the user as
   the \code{\link{processAD}} function includes a call to 'getCounts' as
   part of the standard processing of an \code{alignmentData} object into
@@ -66,7 +75,9 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Get count data for three arbitrarily chosen segments on chromosome 1.
 

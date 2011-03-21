@@ -29,15 +29,18 @@ Objects can be created by calls of the form \code{new("segData", ...,
       potential segment.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes for each sample.}
+    \item{\code{chrs}:}{Object of class \code{"data.frame"}. Should contain
+      two columns 'chr' and 'len' giving the chromosome names and
+      lengths of each chromosome respectively.}
     \item{\code{replicates}:}{Object of class \code{"numeric"}. The
       replicate structure for the samples. This should be a vector of
       consecutive integers starting with 1.}
     \item{\code{priorType}:}{Character string describing the type of prior
-  information available in slot \code{'priors'}.}
+      information available in slot \code{'priors'}.}
     \item{\code{priors}:}{Prior parameter information, estimated from the
-    data (or otherwise acquired). See Details.}
+      data (or otherwise acquired). See Details.}
     \item{\code{segInfo}:}{Object of class \code{"data.frame"}. A data.frame containing the following columns;
-    'chr', 'start', 'end', 'leftSpace', 'rightSpace'. See Details.}
+      'chr', 'start', 'end', 'leftSpace', 'rightSpace'. See Details.}
   }
 }
 
@@ -85,11 +88,13 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Process the alignmentData object to produce a 'segData' object.
 
-sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
+sD <- processAD(alignData, cl = NULL)
 
 # Estimate prior parameters for the segData object.
 

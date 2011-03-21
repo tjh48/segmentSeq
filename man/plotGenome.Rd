@@ -10,7 +10,7 @@
 }
 \usage{
 plotGenome(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL,
-plotType = "pileup", ...)
+plotType = "pileup", plotDuplicated = FALSE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -19,7 +19,7 @@ plotType = "pileup", ...)
   }
   \item{sD}{
     A \code{\linkS4class{countData}} object (produced by the
-    \code{\link{clustSeg}} or \code{\link{classifySeg}} function and therefore) containing
+    \code{\link{heuristicSeg}} or \code{\link{classifySeg}} function and therefore) containing
     appropriate annotation information. Can be omitted if this
     annotation is not known/required.
   }
@@ -38,6 +38,10 @@ plotType = "pileup", ...)
     The manner in which the plot is created. Currently only
     \code{'plotType = pileup'} is supported.
   }
+  \item{plotDuplicated}{
+    If TRUE, then any duplicated sequence tags (i.e., sequence tags that
+    match to multiple places in the genome) in the 'aD' object will be plotted on
+    a negative scale for each sample. Defaults to FALSE.}
   \item{...}{
     Any additional graphical parameters for passing to \code{plot}.
   }
@@ -51,7 +55,7 @@ Thomas J. Hardcastle
 }
 
 \seealso{
-\code{\linkS4class{alignmentData}}, \code{\link{clustSeg}}, \code{\link{classifySeg}}
+\code{\linkS4class{alignmentData}}, \code{\link{heuristicSeg}}, \code{\link{classifySeg}}
 }
 \examples{
 
@@ -72,7 +76,9 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Plot the alignments to the genome on chromosome 1 between bases 1 and 10000
 

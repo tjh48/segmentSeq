@@ -9,22 +9,17 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
+processAD(aD, gap = NULL, verbose = TRUE, cl)
 }
 \arguments{
   \item{aD}{
     An \code{\linkS4class{alignmentData}} object.
   }
-  \item{maxgaplen}{
+  \item{gap}{
     The maximum gap between aligned tags that should be allowed in
     constructing potential segments. See Details.
   }
   
-  \item{maxloclen}{
-    The maximum length that any potential segment may be. If NULL
-    (recommended) no such limit exits. See Details.
-  }
-
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }
@@ -40,24 +35,17 @@ processAD(aD, maxgaplen = 500, maxloclen = NULL, verbose = TRUE, cl = cl)
     exists in the \code{\linkS4class{alignmentData}} object. A potential
     segment then exists from this start point to the end of all regions
     of overlapping alignments such that there is no region in the
-    segment of at least length 'maxgaplen' where no tag aligns. The
-    \code{'maxgaplen'} argument thus defines the maximum gap that can exist
+    segment of at least length 'gap'  where no tag aligns. The
+    \code{'gap'} argument thus defines the maximum gap that can exist
     between tags in a segment of high density of alignments. The number
-    of potential segments can therefore be increased by increasing this
+    of potential segments can therefore be increased by increasing this 
     limit, or (usually more usefully) decreased by decreasing this limit
     in order to save computational effort.
 
-    The number of potential segments may also be decreased by setting a
-    maximum length for any potential segments by setting the argument
-    'maxloclen'. The use of this argument is not recommended as it
-    appears to substatially degrade the results.
+    The 'gap' argument is now by default specified in the \code{\link{processTags}}
+    function used to create the 'aD' object, and so 'gap' can be left as
+    NULL providing this has been done.
 
-    The number of potential segments created can be further reduced by
-    setting a limit on the maximum length that any segment may be with
-    the \code{'maxloclen'} argument. The use of this limit tends to have
-    severe negative effects on the final segmentation results, however,
-    and is therefore not recommended.
-    
     A \code{'cluster'} object (package: snow) is recommended for
     parallelisation of this function when using large data sets.
     Passing NULL to this variable will cause the function to run in non-parallel mode.
@@ -73,7 +61,7 @@ Thomas J. Hardcastle
 \seealso{
   \code{\link{getCounts}}, which produces the count data for each
   potential segment.
-  \code{\link{clustSeg}} and \code{\link{classifySeg}}, which segment the
+  \code{\link{heuristicSeg}} and \code{\link{classifySeg}}, which segment the
   genome based on the \code{segData} object produced by this function
   \code{\linkS4class{segData}}
   \code{\linkS4class{alignmentData}}
@@ -96,11 +84,13 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Process the alignmentData object to produce a 'segData' object.
 
-sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
+sD <- processAD(alignData, gap = 200, cl = NULL)
 
 }
 \keyword{manip}

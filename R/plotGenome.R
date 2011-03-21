@@ -1,11 +1,12 @@
 plotGenome <-
-function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", ...)
+function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", plotDuplicated = FALSE, ...)
 {  
   libsizes = aD@libsizes
   cTags <- aD@alignments
   cdata <- aD@data
+  
 
-  if(!(chr %in% aD@chrs)) stop(paste("Chromosome", chr, "is not defined in the 'aD@chrs' slot."))
+  if(!(chr %in% aD@chrs$chr)) stop(paste("Chromosome", chr, "is not defined in the 'aD@chrs$chr' slot."))
   
   samples <- 1:ncol(aD@data)
 
@@ -44,8 +45,9 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup
           text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")
         }
     }
-      
-  segments(limits[1], samples, limits[2], samples, col = "cyan", lwd = 1)
+
+  if(plotDuplicated) segments(limits[1], samples, limits[2], samples, col = "cyan", lwd = 1) else segments(limits[1], samples - 0.45, limits[2], samples - 0.45, col = "cyan", lwd = 1)
+    
   segments(limits[1], samples - 0.5, limits[2], samples - 0.5, col = "black", lwd = 1)
   segments(limits[1], samples + 0.5, limits[2], samples + 0.5, col = "black", lwd = 1)
 
@@ -55,30 +57,41 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup
          {
            sTags <- cbind(cTags, count = cdata[,uu])[selTags,]
            
-           uTags <- sTags[sTags$duplicated == FALSE,]
-           uTags <- uTags[order(uTags$start, uTags$end),]
-           uTags <- uTags[uTags$count > 0,, drop = FALSE]
-           
-           dTags <- sTags[sTags$duplicated == TRUE,]
-           dTags <- dTags[order(dTags$start, dTags$end),]
-           dTags <- dTags[dTags$count > 0,, drop = FALSE]
-      
-           if(plotType == "pileup")
+           if(plotDuplicated)
              {
-               if(nrow(uTags) > 0)
+               uTags <- sTags[sTags$matches <= 1,]
+               uTags <- uTags[order(uTags$start, uTags$end),]
+               uTags <- uTags[uTags$count > 0,, drop = FALSE]
+               
+               dTags <- sTags[sTags$matches > 1,]
+               dTags <- dTags[order(dTags$start, dTags$end),]
+               dTags <- dTags[dTags$count > 0,, drop = FALSE]
+               
+               if(plotType == "pileup")
                  {
-                   cpu <- coverage(IRanges(start=rep(uTags$start, uTags$count), end=rep(uTags$end, uTags$count)))
+                   if(nrow(uTags) > 0)
+                     {
+                       cpu <- coverage(IRanges(start=rep(uTags$start, uTags$count), end=rep(uTags$end, uTags$count)))
+                       rectcpu <- cbind(start(cpu), 0, end(cpu), runValue(cpu))
+                     } else rectcpu <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
+                   if(nrow(dTags) > 0)
+                     {
+                       cpd <- coverage(IRanges(start=rep(dTags$start, dTags$count), end=rep(dTags$end, dTags$count)))
+                       rectcpd <- cbind(start(cpd), 0, end(cpd), runValue(cpd))
+                     } else rectcpd <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
+                   maxscale <- max(c(log(rectcpu[,4]), log(rectcpd[,4]), log(2))) * 2
+                   
+                   rect(rectcpu[rectcpu[,4] > 0,1], uu, rectcpu[rectcpu[,4] > 0,3], uu + log(rectcpu[rectcpu[,4] > 0,4]) / maxscale, col = "black")
+                   rect(rectcpd[rectcpd[,4] > 0,1], uu, rectcpd[rectcpd[,4] > 0,3], uu - log(rectcpd[rectcpd[,4] > 0,4]) / maxscale, col = "black")
+                 }
+             } else {
+               cpu <- coverage(IRanges(start=rep(sTags$start, sTags$count), end=rep(sTags$end, sTags$count)))
+               if(length(cpu) > 0)
+                 {
                    rectcpu <- cbind(start(cpu), 0, end(cpu), runValue(cpu))
-                 } else rectcpu <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
-               if(nrow(dTags) > 0)
-                 {
-                   cpd <- coverage(IRanges(start=rep(dTags$start, dTags$count), end=rep(dTags$end, dTags$count)))
-                   rectcpd <- cbind(start(cpd), 0, end(cpd), runValue(cpd))
-                 } else rectcpd <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
-               maxscale <- max(c(log(rectcpu[,4]), log(rectcpd[,4]), log(2))) * 2
-
-               rect(rectcpu[rectcpu[,4] > 0,1], uu, rectcpu[rectcpu[,4] > 0,3], uu + log(rectcpu[rectcpu[,4] > 0,4]) / maxscale, col = "black")
-               rect(rectcpd[rectcpd[,4] > 0,1], uu, rectcpd[rectcpd[,4] > 0,3], uu - log(rectcpd[rectcpd[,4] > 0,4]) / maxscale, col = "black")
+                   maxscale <- max(log(rectcpu[,4]), log(2)) / 0.9
+                   rect(rectcpu[rectcpu[,4] > 0,1], uu - 0.45, rectcpu[rectcpu[,4] > 0,3], uu - 0.45 + log(rectcpu[rectcpu[,4] > 0,4]) / maxscale, col = "black")
+                 }
              }
            NULL
          })

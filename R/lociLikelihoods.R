@@ -1,13 +1,18 @@
-lociLikelihoods <- function(cD, aD, bootStraps = 5, inferNulls = TRUE, cl)
+lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 5, inferNulls = TRUE, nasZero = FALSE, cl)
   {    
     loci <- cD@annotation
     lociLens <- loci$end - loci$start + 1
-    countLoci <- getCounts(aD = aD, segments = loci, cl = cl)
+    if(newCounts) countLoci <- getCounts(aD = aD, segments = loci, cl = cl) else countLoci <- cD@data
 
+    chrs <- aD@chrs
+    
     if(inferNulls)
       {
-        nulls <- matrix(unlist(sapply(aD@chrs, function(x) with(loci, rbind(x, c(1, end[chr == x] + 1), c(start[chr == x] - 1, aD@chrlens[aD@chrs == x]), c(NA, start[chr == x]), c(end[chr == x], NA))))), ncol = 5, byrow = TRUE)
-        nulls <- data.frame(chr = I(nulls[,1]), start = as.integer(nulls[,2]), end = as.integer(nulls[,3]), leftLocusExtend = nulls[,4], rightLocusExtend = nulls[,5])
+        nulls <- matrix(unlist(sapply(1:nrow(chrs), function(ii) with(loci, rbind(ii, c(1, end[chr == chrs$chr[ii]] + 1),
+                                                                                  c(start[chr == chrs$chr[ii]] - 1, chrs$len[chrs$chr == chrs$chr[ii]]),
+                                                                                  c(NA, start[chr == chrs$chr[ii]]),
+                                                                                  c(end[chr == chrs$chr[ii]], NA))))), ncol = 5, byrow = TRUE)
+        nulls <- data.frame(chr = chrs$chr[nulls[,1]], start = as.integer(nulls[,2]), end = as.integer(nulls[,3]), leftLocusExtend = nulls[,4], rightLocusExtend = nulls[,5])
         nullLens <- nulls$end - nulls$start + 1
         nulls[nullLens <= 0 | is.na(nullLens),] <- NA
         nullLens[nullLens <= 0 | is.na(nullLens)] <- NA
@@ -23,27 +28,41 @@ lociLikelihoods <- function(cD, aD, bootStraps = 5, inferNulls = TRUE, cl)
                     start = c(nulls$start, cD@annotation$start),
                     end = c(nulls$end, cD@annotation$end),
                     segType = c(rep("null", nrow(nulls)), rep("locus", nrow(cD)))))
+        posteriors = rbind(matrix(-Inf, nrow = nrow(countNulls), ncol = length(unique(aD@replicates))), cD@posteriors)
+        
 
         mD <- mD[!is.na(mD@seglens),]    
         mD@groups <- list(mD@replicates)
         mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
         
-        locW <- as.numeric(mD@annotation$segType[mD@priors$sampled[,1]] == "null")
-        
-        lociWeights <- sapply(unique(mD@replicates), function(rep, locW) {
-          
+        lociWeights <- sapply(unique(mD@replicates), function(rep) {
+          locW <- as.numeric(mD@annotation$segType[mD@priors$sampled[,1]] == "null")
+          locW[mD@annotation$segType[mD@priors$sampled[,1]] == "locus"] <- 1 - exp(posteriors[mD@priors$sampled[mD@annotation$segType[mD@priors$sampled[,1]] == "locus",1],rep])
+          locW <- list(list(locW), list(1 - locW))
+
+          if(nasZero) {
+            locW <- lapply(locW, function(x) {
+              y <- x[[1]]
+              y[is.na(y)] <- 0
+              list(y)
+            })} else locW <- lapply(1:2, function(ii) {
+              y <- locW[[ii]][[1]]
+              y[is.na(y)] <- as.numeric(ii == 1)
+              list(y)
+            })
+            
           message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
           repD <- mD[,mD@replicates == rep]
           repD@replicates <- rep(1, ncol(repD))
           repD@groups <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[rep]]), list(mD@priors$priors[[1]][[rep]]))
-          repD@priors$weights <- list(list(locW), list(1 - locW))
+          repD@priors$weights <- locW
           
-          repD <- getLikelihoods.NB(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
+          repD <- getLikelihoods.NB(cD = repD, bootStraps = 1, verbose = FALSE, cl = cl)
           
           message("done!", appendLF = TRUE)
           repD@posteriors[,2]
-        }, locW = locW)
+        })
 
       } else {
         mD <- cD

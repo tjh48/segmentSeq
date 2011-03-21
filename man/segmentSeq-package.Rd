@@ -71,11 +71,13 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Process the alignmentData object to produce a 'segData' object.
 
-sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
+sD <- processAD(alignData, cl = NULL)
 
 }
 

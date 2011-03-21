@@ -8,6 +8,7 @@
 \alias{dim,alignmentData-method}
 \alias{initialize,alignmentData-method}
 \alias{show,alignmentData-method}
+\alias{cbind,alignmentData-method}
 
 \title{Class "alignmentData"}
 \description{The \code{alignmentData} class records information about
@@ -30,11 +31,9 @@ Objects can be created by calls of the form \code{new("alignmentData",
       names of the libraries for which alignment data exists.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes (see Details) for each of the libraries.}
-    \item{\code{chrs}:}{Object of class \code{"character"}. The
-      chromosome names. Must be given as \code{"character"} to
-      accomodate non-standard chromosome names (such as "X"}
-    \item{\code{chrlens}:}{Object of class \code{"numeric"}. The
-      lengths of each of the chromosomes defined by slot \code{chrs}.}
+    \item{\code{chrs}:}{Object of class \code{"data.frame"}. Should contain
+      two columns 'chr' and 'len' giving the chromosome names and
+      lengths of each chromosome respectively.}
     \item{\code{replicates}:}{Object of class \code{"numeric"}.
       Replicate information for each of the libraries. See Details.}
   }
@@ -77,7 +76,7 @@ Objects can be created by calls of the form \code{new("alignmentData",
 }
 
 \author{Thomas J. Hardcastle}
-\note{Methods 'new', 'dim', '[' and 'show' have been defined for these classes.}
+\note{Methods 'new', 'dim', '[', 'cbind' and 'show' have been defined for these classes.}
 
 \seealso{
   \code{\link{processTags}}, which will produce a \code{'alignmentData'}
@@ -103,7 +102,9 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens)
 
 }
 \keyword{classes}

@@ -11,7 +11,8 @@ these to classify potential segments as either segments or nulls in
 order to define a new (and improved) segment map.
 }
 \usage{
-classifySeg(sD, cD, aD, lociCutoff = 0.5, nullCutoff = 0.9, subRegion = NULL, getLikes = TRUE, cl) 
+classifySeg(sD, cD, aD, lociCutoff = 0.5, nullCutoff = 0.9, subRegion =
+NULL, getLikes = TRUE, lR = FALSE, cl, ...) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,15 +31,19 @@ classifySeg(sD, cD, aD, lociCutoff = 0.5, nullCutoff = 0.9, subRegion = NULL, ge
   \item{nullCutoff}{The minimum posterior likelihood of being a null for
     a region to be treated as a null.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
-    the genome to be segmented. If NULL (default), the whole genome is segmented.}
+    the genome to be segmented. If NULL (default), the whole genome is
+    segmented.}
   \item{getLikes}{Should posterior likelihoods for the new segmented
     genome (loci and nulls) be assessed?}
+  \item{lR}{If TRUE, locus and null calls are made on the basis of
+    likelihood ratios rather than posterior likelihoods. Not recommended.}
   \item{cl}{A SNOW cluster object, or NULL. See Details.}
+  \item{...}{Any additional parameters to be passed to \code{\link{heuristicSeg}}.}
 }
 \details{
 This function acquires empirical distributions of sequence tag density
 from the segmentation map defined by the 'cD' argument (if 'cD = NULL' then the
-\code{\link{clustSeg}} function is used to define a segmentation map. It
+\code{\link{heuristicSeg}} function is used to define a segmentation map. It
 uses these empirical distributions to acquire posterior likelihoods on
 each potential segment being either a true segment or a null
 region. These posterior likelihoods are then used to define the segment map.
@@ -56,7 +61,7 @@ Thomas J. Hardcastle
 }
 
 \seealso{
-  \code{\link{clustSeg}}, a fast heuristic alternative to this function.
+  \code{\link{heuristicSeg}} fast heuristic alternative to this function.
   \code{\link{plotGenome}}, a function for plotting the alignment of
   tags to the genome (together with the segments defined by this
   function).
@@ -80,11 +85,13 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 # Process the alignmentData object to produce a 'segData' object.
 
-sD <- processAD(alignData, maxgaplen = 500, cl = NULL)
+sD <- processAD(alignData, cl = NULL)
 
 # Use the classifySeg function on the segData object to produce a postSeg object.
 

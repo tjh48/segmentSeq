@@ -161,8 +161,12 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
     for(chr in unique(coord$chr))
       {
         whchr <- which(coord$chr == as.character(chr))
-        overlaps[coordord[whchr]] <- chrOverlaps[[which(unique(coord$chr) == chr)]]
+        overlaps[coordord[whchr]] <- chrOverlaps[[which(unique(coord$chr) == chr)]]        
       }
-    if(whichOverlaps) return(overlaps) else return(unlist(overlaps))
+    if(whichOverlaps)
+      {
+        overlaps <- lapply(overlaps, function(x) if(all(is.na(x))) return(integer(0)) else return(x))        
+        return(overlaps)
+      } else return(unlist(overlaps))
   }
 

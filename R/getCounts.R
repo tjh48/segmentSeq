@@ -1,6 +1,6 @@
 
 getCounts <-
-function(segments, aD, cl)
+function(segments, aD, preFiltered = FALSE, cl)
   {     
     if(!is.null(cl))
       {
@@ -18,21 +18,24 @@ function(segments, aD, cl)
       }
 
     alignments <- aD@alignments
-    if("tag" %in% names(alignments)) alignments$tag <- as.integer(as.factor(alignments$tag)) else alignments$tag <- 1:nrow(alignments)
+    if("tag" %in% names(alignments) && class(aD@alignments$tag) != "integer") alignments$tag <- as.integer(as.factor(alignments$tag)) else alignments$tag <- 1:nrow(alignments)
     cdata <- aD@data
     
-    segnas <- is.na(segments$chr) | is.na(segments$start) | is.na(segments$end)
-    segments <- segments[!segnas,]
+    if(!preFiltered)
+      {
+        segnas <- is.na(segments$chr) | is.na(segments$start) | is.na(segments$end)
+        segments <- segments[!segnas,]
 
-    rodering <- order(segments$chr, segments$start, segments$end)
-    rodsegs <- segments[rodering,, drop = FALSE]
-    dup <- which(!duplicated(rodsegs))
-    reps <- c(dup[-1], nrow(rodsegs) + 1) - c(dup)
-    redsegs <- rodsegs[dup,]
-    
+        rodering <- order(segments$chr, segments$start, segments$end)
+        rodsegs <- segments[rodering,, drop = FALSE]
+        dup <- which(!duplicated(rodsegs))
+        reps <- c(dup[-1], nrow(rodsegs) + 1) - c(dup)
+        redsegs <- rodsegs[dup,]
+      } else redsegs <- segments
 
     countsmat <- unlist(lapply(unique(redsegs$chr), function(cc)
                                {
+                                 whchr <- alignments$chr == cc
                                  createIntervals <- function(inCluster = FALSE)
                                    {
                                      cummaxEnd <- cummax(dupTags$end)
@@ -46,13 +49,15 @@ function(segments, aD, cl)
 
                                  
                                  chrsegs <- data.frame(start = redsegs$start, end = redsegs$end)[redsegs$chr == cc,,drop = FALSE]
-                                 chralignments <- subset(alignments, subset = alignments$chr == cc, select = c(start, end, tag))
-                                 chrdata <- subset(cdata, subset = alignments$chr == cc)
+                                 chrdata <- subset(cdata, subset = whchr)
+
+                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c(start, end, tag, chunkDup)) else {
+                                     chralignments <- subset(alignments, subset = whchr, select = c(start, end, tag))
+                                     chralignments <- cbind(chralignments, chunkDup = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
+                                   }
                                  
-                                 chralignments <- cbind(chralignments, duplicated = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
-                                 
-                                 nondupTags <- subset(chralignments, subset = chralignments$duplicated == FALSE, select = c(start, end))
-                                 nondupData <- chrdata[chralignments$duplicated == FALSE,,drop = FALSE]
+                                 nondupTags <- subset(chralignments, subset = chralignments$chunkDup == FALSE, select = c(start, end))
+                                 nondupData <- chrdata[chralignments$chunkDup == FALSE,,drop = FALSE]
                                  
                                  if(nrow(nondupTags) > 0)
                                    {
@@ -66,11 +71,11 @@ function(segments, aD, cl)
                                      startsBelow <- findInterval(chrsegs[,1] - 0.5, nondupTags$start[ordTags])
                                      
                                      chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
-                                     chrUC[chrUC < 0] <- 0
+                                     chrUC[chrUC < 0] <- 0L
                                    } else chrUC <- matrix(0L, ncol = ncol(chrdata), nrow = nrow(chrsegs))
                                  
-                                 dupTags <- subset(chralignments, subset = chralignments$duplicated == TRUE, select = c(start, end, tag))
-                                 dupData <- chrdata[chralignments$duplicated == TRUE,, drop = FALSE]
+                                 dupTags <- subset(chralignments, subset = chralignments$chunkDup == TRUE, select = c(start, end, tag))
+                                 dupData <- chrdata[chralignments$chunkDup == TRUE,, drop = FALSE]
                                  
                                  if(nrow(dupTags) > 0)
                                    {
@@ -86,7 +91,7 @@ function(segments, aD, cl)
                                      
                                      countNonUniques <- function(segii)
                                        {
-                                         if(fIns[segii,1L] > fIns[segii,2L]) return(rep(0, ncol(dupData)))
+                                         if(fIns[segii,1L] > fIns[segii,2L]) return(rep(0L, ncol(dupData)))
                                          seltags <- fIns[segii,1L]:fIns[segii,2L]
                                          tags <- dupTags[seltags,, drop = FALSE]
                                          seltags <- seltags[tags$start <= chrsegs$end[segii] & tags$end >= chrsegs$start[segii]]
@@ -103,11 +108,14 @@ function(segments, aD, cl)
                                  t(chrUC + t(chrNC))
                                }))
     countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
-    countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
-    countsmat[order(rodering),, drop = FALSE]
 
-    countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))
-    countsnas[!segnas,] <- countsmat
+    if(!preFiltered) {
+      countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
+      countsmat[order(rodering),, drop = FALSE]
+
+      countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))
+      countsnas[!segnas,] <- countsmat
+    } else countsnas <- countsmat
 
     countsnas
   }

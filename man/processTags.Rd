@@ -12,7 +12,7 @@ This function takes files in a text format with defined columns
 }
 \usage{
 processTags(files, dir = ".", replicates, libnames, chrs, chrlens, cols, header =
-TRUE, verbose = TRUE, ...)
+TRUE, gap = 200, verbose = TRUE, ...)
 }
 \arguments{
   \item{files}{
@@ -39,7 +39,10 @@ TRUE, verbose = TRUE, ...)
   
   \item{header}{Do the input files have a header line? Defaults
     to TRUE. See Details.}
-  
+  \item{gap}{
+    The maximum gap between aligned tags that should be allowed in
+    constructing potential segments. See Details.
+  }
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }
@@ -116,7 +119,9 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(libfiles, dir = datadir, replicates, libnames, chrlens, chrs = c(">Chr1", ">Chr2"), header = TRUE)
+alignData <- processTags(file = libfiles, dir = datadir, replicates =
+replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
+chrlens, gap = 200)
 
 }
 \keyword{files}

@@ -1,4 +1,4 @@
-B1;1614;0cPackage: segmentSeq
+Package: segmentSeq
 Type: Package
 Title: Methods for identifying small RNA loci from high-throughput sequencing data
 Version: 1.3.11

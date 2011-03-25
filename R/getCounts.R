@@ -111,7 +111,7 @@ function(segments, aD, preFiltered = FALSE, cl)
 
     if(!preFiltered) {
       countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
-      countsmat[order(rodering),, drop = FALSE]
+      countsmat <- countsmat[order(rodering),, drop = FALSE]
 
       countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))
       countsnas[!segnas,] <- countsmat

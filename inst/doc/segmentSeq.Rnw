@@ -80,7 +80,6 @@ overlap with any other such segments in defining our segmentation map.
 
 <<>>=
 classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, cl = cl, lociCutoff = 0.9, nullCutoff = 0.9)
-classSegsLR <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, lR = TRUE, cl = cl)
 classSegs
 @ 
 

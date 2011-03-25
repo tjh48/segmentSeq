@@ -1,4 +1,4 @@
-lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 5, inferNulls = TRUE, nasZero = FALSE, cl)
+lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, nasZero = FALSE, cl)
   {    
     loci <- cD@annotation
     lociLens <- loci$end - loci$start + 1
@@ -44,11 +44,11 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 5, inferNull
             locW <- lapply(locW, function(x) {
               y <- x[[1]]
               y[is.na(y)] <- 0
-              list(y)
+              list(y * mD@priors$weights)
             })} else locW <- lapply(1:2, function(ii) {
               y <- locW[[ii]][[1]]
               y[is.na(y)] <- as.numeric(ii == 1)
-              list(y)
+              list(y * mD@priors$weights)
             })
             
           message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
@@ -58,7 +58,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 5, inferNull
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[rep]]), list(mD@priors$priors[[1]][[rep]]))
           repD@priors$weights <- locW
           
-          repD <- getLikelihoods.NB(cD = repD, bootStraps = 1, verbose = FALSE, cl = cl)
+          repD <- getLikelihoods.NB(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
           
           message("done!", appendLF = TRUE)
           repD@posteriors[,2]

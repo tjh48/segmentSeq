@@ -8,8 +8,8 @@
   for each replicate group.
 }
 \usage{
-lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 5, inferNulls = TRUE, nasZero =
-FALSE, cl)
+lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 1,
+                inferNulls = TRUE, nasZero = FALSE, cl)
 }
 \arguments{
   \item{cD}{
@@ -73,7 +73,9 @@ sD <- processAD(alignData, cl = NULL)
 # Use the segData object to produce a segmentation of the genome, but
 # without evaluating posterior likelihoods.
 
-segD <- heuristicSeg(sD = sD, aD = alignData, subRegion = data.frame(chr = ">Chr1", start = 1, end = 1e5), getLikes = FALSE, cl = NULL)
+segD <- heuristicSeg(sD = sD, aD = alignData,
+    subRegion = data.frame(chr= ">Chr1", start = 1, end = 1e5),
+    getLikes = FALSE, cl = NULL) 
 
 # Use the postSeg function to evaluate the posterior likelihoods directly.
 

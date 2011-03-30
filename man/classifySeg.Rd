@@ -11,7 +11,7 @@ these to classify potential segments as either segments or nulls in
 order to define a new (and improved) segment map.
 }
 \usage{
-classifySeg(sD, cD, aD, lociCutoff = 0.5, nullCutoff = 0.9, subRegion =
+classifySeg(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion =
 NULL, getLikes = TRUE, lR = FALSE, cl, ...) 
 }
 %- maybe also 'usage' for other objects documented here.

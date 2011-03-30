@@ -10,7 +10,7 @@
 }
 \usage{
 plotGenome(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL,
-plotType = "pileup", plotDuplicated = FALSE, ...)
+plotType = "chunk", plotDuplicated = FALSE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

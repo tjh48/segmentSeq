@@ -41,7 +41,7 @@ There is a convenience function, \verb'processTags' which is able to read in tab
 <<>>=
 chrlens <- c(1e6, 5e5)
 
-datadir <- system.file("data", package = "segmentSeq")
+datadir <- system.file("extdata", package = "segmentSeq")
 libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)

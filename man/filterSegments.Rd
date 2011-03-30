@@ -62,12 +62,12 @@ chrlens <- c(2e6, 1e6)
 
 # Define the files containing sample information.
 
-datadir <- system.file("data", package = "segmentSeq")
+datadir <- system.file("extdata", package = "segmentSeq")
 libfiles <- dir(datadir, pattern = ".txt", full.names = TRUE)
 
 # Establish the library names and replicate structure.
 
-datadir <- system.file("data", package = "segmentSeq")
+datadir <- system.file("extdata", package = "segmentSeq")
 libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 
 # Establish the library names and replicate structure.

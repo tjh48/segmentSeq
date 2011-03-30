@@ -37,8 +37,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
 
-    files <- paste(dir, files, sep = "/")
-
+    #files <- paste(dir, files, sep = "/")
+    files <- file.path(dir, files)
     if(class(chrs) != "character")
       stop("'chrs' must be of type 'character'.")
 

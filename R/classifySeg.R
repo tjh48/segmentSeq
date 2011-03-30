@@ -30,7 +30,7 @@ getLocLikelihoods <- function(pcD, subset, cl = cl)
         {
           seglen <- rep(seglen, length(cts))
 
-          wsInfo <- which(numintSamp[,1] == number)
+#          wsInfo <- which(numintSamp[,1] == number)
 #          weights[numintSamp[wsInfo,2],] <- weights[numintSamp[wsInfo,2],] - numintSamp[wsInfo,-(1:2)]
 
 #          likes <- rowSums(
@@ -113,7 +113,7 @@ getLocLikelihoods <- function(pcD, subset, cl = cl)
   }
     
 
-classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, getLikes = TRUE, lR = FALSE, cl, ...) 
+classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...) 
 {  
     fastUniques <- function(x){
       if (nrow(x) > 1) {
@@ -161,15 +161,15 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
   subLoc <- which(subLoc)[filterSegments(potlociD@annotation[subLoc,], runif(sum(subLoc)))]
   prepD <- potlociD[subLoc,]
   prepD@groups <- list(prepD@replicates)
-  prepD <- getPriors.NB(prepD, verbose = FALSE, samplesize = length(subLoc), cl = cl)
-  weights <- cD@posteriors[unlist(getOverlaps(coordinates = prepD@annotation[prepD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),]
+    prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = FALSE, cl = cl)
+    weights <- cD@posteriors[unlist(getOverlaps(coordinates = prepD@annotation[prepD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),]
   repWeights <- sapply(unique(potlociD@replicates), function(rep) {
     repWeights <- weights[,rep]
     repWeights[rowSums(prepD@data[prepD@priors$sampled[,1], potlociD@replicates == rep, drop = FALSE]) == 0] <- NA
     repWeights
   })
 
-  weightFactors <- prepD@priors$weights
+    weightFactors <- prepD@priors$weights
     priors <- prepD@priors$priors    
     sampled <- prepD@priors$sampled
     sampled[,1] <- subLoc[sampled[,1]]
@@ -294,7 +294,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
       curNullsWithin <- constructNulls(withinLoc, lociPD@annotation, withinOnly = TRUE)
       curNullsWithin <- curNullsWithin[filterSegments(curNullsWithin@annotation, runif(nrow(curNullsWithin))),]
       curNullsWithin@groups <- list(curNullsWithin@replicates)
-      curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = nrow(curNullsWithin), cl = cl)
+      curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, cl = cl)
       curNullsWithinWeights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))#cD@posteriors[unlist(getOverlaps(curNullsWithin@annotation[curNullsWithin@priors$sampled[,1],], cD@annotation, overlapType = "within", cl = cl)),]
 
       potnullD <- constructNulls(withinLoc, lociPD@annotation, withinOnly = FALSE)
@@ -315,7 +315,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
           nullPriors@posteriors <- matrix(nrow = 0, ncol = 0)
           nullPriors <- nullPriors[,nullPriors@replicates == rep]
           nullPriors@replicates <- rep(1, ncol(nullPriors))
-          nullPriors <- getPriors.NB(nullPriors, samplesize = nrow(nullPriors), verbose = FALSE, cl = cl)
+          nullPriors <- getPriors.NB(nullPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
           
           repD@priors$priors <- list(list(nullPriors@priors$priors[[1]][[1]]), list(curNullsWithin@priors$priors[[1]][[rep]]))
           repD@priors$sampled <- list(list(nullPriors@priors$sampled), list(curNullsWithin@priors$sampled))

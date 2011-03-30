@@ -37,8 +37,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
 
-    #files <- paste(dir, files, sep = "/")
-    files <- file.path(dir, files)
+    files <- paste(dir, files, sep = "/")
+
     if(class(chrs) != "character")
       stop("'chrs' must be of type 'character'.")
 
@@ -147,7 +147,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                            return(tagSet$count)
                                          }))
 
-    if(tagPresent) libsizes <- colSums(tagCounts[!duplicated(uniqueTags$tag),]) else libsizes <- colSums(tagCounts)
+    if(tagPresent) libsizes <- colSums(tagCounts[!duplicated(uniqueTags$tag),,drop = FALSE]) else libsizes <- colSums(tagCounts)
     
     data <- tagCounts
 

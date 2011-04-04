@@ -116,7 +116,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     message("Processing files...", appendLF = FALSE)
     
     uniqueTags <- do.call("rbind", Tags)
-    uniqueTags <- subset(uniqueTags, select = c(chr, start, end, tag))
+    uniqueTags <- subset(uniqueTags, select = c("chr", "start", "end", "tag"))
 
 
     gc()
@@ -138,7 +138,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     
     tagCounts <- do.call("cbind", lapply(Tags, function(tagSet)
                                          {
-                                           tagSet <- rbind(tagSet, data.frame(subset(uniqueTags, select = c(chr, start, end, tag)), count = 0L))
+                                           tagSet <- rbind(tagSet, data.frame(subset(uniqueTags, select = c("chr", "start", "end", "tag")), count = 0L))
                                            if(tagPresent) {
                                              tagSet <- tagSet[order(as.factor(tagSet$tag), as.factor(tagSet$chr), tagSet$start, tagSet$end, -tagSet$count, decreasing = FALSE),]
                                            } else tagSet <- tagSet[order(as.factor(tagSet$chr), tagSet$start, tagSet$end, -tagSet$count, decreasing = FALSE),]

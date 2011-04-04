@@ -1,4 +1,4 @@
-processPosteriors <- function(lociPD, nullPD, chrs, aD, lociCutoff = 0.5, nullCutoff = 0.9, getLikes = TRUE, cl)
+.processPosteriors <- function(lociPD, nullPD, chrs, aD, lociCutoff = 0.5, nullCutoff = 0.9, getLikes = TRUE, cl)
   {
     if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@posteriors >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
     if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@posteriors >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD

@@ -33,13 +33,13 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "chunk"
               brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                             (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                             (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = alpha)
-              rect(bps[,2], -.5 + ss, bps[,3], ss + .5, density = 2, brcols, angle = 0:5 * 180 / 7)
+              rect(bps[,2], -.5 + ss, bps[,3], ss + .5, density = 0, col = brcols, border = brcols, angle = 0:5 * 180 / 7)
             })
           } else {
             brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                           (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                           (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
-            rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 2, brcols, angle = 0:5 * 180/7)
+            rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = 0, col = brcols, border = brcols, angle = 0:5 * 180/7)
           }
           
           text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")
@@ -97,11 +97,12 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "chunk"
   } else if(plotType == "chunk") {
     pAD <- processAD(aD[selTags,], gap = 0, cl = NULL, verbose = FALSE)
     rectcpu <- pAD@data / (pAD@segInfo$end - pAD@segInfo$start + 1)
-    rectcpu[rectcpu < 1 & rectcpu > 0] <- round(rectcpu[rectcpu < 1 & rectcpu > 0])
-    maxscale <- apply(rbind(log(2), log(rectcpu)), 2, max) / 0.9
+    #rectcpu[rectcpu < 1 & rectcpu > 0] <- round(rectcpu[rectcpu < 1 & rectcpu > 0])
+    maxscale <- apply(rectcpu, 2, max) / 0.9
     sapply(1:length(samples), function(uu) {
       samp <- samples[uu]
-      rect(pAD@segInfo$start[rectcpu[,samp] > 0], uu - 0.45, pAD@segInfo$end[rectcpu[,samp] > 0], uu - 0.45 + log(rectcpu[rectcpu[,samp] > 0, samp]) / maxscale[samp], col = "black")
+      if(any(rectcpu[,samp] > 0))
+        rect(pAD@segInfo$start[rectcpu[,samp] > 0], uu - 0.45, pAD@segInfo$end[rectcpu[,samp] > 0], uu - 0.45 + (rectcpu[rectcpu[,samp] > 0, samp]) / maxscale[samp], col = "black")
     })
   }
   invisible(NULL)

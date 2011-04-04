@@ -40,7 +40,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     potlociD@replicates <- sD@replicates
     potlociD@seglens <- matrix(with(sD@segInfo[selLoc,], end - start + 1), ncol = 1)
     potlociD@data <- sD@data[selLoc,]
-    potlociD@annotation <- subset(sD@segInfo, subset = selLoc, select = c(chr, start, end))
+    potlociD@annotation <- subset(sD@segInfo, subset = selLoc, select = c("chr", "start", "end"))
     potlociD@posteriors <- log(locM[selLoc,,drop = FALSE])
 
     emptyNulls <- with(sD@segInfo, data.frame(chr = chr[dupStarts], start = start[dupStarts] - leftSpace[dupStarts], end = start[dupStarts] - 1))
@@ -152,6 +152,6 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     
     gc()
     
-    seg <- processPosteriors(potlociD, potnullD, chrs = sD@chrs, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
+    seg <- .processPosteriors(potlociD, potnullD, chrs = sD@chrs, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
     seg
   }

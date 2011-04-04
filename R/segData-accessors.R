@@ -1,34 +1,35 @@
-updateSD <- function(nsD, aD, cl = NULL)
-  {
-    if(is.unsorted(nsD@segInfo$chr)) nsD <- nsD[order(nsD@segInfo$chr),]
-    updateSegs <- which(rowSums(is.na(nsD@data)) > 0)
-    sI <- nsD@segInfo[updateSegs,]
-    nsD@data[updateSegs,]    <- do.call("rbind",
-                                     lapply(unique(sI$chr), function(chr) {
-                                      chrAD <- aD[aD@alignments$chr == chr,]
-                                      crsi <- sI[sI$chr == chr,]
-                                      gap <- which(abs(diff(crsi$start)) > 1e4)
-                                      splits <- cbind(c(1, gap + 1), c(gap, nrow(crsi)))
-                                      do.call("rbind", lapply(1:nrow(splits), function(ii) {
-                                        x <- as.numeric(splits[ii,])
-                                        raD <- chrAD[chrAD@alignments$start >= crsi$start[x[1]] & chrAD@alignments$end <= crsi$end[x[2]],]
-                                        getCounts(crsi[x[1]:x[2],], raD, cl = cl)
-                                      }))
-                                    }))
-    nsD
-  }
-        
+mergeSD <- function(..., aD, replicates, gap = 200, cl = NULL) {
 
-mergeSD <- function(..., replicates, maxgaplen = 500) {
+  updateSD <- function(nsD, aD, cl = NULL)
+    {
+      if(is.unsorted(nsD@segInfo$chr)) nsD <- nsD[order(nsD@segInfo$chr),]
+      updateSegs <- which(rowSums(is.na(nsD@data)) > 0)
+      sI <- nsD@segInfo[updateSegs,]
+      nsD@data[updateSegs,]    <- do.call("rbind",
+                                          lapply(unique(sI$chr), function(chr) {
+                                            chrAD <- aD[aD@alignments$chr == chr,]
+                                            crsi <- sI[sI$chr == chr,]
+                                            gap <- which(abs(diff(crsi$start)) > 1e4)
+                                            splits <- cbind(c(1, gap + 1), c(gap, nrow(crsi)))
+                                            do.call("rbind", lapply(1:nrow(splits), function(ii) {
+                                              x <- as.numeric(splits[ii,])
+                                              raD <- chrAD[chrAD@alignments$start >= crsi$start[x[1]] & chrAD@alignments$end <= crsi$end[x[2]],]
+                                              getCounts(crsi[x[1]:x[2],], raD, cl = cl)
+                                            }))
+                                          }))
+      nsD
+    }
+
+  
             binds <- list(...)
-                                        #  maxgaplen <- 500
+                                        #  gap <- 500
             maxloclen <- Inf
             
             fastUniques <- function(x)
               if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
             
             binds <- lapply(binds, function(x) x[with(x@segInfo, order(as.factor(chr), start, end)),])
-            subinds <- lapply(binds, function(x) subset(x@segInfo, subset = fastUniques(subset(x@segInfo, select = c(chr, start))), select = c(chr, start, end)))
+            subinds <- lapply(binds, function(x) subset(x@segInfo, subset = fastUniques(subset(x@segInfo, select = c("chr", "start"))), select = c("chr", "start", "end")))
             mergeSegs <- do.call("rbind", subinds)
             
             chrs <- unique(as.character(mergeSegs$chr))
@@ -59,7 +60,7 @@ mergeSD <- function(..., replicates, maxgaplen = 500) {
                                                       startstop <- cbind(start = as.integer(c(min(chrmax[,1L]), chrmax[ch + 1L,1L])),
                                                                          end = as.integer(c(chrmax[ch,2L], max(chrmax[,2L]))))
                                                     } else if(nrow(chrSS) == 1) startstop <- cbind(starts = chrSS$start, ends = chrSS$end) else startstop <- matrix(nrow = 0, ncol = 0)   
-                                                  gaps <- c(which(startstop[-nrow(startstop),2L] < startstop[-1L, 1L] - maxgaplen), nrow(startstop))
+                                                  gaps <- c(which(startstop[-nrow(startstop),2L] < startstop[-1L, 1L] - gap), nrow(startstop))
                                                   
                                         #          if(verbose)
                                         #            message("Defining potential subsegments...", appendLF = FALSE)
@@ -101,7 +102,7 @@ mergeSD <- function(..., replicates, maxgaplen = 500) {
                   xstarts <- findInterval(csegs$start - 0.5, chrx@segInfo$start) + 1
                   xstarting <- chrx@segInfo$start[xstarts]
                   xregs <- cbind(xstarting, xending, 1:nrow(csegs), NA, deparse.level = 0)[is.na(xdata[,1]),]
-                  xlink <- cbind(as.matrix(subset(chrx@segInfo, select = c(start, end))), NA, 1:nrow(chrx), deparse.level = 0)
+                  xlink <- cbind(as.matrix(subset(chrx@segInfo, select = c("start", "end"))), NA, 1:nrow(chrx), deparse.level = 0)
                   colnames(xlink) <- NULL
                   xlink <- rbind(xlink, xregs)
                   xlink <- xlink[order(xlink[,1], xlink[,2]),]
@@ -121,7 +122,7 @@ mergeSD <- function(..., replicates, maxgaplen = 500) {
             z@chrs <- chrs
             z@replicates <- as.integer(replicates)
             
-            z
+  updateSD(z, aD, cl = cl)
           }
           
 

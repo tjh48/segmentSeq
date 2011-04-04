@@ -8,6 +8,7 @@
 \alias{dim,alignmentData-method}
 \alias{initialize,alignmentData-method}
 \alias{show,alignmentData-method}
+\alias{cbind}
 \alias{cbind,alignmentData-method}
 
 \title{Class "alignmentData"}

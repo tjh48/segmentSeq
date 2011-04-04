@@ -21,7 +21,7 @@ function(aD, gap = NULL, verbose = TRUE, cl)
       {
         if(any(cTags$chr == chrs[cc]))
           {            
-            chrSS <- subset(cTags, subset = cTags$chr == chrs[cc], select = c(start, end, chunk, chunkDup))
+            chrSS <- subset(cTags, subset = cTags$chr == chrs[cc], select = c("start", "end", "chunk", "chunkDup"))
 
             if(any(chrSS$end > chrlens[cc]))
               warning(paste("Chromosome", chrs[cc], "has tags which extend over the given chromsome length."))
@@ -78,7 +78,7 @@ function(aD, gap = NULL, verbose = TRUE, cl)
                                                 waD@data <- aD@data[chad,]
                                                 message(".", appendLF = FALSE)
                                                  getCounts(
-                                                          segments = data.frame(chr = chrs[cc], subset(csegs, csegs$chunk %in% chunks, select = c(start, end)))
+                                                          segments = data.frame(chr = chrs[cc], subset(csegs, csegs$chunk %in% chunks, select = c("start", "end")))
                                                           , aD = waD, preFiltered = TRUE, cl = cl)
                                               })))
                                                             

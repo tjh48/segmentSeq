@@ -9,7 +9,7 @@ findChunks <- function(aD, gap)
     chraD <- aD@alignments$chr == chr
     if(any(chraD))
       {
-        chral <- subset(aD@alignments, subset = chraD, select = c(start, end))
+        chral <- subset(aD@alignments, subset = chraD, select = c("start", "end"))
         chunkNum <- c(0L, which(chral$start[-1] - cummax(chral$end[-nrow(chral)]) > gap))
         chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, nrow(chral))))
         maxChunk <- as.integer(max(chunkID))
@@ -18,7 +18,7 @@ findChunks <- function(aD, gap)
   }
 
   aD@alignments$chunkDup <- NA
-  aligns <- subset(aD@alignments, select = c(chunk, tag))
+  aligns <- subset(aD@alignments, select = c("chunk", "tag"))
   rodal <- order(aligns$chunk, as.factor(aligns$tag))
   aligns <- aligns[rodal,]
   chunkDups <- which(!fastUniques(aligns))

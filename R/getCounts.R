@@ -51,12 +51,12 @@ function(segments, aD, preFiltered = FALSE, cl)
                                  chrsegs <- data.frame(start = redsegs$start, end = redsegs$end)[redsegs$chr == cc,,drop = FALSE]
                                  chrdata <- subset(cdata, subset = whchr)
 
-                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c(start, end, tag, chunkDup)) else {
-                                     chralignments <- subset(alignments, subset = whchr, select = c(start, end, tag))
+                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag", "chunkDup")) else {
+                                     chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag"))
                                      chralignments <- cbind(chralignments, chunkDup = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
                                    }
                                  
-                                 nondupTags <- subset(chralignments, subset = chralignments$chunkDup == FALSE, select = c(start, end))
+                                 nondupTags <- subset(chralignments, subset = chralignments$chunkDup == FALSE, select = c("start", "end"))
                                  nondupData <- chrdata[chralignments$chunkDup == FALSE,,drop = FALSE]
                                  
                                  if(nrow(nondupTags) > 0)
@@ -74,7 +74,7 @@ function(segments, aD, preFiltered = FALSE, cl)
                                      chrUC[chrUC < 0] <- 0L
                                    } else chrUC <- matrix(0L, ncol = ncol(chrdata), nrow = nrow(chrsegs))
                                  
-                                 dupTags <- subset(chralignments, subset = chralignments$chunkDup == TRUE, select = c(start, end, tag))
+                                 dupTags <- subset(chralignments, subset = chralignments$chunkDup == TRUE, select = c("start", "end", "tag"))
                                  dupData <- chrdata[chralignments$chunkDup == TRUE,, drop = FALSE]
                                  
                                  if(nrow(dupTags) > 0)

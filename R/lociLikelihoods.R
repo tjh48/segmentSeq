@@ -89,7 +89,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
           
 
     mD@posteriors <- lociWeights
-    mD@annotation <- subset(mD@annotation, select = c(chr, start, end))
+    mD@annotation <- subset(mD@annotation, select = c("chr", "start", "end"))
 
     mD <- mD[with(mD@annotation, order(chr, start, end)),]
     

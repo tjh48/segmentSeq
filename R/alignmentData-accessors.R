@@ -8,13 +8,13 @@ setMethod("cbind", "alignmentData", function(..., deparse.level = 1) {
 
     uniqueTags <- do.call("rbind", lapply(binds, function(x) x@alignments))
     uniqueTags <- uniqueTags[order(as.factor(uniqueTags$chr), uniqueTags$start, uniqueTags$end, as.factor(uniqueTags$tag), decreasing = TRUE),]
-    uniqueTags <- subset(uniqueTags, select = c(chr, start, end, tag))
+    uniqueTags <- subset(uniqueTags, select = c("chr", "start", "end", "tag"))
     uniqueTags <- uniqueTags[fastUniques(uniqueTags),]
 
     mergeUniques <- function(z, uniqueTags)
       {
         if("tag" %in% colnames(z@alignments)) uniqueSelect <- !(uniqueTags$tag %in% z@alignments$tag) else uniqueSelect <- rep(TRUE, nrow(uniqueTags))
-        zalign <- rbind(subset(z@alignments, select = c(chr, start, end, tag)), uniqueTags[uniqueSelect,])
+        zalign <- rbind(subset(z@alignments, select = c("chr", "start", "end", "tag")), uniqueTags[uniqueSelect,])
         zdata <- rbind(z@data, matrix(0, nrow = sum(uniqueSelect), ncol = ncol(z)))
         ordAlign <- with(zalign, order(as.factor(chr), start, end, as.factor(tag), decreasing = TRUE))  
         zalign <- zalign[ordAlign,, drop = FALSE]

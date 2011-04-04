@@ -12,7 +12,7 @@ order to define a new (and improved) segment map.
 }
 \usage{
 classifySeg(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion =
-NULL, getLikes = TRUE, lR = FALSE, cl, ...) 
+NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -36,7 +36,11 @@ NULL, getLikes = TRUE, lR = FALSE, cl, ...)
   \item{getLikes}{Should posterior likelihoods for the new segmented
     genome (loci and nulls) be assessed?}
   \item{lR}{If TRUE, locus and null calls are made on the basis of
-    likelihood ratios rather than posterior likelihoods. Not recommended.}
+    likelihood ratios rather than posterior likelihoods. Not
+    recommended.}
+  \item{samplesize}{The sample size to be used when estimating the prior
+    distribution of the data with the
+    \code{\link[baySeq:getPriors.NB]{getPriors.NB}} function.}
   \item{cl}{A SNOW cluster object, or NULL. See Details.}
   \item{...}{Any additional parameters to be passed to \code{\link{heuristicSeg}}.}
 }

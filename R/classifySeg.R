@@ -1,4 +1,4 @@
-getLocLikelihoods <- function(pcD, subset, cl = cl)
+.getLocLikelihoods <- function(pcD, subset, cl = cl)
   {
     constructWeights <- function(withinCluster = FALSE)
       {
@@ -97,7 +97,7 @@ getLocLikelihoods <- function(pcD, subset, cl = cl)
 #        clusterCall(cl, constructWeights, TRUE)
       }
     
-    message("...", appendLF = FALSE)
+#    message("...", appendLF = FALSE)
     
     if (is.null(cl)) {
       ps <- t(apply(cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,,drop = FALSE], 1, NBdens))
@@ -155,12 +155,12 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
                                                               potlociD@annotation$end <= as.numeric(sR[3])))))))
     }
 
-  subLoc <- getOverlaps(coordinates = potlociD@annotation,
-                        segments = cD@annotation, overlapType = "within", 
-                        whichOverlaps = FALSE, cl = cl)
-  subLoc <- which(subLoc)[filterSegments(potlociD@annotation[subLoc,], runif(sum(subLoc)))]
-  prepD <- potlociD[subLoc,]
-  prepD@groups <- list(prepD@replicates)
+    subLoc <- getOverlaps(coordinates = potlociD@annotation,
+                          segments = cD@annotation, overlapType = "within", 
+                          whichOverlaps = FALSE, cl = cl)
+    subLoc <- which(subLoc)[filterSegments(potlociD@annotation[subLoc,], runif(sum(subLoc)))]
+    prepD <- potlociD[subLoc,]
+    prepD@groups <- list(prepD@replicates)
     prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = FALSE, cl = cl)
     weights <- cD@posteriors[unlist(getOverlaps(coordinates = prepD@annotation[prepD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),]
   repWeights <- sapply(unique(potlociD@replicates), function(rep) {
@@ -211,11 +211,14 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
         repD@priors$weights <- repD@priors$weights * weightFactors
         repD@priors$sampled <- sampled
                 
-        subset <- which(rowSums(repD@data) > 0)        
+        subset <- intersect(locSubset, which(rowSums(repD@data) > 0))
+
+#        subset <- c(1:1000, 8261628)
         
-        lD <- getLocLikelihoods(repD, subset = subset, cl = cl)
+        lD <- .getLocLikelihoods(repD, subset = subset, cl = cl)
 
         if(lR) repLoci <- lD[,2] > lD[,1] else {
+          
           #repSmall <- smallLoci[rowSums(repD@data[smallLoci,,drop = FALSE]) > 0]
           #whichPriorSubset <- unlist(lapply(unique(repD@annotation$chr), function(chr) {
           #  chrrep <- repD@annotation$chr == chr
@@ -269,7 +272,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
                                                (end - start + 1 + rightSpace)[rightSpace > 0]),
                                                  libsizes = sDWithin@libsizes,
                                                  replicates = sDWithin@replicates,   
-                                                 annotation = data.frame(chr = levels(sDWithin@segInfo$chr)[c(emptyNulls$chr, sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0 & sDWithin@segInfo$rightSpace > 0],
+                                                 annotation = data.frame(chr = (sDWithin@segInfo$chr)[c(emptyNulls$chr, sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0 & sDWithin@segInfo$rightSpace > 0],
                                                                            sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0], sDWithin@segInfo$chr[sDWithin@segInfo$rightSpace > 0])],
                                                    start = c(emptyNulls$start, (start - leftSpace)[leftSpace > 0 & rightSpace > 0], (start - leftSpace)[leftSpace > 0], start[rightSpace > 0]),
                                                    end = c(emptyNulls$end, (end + rightSpace)[leftSpace > 0 & rightSpace > 0], end[leftSpace > 0], (end + rightSpace)[rightSpace > 0]),
@@ -392,6 +395,6 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
 
   lociPD@posteriors <- log(lociPD@posteriors)
   
-  locMap <- processPosteriors(lociPD, potnullD, chrs = sD@chrs, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
+    locMap <- .processPosteriors(lociPD, potnullD, chrs = sD@chrs, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
   locMap
       }

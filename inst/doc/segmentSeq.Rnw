@@ -3,6 +3,8 @@
 
 \documentclass[a4paper]{article}
 
+\usepackage{rotating}
+
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
 
@@ -89,12 +91,12 @@ By one of these methods, we finally acquire an annotated \verb'countData' object
 We can use this \verb'countData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
 
 <<fig = FALSE, label=segPlot, height = 10, width = 12>>=
-  par(mfrow = c(2,1))
+  par(mfrow = c(2,1), mar = c(2,2,2,2))
 plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 3e5))
 plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 3e5))
 @
 
-\begin{figure}[!ht]
+\begin{sidewaysfigure}[!ht]
 \begin{center}
 
 <<label=figSeg, fig=TRUE,echo=FALSE>>=
@@ -103,7 +105,7 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 3e5))
 \caption{The segmented genome (first $10^5$ bases of chromosome 1.}
 \label{fig:Seg}
 \end{center}
-\end{figure}
+\end{sidewaysfigure}
 
 This \verb'countData' object can now be examined for differential expression with the \verb'baySeq' package.
 

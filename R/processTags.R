@@ -1,6 +1,6 @@
 processTags <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, gap = 200, verbose = TRUE, ...)
+         cols, header = TRUE, gap = 200, verbose = TRUE, strand = NA, ...)
   {
     fastUniques <- function(x)
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
@@ -15,6 +15,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 
     countPresent <- TRUE
     tagPresent <- TRUE
+    strandPresent <- TRUE
 
     if(missing(cols)) cols <- NULL
     
@@ -32,7 +33,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
             tagPresent <- FALSE
             warning("No 'tag' column specified in 'cols' argument; the 'alignData' object will omit sequence information.")
           }
-      } else if(is.null(cols) & header == FALSE) warning("No 'cols' argument supplied and 'header = FALSE'. Using default values for columns")
+        if(any(c(!("strand" %in% names(cols)), is.na(cols[names(cols) == "strand"]))))
+          {
+            strandPresent <- FALSE
+          }        
+      } else if(is.null(cols) & header == FALSE) warning("No 'cols' argument supplied and 'header = FALSE'. Using default values for columns")  
 
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
@@ -71,6 +76,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
               countPresent <- FALSE
               warning("No 'count' column found in file; 'processTags' will assume that the file contains non-redundant reads")
             }
+          if("strand" %in% names(filetags)) strandcol <- which(names(filetags) == "strand") else strandPresent <- FALSE
+            
         } else if(!header & is.null(cols))
           {
             chrcol <- 1L
@@ -78,17 +85,23 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
             countcol <- 3L
             startcol <- 4L
             endcol <- 5L
+            strandcol <- 6L            
             tagPresent <- TRUE
             countPresent <- TRUE
+            strandPresent <- TRUE
           } else if(!is.null(cols)) {
             chrcol <- cols[names(cols) == "chr"]
             if(tagPresent) tagcol <- cols[names(cols) == "tag"] else tagcol <- NA          
             if(countPresent) countcol <- cols[names(cols) == "count"] else countcol <- NA
+            if(strandPresent) strandcol <- cols[names(cols) == "strand"] else strandcol <- NA
             startcol <- cols[names(cols) == "start"]
             endcol <- cols[names(cols) == "end"]
           }
+
+      if(strandPresent & !is.na(strand)) filetags <- filetags[filetags[,strandcol] %in% strand,]
       
       chrtags <- which(filetags[,chrcol] %in% chrs)
+
 
       if(tagPresent & countPresent)
         {

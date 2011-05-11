@@ -51,8 +51,11 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
       emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
       gap <- 10^(bimodalSep(log10(emptyNulls$end - emptyNulls$start + 1)))
     }
+    emptyNulls <- cbind(emptyNulls, nullClass = "empty")
 
     emptyNulls <- emptyNulls[emptyNulls$end - emptyNulls$start + 1 > as.integer(floor(gap)),]
+    whover <- getOverlaps(emptyNulls, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
+    emptyNulls <- emptyNulls[whover,]
 
     whSDboth <- with(sD@segInfo,
                      which(leftSpace > 0 & rightSpace > 0))
@@ -61,12 +64,35 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     whSDboth <- whSDboth[seglenBoth > as.integer(floor(gap))]
     seglenBoth <- seglenBoth[seglenBoth > as.integer(floor(gap))]
 
+    bothAnn <- with(sD@segInfo, data.frame(
+                                           chr = levels(chr)[chr[c(whSDboth)]],
+                                           start = start[whSDboth] - leftSpace[whSDboth],
+                                           end = end[whSDboth] + rightSpace[whSDboth],
+                                           nullClass = NA))
+    whover <- getOverlaps(bothAnn, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = cl)
+
+    whSDboth <- whSDboth[whover]
+    seglenBoth <- seglenBoth[whover]
+    bothAnn <- bothAnn[whover,,drop = FALSE]
+    
     whSDleft <- with(sD@segInfo,
                      which(leftSpace > 0))
     seglenLeft <- with(sD@segInfo,
                        (end - start + 1 + leftSpace)[whSDleft])
     whSDleft <- whSDleft[seglenLeft > as.integer(floor(gap))]
     seglenLeft <- seglenLeft[seglenLeft > as.integer(floor(gap))]
+    leftAnn <- with(sD@segInfo, data.frame(
+                                           chr = levels(chr)[chr[c(whSDleft)]],
+                                           start = start[whSDleft] - leftSpace[whSDleft],
+                                           end = end[whSDleft],
+                                           nullClass = NA))
+    whover <- getOverlaps(leftAnn, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = cl)
+
+    whSDleft <- whSDleft[whover]
+    seglenLeft <- seglenLeft[whover]
+    leftAnn <- leftAnn[whover,,drop = FALSE]
+
+
 
     whSDright <- with(sD@segInfo,
                      which(rightSpace > 0))
@@ -74,7 +100,18 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
                        (end - start + 1 + rightSpace)[whSDright])
     whSDright <- whSDright[seglenRight > as.integer(floor(gap))]
     seglenRight <- seglenRight[seglenRight > as.integer(floor(gap))]
+    rightAnn <- with(sD@segInfo, data.frame(
+                                            chr = levels(chr)[chr[c(whSDright)]],
+                                            start = start[whSDright],
+                                            end = end[whSDright] + rightSpace[whSDright],
+                                            nullClass = NA))
+    whover <- getOverlaps(rightAnn, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = cl)
 
+    whSDright <- whSDright[whover]
+    seglenRight <- seglenRight[whover]
+    rightAnn <- rightAnn[whover,,drop = FALSE]
+
+    rm(whover)
     gc()
 
     potnullD <- with(sD@segInfo, new("postSeg",
@@ -82,23 +119,20 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
                                      replicates = sD@replicates,
                                      data = matrix(nrow = 0, ncol = ncol(sD))))
     nullData <- rbind(matrix(0L, ncol = ncol(sD), nrow = nrow(emptyNulls)),
-                  sD@data[c(whSDboth, whSDleft, whSDright),])    
+                      sD@data[whSDboth,,drop = FALSE],
+                      sD@data[whSDleft,,drop = FALSE],
+                      sD@data[whSDright,,drop = FALSE])
     nullSeglens = as.integer(c(emptyNulls$end - emptyNulls$start + 1, seglenBoth, seglenLeft, seglenRight))
-    
-    nullAnnotation = with(sD@segInfo, data.frame(
-      chr = levels(chr)[c(emptyNulls$chr, chr[c(whSDboth, whSDleft, whSDright)])],
-      start = c(emptyNulls$start, (start[whSDboth] - leftSpace[whSDboth]), (start[whSDleft] - leftSpace[whSDleft]), start[whSDright]),
-      end = c(emptyNulls$end, (end[whSDboth] + rightSpace[whSDboth]), end[whSDleft], (end + rightSpace)[whSDright]),
-      nullClass = as.factor(rep(c("empty", "segSpace"), c(nrow(emptyNulls), length(whSDboth) + length(whSDleft) + length(whSDright))))
-      ))    
 
-    rm(whSDboth, whSDleft, whSDright, seglenBoth, seglenLeft, seglenRight)
+    nullAnnotation <- rbind(emptyNulls, bothAnn, leftAnn, rightAnn)
+    
+    rm(whSDboth, whSDleft, whSDright, seglenBoth, seglenLeft, seglenRight, bothAnn, leftAnn, rightAnn, emptyNulls)
     gc()
 
     if(nrow(nullData) > 0)
       {
         nulDens <- do.call("cbind", lapply(unique(replicates), function(rep) {
-          nulDens <- (colSums(t(nullData[,replicates == rep,drop = FALSE]) / potnullD@libsizes[replicates == rep]) / sum(replicates == rep) / (nullSeglens + 1))
+          nulDens <- (colSums(t(nullData[,replicates == rep,drop = FALSE]) / potnullD@libsizes[replicates == rep]) / sum(replicates == rep) / (nullSeglens))
           nulDens
         }))
         
@@ -115,14 +149,14 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
 
     gc()
         
-    nulWithin <- getOverlaps(nullAnnotation, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
+#    nulWithin <- getOverlaps(nullAnnotation, potlociD@annotation, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
 
-    nulM <- nulM[nulWithin,,drop = FALSE]
-    nullData <- nullData[nulWithin,,drop = FALSE]
-    nullSeglens <- nullSeglens[nulWithin]
-    nullAnnotation <- nullAnnotation[nulWithin,,drop = FALSE]
+#    nulM <- nulM[nulWithin,,drop = FALSE]
+#    nullData <- nullData[nulWithin,,drop = FALSE]
+#    nullSeglens <- nullSeglens[nulWithin]
+#    nullAnnotation <- nullAnnotation[nulWithin,,drop = FALSE]
 
-    gc()
+#    gc()
 
     if (is.null(subRegion)) {
       locSub <- 1:nrow(potlociD)
@@ -146,7 +180,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     potnullD@data <- nullData[nulSub,, drop = FALSE]
     potnullD@annotation <- nullAnnotation[nulSub,]
     potnullD@seglens <- matrix(nullSeglens[nulSub], ncol = 1)
-    potnullD@posteriors <- nulM[nulSub,, drop = FALSE]
+    potnullD@posteriors <- log(nulM[nulSub,, drop = FALSE])
 
     rm(nullData, nullAnnotation, nullSeglens, nulM)
     

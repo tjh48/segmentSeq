@@ -1,4 +1,4 @@
-lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, nasZero = FALSE, cl)
+lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, cl)
   {    
     loci <- cD@annotation
     lociLens <- loci$end - loci$start + 1
@@ -16,7 +16,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
         nullLens <- nulls$end - nulls$start + 1
         nulls[nullLens <= 0 | is.na(nullLens),] <- NA
         nullLens[nullLens <= 0 | is.na(nullLens)] <- NA
-        nulls <- nulls[rowSums(is.na(nulls)) == 0,1:3]
+        nulls <- nulls[rowSums(is.na(nulls)) == 0,1:3,drop = FALSE]
         nullLens <- nulls$end - nulls$start + 1    
         countNulls <- getCounts(aD = aD, segments = nulls, cl = cl)
         
@@ -29,17 +29,27 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
                     end = c(nulls$end, cD@annotation$end),
                     segType = c(rep("null", nrow(nulls)), rep("locus", nrow(cD)))))
         posteriors = rbind(matrix(-Inf, nrow = nrow(countNulls), ncol = length(unique(aD@replicates))), cD@posteriors)
-        
+      } else {
+        posteriors <- cD@posteriors
+        mD <- new("postSeg", data = countLoci,
+                  seglens = lociLens,
+                  libsizes = aD@libsizes,
+                  replicates = aD@replicates, 
+                  annotation = loci)
+      }
 
-        mD <- mD[!is.na(mD@seglens),]    
-        mD@groups <- list(mD@replicates)
-        mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
-        
+    mD <- mD[rowSums(is.na(mD@seglens)) == 0,]    
+    mD@groups <- list(mD@replicates)
+    mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
+
+    if(usePosteriors)
+      {
         lociWeights <- sapply(unique(mD@replicates), function(rep) {
-          locW <- as.numeric(mD@annotation$segType[mD@priors$sampled[,1]] == "null")
-          locW[mD@annotation$segType[mD@priors$sampled[,1]] == "locus"] <- 1 - exp(posteriors[mD@priors$sampled[mD@annotation$segType[mD@priors$sampled[,1]] == "locus",1],rep])
+#          locW <- as.numeric(mD@annotation$segType[mD@priors$sampled[,1]] == "null")
+#          locW[mD@annotation$segType[mD@priors$sampled[,1]] == "locus"] <- 1 - exp(posteriors[mD@priors$sampled[mD@annotation$segType[mD@priors$sampled[,1]] == "locus",1],rep])
+          locW <- 1 - exp(posteriors[mD@priors$sampled[,1],rep])
           locW <- list(list(locW), list(1 - locW))
-
+          
           if(nasZero) {
             locW <- lapply(locW, function(x) {
               y <- x[[1]]
@@ -63,12 +73,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
           message("done!", appendLF = TRUE)
           repD@posteriors[,2]
         })
-
       } else {
-        mD <- cD
-        class(mD) == "postSeg"
-
-        mD@groups <- list(mD@replicates)
         mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
         
         lociWeights <- sapply(unique(mD@replicates), function(rep) {

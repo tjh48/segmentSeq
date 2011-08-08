@@ -18,9 +18,9 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup
   axis(side = 1, at = 0:10 * round(diff(limits) / 10)  + limits[1])
   axis(side = 2, at = 1:length(libnames), labels = libnames, las = 1)
   
-  if(plotDuplicated & plotType == "pileup") segments(limits[1], samples, limits[2], samples, col = "cyan", lwd = 1) else segments(limits[1], samples - 0.45, limits[2], samples - 0.45, col = "cyan", lwd = 1)    
-  segments(limits[1], samples - 0.5, limits[2], samples - 0.5, col = "black", lwd = 1)
-  segments(limits[1], samples + 0.5, limits[2], samples + 0.5, col = "black", lwd = 1)
+  if(plotDuplicated & plotType == "pileup") segments(limits[1], 1:length(samples), limits[2], 1:length(samples), col = "cyan", lwd = 1) else segments(limits[1], 1:length(samples) - 0.45, limits[2], 1:length(samples)- 0.45, col = "cyan", lwd = 1)    
+  segments(limits[1], 1:length(samples) - 0.5, limits[2], 1:length(samples) - 0.5, col = "black", lwd = 1)
+  segments(limits[1], 1:length(samples) + 0.5, limits[2], 1:length(samples) + 0.5, col = "black", lwd = 1)
 
   message("Computing plot...", appendLF = FALSE)
   
@@ -130,14 +130,14 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup
           bps$end <- sapply(bps$end, min, limits[2])
 
           if(!is.null(sD@posteriors) & all(dim(sD@posteriors) != 0)) {
-            sapply(1:ncol(sD), function(ss) {
-              alpha = (exp(sD@posteriors[brlims,sD@replicates[ss]]))
+            sapply(1:length(samples), function(ss) {
+              alpha = (exp(sD@posteriors[brlims,sD@replicates[samples[ss]]]))
               alpha[is.na(alpha)] <- 0
               if(any(alpha > 0.1))
                 {
                   brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                                (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
-                                (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = alpha)
+                                (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)],
+                                (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = alpha)
                   angle <- rep(c(45, 115, 165), ceiling(length(brlims) / 3))
                   rect(bps[alpha > 0.1,2], -.5 + ss, bps[alpha>0.1,3], ss + .5, density = density, col = brcols[alpha > 0.1], border = brcols[alpha > 0.1], angle = angle[alpha > 0.1])
                   segments(bps[,2], -.5 + ss, bps[,3], ss + .5, col = brcols)
@@ -147,8 +147,7 @@ function(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup
             brcols <- rgb((rep(c(1,0,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                           (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)],
                           (rep(c(0,0,1), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = 1)
-            rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = density, col = brcols, border = brcols, angle = 45)
-            segments(bps[,2], -.5 + ss, bps[,3], ss + .5, col = brcols)
+            rect(bps[,2], 0 + .5, bps[,3], length(samples) + 0.5, density = density, col = brcols, border = brcols, angle = 45)            
           }
 
           if(showNumber) text((bps$start + bps$end) / 2, y = 0, labels = brlims, col = "black")            

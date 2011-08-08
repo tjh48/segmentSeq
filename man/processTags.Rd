@@ -60,21 +60,21 @@ TRUE, gap = 200, verbose = TRUE, ...)
 
   The files may contain columns with column names
   \code{'chr'}, \code{'tag'}, \code{'count'}, \code{'start'},
-  \code{'end'}, in which case the 'cols' argument can be ommitted and
+  \code{'end'}, \code{'strand'} in which case the 'cols' argument can be ommitted and
   'header' set to TRUE. If this is the case, there is no requirement for
   all the files to have the same ordering of columns (although all
   must have these column names).
 
 Alternatively, the columns of data in the input files can be specified by
 the 'cols' argument in the form of a named character vector (e.g;
-\code{'cols = c(chr = 1, tag = 2, count = 3, start = 4, end = 5)'} would
-cause the function to assume that the first column contains the
+\code{'cols = c(chr = 1, tag = 2, count = 3, start = 4, end = 5, strand
+  = 6)'} would cause the function to assume that the first column contains the
 chromosome information, the second column contained the tag information,
 &c. If 'cols' is specified then information in the header is ignored. If
 'cols' is missing and 'header = FALSE' then it is assumed that the
 data takes the form described in the example above.
 
-The \code{'tag'} and \code{'count'} columns may optionally be
+The \code{'tag'}, \code{'count'} and \code{'strand'} columns may optionally be
 omitted from either the file column headers or the 'cols' argument. If
 the \code{'tag'} column is omitted, then the data will not account for
 duplicated sequences when estimating the number of counts in loci. If
@@ -82,7 +82,8 @@ the \code{'count'} column is omitted, the \code{'processTags'} function
 will assume that the file contains the alignments of each copy of each
 sequence tag, rather than an aggregated alignment of each unique
 sequence. The unique alignments will be identified and the number of
-sequence tags aligning to each position will be calculated.
+sequence tags aligning to each position will be calculated. If
+\code{'strand'} is omitted, the strand will simply be ignored.
 
 The \code{replicates} argument should take the form of a vector of
 integers such that if and only if the ith library is a replicate of the

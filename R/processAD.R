@@ -70,18 +70,18 @@ function(aD, gap = NULL, verbose = TRUE, cl)
             waD@replicates = replicates
 
             gc()
-            
+
             tD@data <- rbind(tD@data, do.call("rbind",
                                               lapply(windowChunks, function(chunks) {
                                                 chad <- which(aD@alignments$chunk %in% chunks)
-                                                waD@alignments <- aD@alignments[chad,]
-                                                waD@data <- aD@data[chad,]
+                                                waD@alignments <- aD@alignments[chad,,drop = FALSE]
+                                                waD@data <- aD@data[chad,,drop = FALSE]
                                                 message(".", appendLF = FALSE)
                                                  getCounts(
                                                           segments = data.frame(chr = chrs[cc], subset(csegs, csegs$chunk %in% chunks, select = c("start", "end")))
                                                           , aD = waD, preFiltered = TRUE, cl = cl)
                                               })))
-                                                            
+
             if(verbose)
               message("...done!")
 

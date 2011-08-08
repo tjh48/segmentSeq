@@ -9,7 +9,8 @@
 }
 \usage{
 lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 1,
-                inferNulls = TRUE, nasZero = FALSE, cl)
+                inferNulls = TRUE, nasZero = FALSE, usePosteriors =
+TRUE, cl)
 }
 \arguments{
   \item{cD}{
@@ -29,6 +30,9 @@ lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 1,
   \item{nasZero}{If FALSE, any locus with a posterior likelihood 'NA' in
     the existing segmentation map is treated as a null region for the
     first bootstrap; If TRUE, it is ignored for the first bootstrap.}
+  \item{usePosteriors}{If TRUE, the function uses the existing
+    likelihoods to weight the prior estimation of parameters. Defaults
+    to TRUE.}
   \item{cl}{
     A SNOW cluster object, or NULL. See Details.
 }

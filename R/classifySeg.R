@@ -163,11 +163,11 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
     prepD@groups <- list(prepD@replicates)
     prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = FALSE, cl = cl)
     weights <- cD@posteriors[unlist(getOverlaps(coordinates = prepD@annotation[prepD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),]
-  repWeights <- sapply(unique(potlociD@replicates), function(rep) {
-    repWeights <- weights[,rep]
-    repWeights[rowSums(prepD@data[prepD@priors$sampled[,1], potlociD@replicates == rep, drop = FALSE]) == 0] <- NA
-    repWeights
-  })
+    repWeights <- sapply(unique(potlociD@replicates), function(rep) {
+      repWeights <- weights[,rep]
+      repWeights[rowSums(prepD@data[prepD@priors$sampled[,1], potlociD@replicates == rep, drop = FALSE]) == 0] <- NA
+      repWeights
+    })
 
     weightFactors <- prepD@priors$weights
     priors <- prepD@priors$priors    
@@ -261,23 +261,25 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
           
           sDWithin <- sD[withinLoc,]
           
-          potnullD <- with(sDWithin@segInfo, new("postSeg",
-                                             data = rbind(matrix(0, ncol = ncol(sDWithin), nrow = nrow(emptyNulls)),
-                                               sDWithin@data[leftSpace > 0 & rightSpace > 0,],
-                                               sDWithin@data[leftSpace > 0,],
-                                               sDWithin@data[rightSpace > 0,]),
-                                             seglens = c(emptyNulls$end - emptyNulls$start + 1,
-                                               (end - start + 1 + leftSpace + rightSpace)[leftSpace > 0 & rightSpace > 0],
-                                               (end - start + 1 + leftSpace)[leftSpace > 0],
-                                               (end - start + 1 + rightSpace)[rightSpace > 0]),
-                                                 libsizes = sDWithin@libsizes,
-                                                 replicates = sDWithin@replicates,   
-                                                 annotation = data.frame(chr = (sDWithin@segInfo$chr)[c(emptyNulls$chr, sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0 & sDWithin@segInfo$rightSpace > 0],
-                                                                           sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0], sDWithin@segInfo$chr[sDWithin@segInfo$rightSpace > 0])],
-                                                   start = c(emptyNulls$start, (start - leftSpace)[leftSpace > 0 & rightSpace > 0], (start - leftSpace)[leftSpace > 0], start[rightSpace > 0]),
-                                                   end = c(emptyNulls$end, (end + rightSpace)[leftSpace > 0 & rightSpace > 0], end[leftSpace > 0], (end + rightSpace)[rightSpace > 0]),
-                                                   nullClass = as.factor(rep(c("empty", "expBoth", "expLeft", "expRight"), c(nrow(emptyNulls), sum(leftSpace > 0 & rightSpace > 0), sum(leftSpace > 0), sum(rightSpace > 0)))))
-                                                 ))
+          potnullD <-
+            with(sDWithin@segInfo,
+                 new("postSeg",
+                     data = rbind(matrix(0, ncol = ncol(sDWithin), nrow = nrow(emptyNulls)),
+                       sDWithin@data[leftSpace > 0 & rightSpace > 0,],
+                       sDWithin@data[leftSpace > 0,],
+                       sDWithin@data[rightSpace > 0,]),
+                     seglens = c(emptyNulls$end - emptyNulls$start + 1,
+                       (end - start + 1 + leftSpace + rightSpace)[leftSpace > 0 & rightSpace > 0],
+                       (end - start + 1 + leftSpace)[leftSpace > 0],
+                       (end - start + 1 + rightSpace)[rightSpace > 0]),
+                     libsizes = sDWithin@libsizes,
+                     replicates = sDWithin@replicates,   
+                     annotation = data.frame(chr = factor(levels(sDWithin@segInfo$chr)[c(emptyNulls$chr, sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0 & sDWithin@segInfo$rightSpace > 0],
+                                                               sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0], sDWithin@segInfo$chr[sDWithin@segInfo$rightSpace > 0])], levels = levels(sDWithin@segInfo$chr)),
+                                start = c(emptyNulls$start, (start - leftSpace)[leftSpace > 0 & rightSpace > 0], (start - leftSpace)[leftSpace > 0], start[rightSpace > 0]),
+                                end = c(emptyNulls$end, (end + rightSpace)[leftSpace > 0 & rightSpace > 0], end[leftSpace > 0], (end + rightSpace)[rightSpace > 0]),
+                                nullClass = as.factor(rep(c("empty", "expBoth", "expLeft", "expRight"), c(nrow(emptyNulls), sum(leftSpace > 0 & rightSpace > 0), sum(leftSpace > 0), sum(rightSpace > 0)))))
+                     ))
 
           overLoci <- which(getOverlaps(coordinates = potnullD@annotation, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = cl))
           

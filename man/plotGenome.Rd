@@ -10,7 +10,8 @@
 }
 \usage{
 plotGenome(aD, sD, chr = 1, limits = c(0, 1e4), samples = NULL,
-plotType = "chunk", plotDuplicated = FALSE, ...)
+plotType = "pileup", plotDuplicated = FALSE, density = 0, showNumber =
+TRUE, logScale = FALSE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -36,12 +37,17 @@ plotType = "chunk", plotDuplicated = FALSE, ...)
   }
   \item{plotType}{
     The manner in which the plot is created. Currently only
-    \code{'plotType = pileup'} is supported.
+    \code{'plotType = pileup'} is recommended.
   }
   \item{plotDuplicated}{
     If TRUE, then any duplicated sequence tags (i.e., sequence tags that
     match to multiple places in the genome) in the 'aD' object will be plotted on
     a negative scale for each sample. Defaults to FALSE.}
+  \item{density}{The density of the shading lines to be used in plotting
+    each segment.}
+  \item{showNumber}{Should the row number of each segment be shown?}
+  \item{logScale}{Should a log scale be used for the number of sequence
+    tags found at each base?}
   \item{...}{
     Any additional graphical parameters for passing to \code{plot}.
   }

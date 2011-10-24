@@ -124,7 +124,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
     if (missing(cD)) 
         cD <- NULL
     if (is.null(cD)) 
-        cD <- heuristicSeg(sD = sD, aD = aD, subRegion = subRegion, ..., cl = cl)
+        cD <- heuristicSeg(sD = sD, aD = aD, subRegion = subRegion, getLikes = TRUE, ..., cl = cl)
 #    if (class(cD) == "countData") 
 #        cD <- lociLikelihoods(cD = cD, aD = aD, cl = cl)
 
@@ -132,38 +132,42 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
       pET <- "none"
       lociCutoff <- nullCutoff <- 0.5
     } else {
-      locps <- sapply(unique(cD@replicates), function(rep) mean(exp(cD@posteriors[rowSums(cD@data[,cD@replicates == rep, drop = FALSE]) > 0,rep])))
+      locps <- sapply(levels(cD@replicates), function(rep) mean(exp(cD@locLikelihoods[rowSums(cD@data[,cD@replicates == rep, drop = FALSE]) > 0,rep])))
       pET <- "BIC"
     }
 
     
-    smallLoci <- which(fastUniques(cbind(sD@segInfo$chr, sD@segInfo$start)))
+    smallLoci <- which(fastUniques(cbind(as.character(seqnames(sD@coordinates)), start(sD@coordinates))))
+    potlociD <- sD
 
-    potlociD <- with(sD@segInfo, new("postSeg",
-                                     data = sD@data,
-                                     seglens = end - start + 1,
-                                     libsizes = sD@libsizes,
-                                     replicates = sD@replicates,
-                                     annotation = data.frame(chr = chr, start = start, end = end, segType = "potloc")))
-
+    
     if (is.null(subRegion)) {
       locSubset <- 1:nrow(potlociD)
     } else {
       locSubset <- sort(unique(c(unlist(apply(subRegion, 1, 
-                                           function(sR) which(as.character(potlociD@annotation$chr) == as.character(sR[1]) &
-                                                              potlociD@annotation$start >= as.numeric(sR[2]) &
-                                                              potlociD@annotation$end <= as.numeric(sR[3])))))))
+                                              function(sR) which(as.character(seqnames(potlociD@coordinates)) == as.character(sR[1]) &
+                                                                 start(potlociD@coordinates) >= as.numeric(sR[2]) &
+                                                              end(potlociD@coordinates) <= as.numeric(sR[3])))))))
     }
 
-    subLoc <- getOverlaps(coordinates = potlociD@annotation,
-                          segments = cD@annotation, overlapType = "within", 
+    subLoc <- getOverlaps(coordinates = potlociD@coordinates,
+                          segments = cD@coordinates, overlapType = "within", 
                           whichOverlaps = FALSE, cl = cl)
-    subLoc <- which(subLoc)[filterSegments(potlociD@annotation[subLoc,], runif(sum(subLoc)))]
+    subLoc <- which(subLoc)[.filterSegments(potlociD@coordinates[subLoc,], runif(sum(subLoc)))]
     prepD <- potlociD[subLoc,]
+
+    prepD <- new("lociData",
+                 data = sapply(1:ncol(potlociD), function(ii) as.integer(potlociD@data[subLoc,ii])),
+                 seglens = width(sD@coordinates[subLoc,]),
+                 libsizes = sD@libsizes,
+                 replicates = sD@replicates,
+                 coordinates = sD@coordinates[subLoc,])
+
+    
     prepD@groups <- list(prepD@replicates)
     prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = FALSE, cl = cl)
-    weights <- cD@posteriors[unlist(getOverlaps(coordinates = prepD@annotation[prepD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),]
-    repWeights <- sapply(unique(potlociD@replicates), function(rep) {
+    weights <- cD@locLikelihoods[unlist(getOverlaps(coordinates = prepD@coordinates[prepD@priors$sampled[,1], ], segments = cD@coordinates, overlapType = "within", cl = cl)),]
+    repWeights <- sapply(levels(potlociD@replicates), function(rep) {
       repWeights <- weights[,rep]
       repWeights[rowSums(prepD@data[prepD@priors$sampled[,1], potlociD@replicates == rep, drop = FALSE]) == 0] <- NA
       repWeights
@@ -177,16 +181,21 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
     getLikeLoci <- function(rep, psD, priors, repWeights, sampled, smallLoci, ...) {
       message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
       
-      repD <- psD[, psD@replicates == rep]
+      repD <- new("lociData",
+                   data = sapply(which(psD@replicates == rep), function(ii) as.integer(psD@data[,ii])),
+                   seglens = width(sD@coordinates),
+                   libsizes = sD@libsizes[psD@replicates == rep],
+                   replicates = as.factor(rep(1, sum(psD@replicates == rep))),
+                   coordinates = sD@coordinates)
+
       repD@priorType = "NB"
-      repD@replicates <- rep(1, ncol(repD))
       repD@groups <- list(rep(1, ncol(repD)))#, rep(1, ncol(repD)))
 
 #      subset <- which(rowSums(repD@data) > 0)
 #      subLoc <- getOverlaps(coordinates = repD@annotation[subset,],
 #                            segments = cD@annotation, overlapType = "within", 
 #                            whichOverlaps = FALSE, cl = cl)
-#      sampSubset <- (subset[subLoc])[filterSegments(repD@annotation[subset[subLoc],], runif(sum(subLoc)))]
+#      sampSubset <- (subset[subLoc])[.filterSegments(repD@annotation[subset[subLoc],], runif(sum(subLoc)))]
 
 #      repWeights <- cD@posteriors[unlist(getOverlaps(coordinates = repD@annotation[sampSubset,],
 #                                                     segments = cD@annotation, overlapType = "within", 
@@ -194,7 +203,6 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
       
 #      repD <- getPriors.NB(repD, verbose = FALSE, cl = cl, samplingSubset = sampSubset)
 #      withinWeights <- cD@posteriors[unlist(getOverlaps(coordinates = repD@annotation[repD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),rep]
-
 
       withinWeights <- exp(repWeights[, rep])
 
@@ -204,7 +212,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
         repLoci <- rep(FALSE, nrow(repD))
       } else {        
 #        repD@priors$priors <- repD@priors$priors[[1]][[1]]
-        repD@priors$priors <- priors[[1]][[rep]]
+        repD@priors$priors <- priors[[1]][[which(levels(psD@replicates) == rep)]]
 
         repD@priors$weights <- cbind(1-(withinWeights), withinWeights)
         repD@priors$weights[is.na(repD@priors$weights)] <- 0
@@ -220,11 +228,11 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
         if(lR) repLoci <- lD[,2] > lD[,1] else {
           
           #repSmall <- smallLoci[rowSums(repD@data[smallLoci,,drop = FALSE]) > 0]
-          #whichPriorSubset <- unlist(lapply(unique(repD@annotation$chr), function(chr) {
+          #whichPriorSubset <- unlist(lapply(levels(repD@annotation$chr), function(chr) {
           #  chrrep <- repD@annotation$chr == chr
           #  which(chrrep & repD@annotation$start %in% repD@annotation$start[intersect(which(chrrep), repSmall)] & repD@annotation$end %in% repD@annotation$end[intersect(which(chrrep), repSmall)])
           #}))                      
-          #priorSubset <- whichPriorSubset[filterSegments(repD@annotation[whichPriorSubset, ], runif(length(whichPriorSubset)))]
+          #priorSubset <- whichPriorSubset[.filterSegments(repD@annotation[whichPriorSubset, ], runif(length(whichPriorSubset)))]
                   
           #priorLoc <- sum(lD[priorSubset,2] > lD[priorSubset,1], na.rm = TRUE) / length(priorSubset)
           #ps <- c(1-priorLoc, priorLoc)
@@ -243,160 +251,170 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
       message("...done.")
       repLoci
     }
-  
-  message("Establishing likelihoods of loci...", appendLF = TRUE)  
-  potlociD@posteriors <- sapply(unique(potlociD@replicates), getLikeLoci, psD = potlociD, priors = priors, repWeights = repWeights, sampled = sampled, smallLoci = smallLoci)
-  lociPD <- potlociD[which(rowSums(potlociD@posteriors, na.rm = TRUE) > 0),]
 
-  withinLoc <- which(getOverlaps(sD@segInfo, lociPD@annotation, whichOverlaps = FALSE, overlapType = "within", cl = cl))
+    message("Establishing likelihoods of loci...", appendLF = TRUE)  
+    locLikelihoods <- sapply(levels(potlociD@replicates), getLikeLoci, psD = potlociD, priors = priors, repWeights = repWeights, sampled = sampled, smallLoci = smallLoci)    
+    selLoc <- which(rowSums(locLikelihoods, na.rm = TRUE) > 0)
 
-  if(length(withinLoc > 0))
-    {      
+    if(length(selLoc) == 0)
+      stop("No loci found; maybe your cutoff values are too strict?")
+    
+    lociPD <- new("lociData",
+                  data = matrix(sapply(1:ncol(potlociD), function(ii) as.integer(potlociD@data[selLoc,ii])), nrow = length(selLoc)),
+                  seglens = width(sD@coordinates[selLoc,]),
+                  libsizes = sD@libsizes,
+                  replicates = potlociD@replicates,
+                  coordinates = sD@coordinates[selLoc,],
+                  locLikelihoods = locLikelihoods[selLoc,,drop = FALSE])
+    colnames(lociPD@data) <- colnames(potlociD@data)
+    
+    withinLoc <- which(getOverlaps(sD@coordinates, lociPD@coordinates, whichOverlaps = FALSE, overlapType = "within", cl = cl))
+
+    if(length(withinLoc > 0))
+    {
+      sDWithin <- sD[withinLoc,]
       constructNulls <- function(withinLoc, locDef, withinOnly)
         {
-          smallIn <- intersect(smallLoci, withinLoc)
-          emptyNulls <- with(sD@segInfo, data.frame(chr = chr[smallIn], start = start[smallIn] - leftSpace[smallIn], end = start[smallIn] - 1))
-          emptyNulls <- emptyNulls[emptyNulls$start > 1, ]
-          emptyNulls <- emptyNulls[emptyNulls$end - emptyNulls$start + 1 > 0,]
+          emptyNulls <- gaps(sD@coordinates[smallLoci,])
+          emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
+                    
+          leftRight <- do.call("rbind", lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
+            left <- start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]) -
+              start(emptyNulls[seqnames(emptyNulls) == chr])[match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))]
+            right <- end(emptyNulls[seqnames(emptyNulls) == chr])[match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))] - end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),])
+            cbind(left, right)
+          }))
+
+          emptyInside <- which(getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
+
+          if(!withinOnly) {            
+            emptyAdjacent <- unlist(lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
+              leftEmpties <- match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))
+              rightEmpties <- match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))
+              which(seqnames(emptyNulls) == chr)[union(leftEmpties, rightEmpties)]
+            }))
+            empties <- union(emptyInside, emptyAdjacent)
+          } else empties <- emptyInside
+          empties <- empties[!is.na(empties)]
           
-          sDWithin <- sD[withinLoc,]
+          withinData <- matrix(sapply(1:ncol(sDWithin), function(ii) as.integer(sDWithin@data[,ii])), nrow = nrow(sDWithin))
           
           potnullD <-
-            with(sDWithin@segInfo,
-                 new("postSeg",
-                     data = rbind(matrix(0, ncol = ncol(sDWithin), nrow = nrow(emptyNulls)),
-                       sDWithin@data[leftSpace > 0 & rightSpace > 0,],
-                       sDWithin@data[leftSpace > 0,],
-                       sDWithin@data[rightSpace > 0,]),
-                     seglens = c(emptyNulls$end - emptyNulls$start + 1,
-                       (end - start + 1 + leftSpace + rightSpace)[leftSpace > 0 & rightSpace > 0],
-                       (end - start + 1 + leftSpace)[leftSpace > 0],
-                       (end - start + 1 + rightSpace)[rightSpace > 0]),
-                     libsizes = sDWithin@libsizes,
-                     replicates = sDWithin@replicates,   
-                     annotation = data.frame(chr = factor(levels(sDWithin@segInfo$chr)[c(emptyNulls$chr, sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0 & sDWithin@segInfo$rightSpace > 0],
-                                                               sDWithin@segInfo$chr[sDWithin@segInfo$leftSpace > 0], sDWithin@segInfo$chr[sDWithin@segInfo$rightSpace > 0])], levels = levels(sDWithin@segInfo$chr)),
-                                start = c(emptyNulls$start, (start - leftSpace)[leftSpace > 0 & rightSpace > 0], (start - leftSpace)[leftSpace > 0], start[rightSpace > 0]),
-                                end = c(emptyNulls$end, (end + rightSpace)[leftSpace > 0 & rightSpace > 0], end[leftSpace > 0], (end + rightSpace)[rightSpace > 0]),
-                                nullClass = as.factor(rep(c("empty", "expBoth", "expLeft", "expRight"), c(nrow(emptyNulls), sum(leftSpace > 0 & rightSpace > 0), sum(leftSpace > 0), sum(rightSpace > 0)))))
-                     ))
+            new("lociData",
+                data = rbind(matrix(0, ncol = ncol(sDWithin), nrow = length(empties)),
+                  withinData[!is.na(leftRight[,'left']) & !is.na(leftRight[,'right']),],
+                  withinData[!is.na(leftRight[,'left']),],
+                  withinData[!is.na(leftRight[,'right']),]),
+                libsizes = sDWithin@libsizes,
+                replicates = sDWithin@replicates,
+                coordinates = GRanges(
+                  seqnames = c(seqnames(emptyNulls[empties,]), seqnames(sDWithin@coordinates)[!is.na(leftRight[,'left']) & !is.na(leftRight[,'right'])],
+                    (seqnames(sDWithin@coordinates))[!is.na(leftRight[,'left'])], (seqnames(sDWithin@coordinates))[!is.na(leftRight[,'right'])]),
+                  IRanges(
+                          start = c(start(emptyNulls[empties,]), (start(sDWithin@coordinates) - leftRight[,"left"])[!is.na(leftRight[,'left']) & !is.na(leftRight[,'right'])],
+                            (start(sDWithin@coordinates) - leftRight[,"left"])[!is.na(leftRight[,'left'])], (start(sDWithin@coordinates))[!is.na(leftRight[,'right'])]),
+                          end = c(end(emptyNulls[empties,]), (end(sDWithin@coordinates) + leftRight[,"right"])[!is.na(leftRight[,'left']) & !is.na(leftRight[,'right'])],
+                            (end(sDWithin@coordinates))[!is.na(leftRight[,'left'])], (end(sDWithin@coordinates) + leftRight[,'right'])[!is.na(leftRight[,'right'])])
+                          )
+                  )
+                )
 
-          overLoci <- which(getOverlaps(coordinates = potnullD@annotation, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = cl))
+          potnullD@seglens <- matrix(width(potnullD@coordinates), ncol = 1)
+          
+          overLoci <- which(getOverlaps(coordinates = potnullD@coordinates, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = cl))
           
           if(!withinOnly)           
-            overLoci <- unique(c(overLoci,
-                                 unlist(lapply(unique(potnullD@annotation$chr), function(chrom)
-                                               which(potnullD@annotation$chr == chrom)[with(potnullD@annotation[potnullD@annotation$chr == chrom,],
-                                                       which(nullClass == "empty" &
-                                                             (end + 1) %in% c(locDef$start[locDef$chr == chrom], aD@chrs$len[aD@chrs$chr == chrom]) &
-                                                             (start - 1) %in% c(locDef$end[locDef$chr == chrom], 0)))]
-                                               ))))
+            overLoci <- union(1:length(empties), overLoci)
           
           potnullD <- potnullD[overLoci,]
           potnullD
         }
-
-      curNullsWithin <- constructNulls(withinLoc, lociPD@annotation, withinOnly = TRUE)
-      curNullsWithin <- curNullsWithin[filterSegments(curNullsWithin@annotation, runif(nrow(curNullsWithin))),]
-      curNullsWithin@groups <- list(curNullsWithin@replicates)
-      curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, cl = cl)
-      curNullsWithinWeights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))#cD@posteriors[unlist(getOverlaps(curNullsWithin@annotation[curNullsWithin@priors$sampled[,1],], cD@annotation, overlapType = "within", cl = cl)),]
-
-      potnullD <- constructNulls(withinLoc, lociPD@annotation, withinOnly = FALSE)
       
+      curNullsWithin <- constructNulls(withinLoc, lociPD@coordinates, withinOnly = TRUE)
+
+      if(nrow(curNullsWithin) > 0) {      
+        curNullsWithin <- curNullsWithin[.filterSegments(curNullsWithin@coordinates, runif(nrow(curNullsWithin))),]
+        curNullsWithin@groups <- list(curNullsWithin@replicates)
+        curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, cl = cl)
+        curNullsWithinWeights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))#cD@posteriors[unlist(getOverlaps(curNullsWithin@coordinates[curNullsWithin@priors$sampled[,1],], cD@coordinates, overlapType = "within", cl = cl)),]
+        
+        potnullD <- constructNulls(withinLoc, lociPD@coordinates, withinOnly = FALSE)
       
-      getNullPosteriors <- function(rep, lociPD, potNulls) {
         
-        getPosts <- function(rep, psD) {
-          message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
+        getNullPosteriors <- function(rep, lociPD, potNulls) {
           
-          repD <- psD[, psD@replicates == rep]
-          repD@priorType = "NB"
-          repD@replicates <- rep(1, ncol(repD))
-          
-          repD@groups <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
-          
-          nullPriors <- cD
-          nullPriors@posteriors <- matrix(nrow = 0, ncol = 0)
-          nullPriors <- nullPriors[,nullPriors@replicates == rep]
-          nullPriors@replicates <- rep(1, ncol(nullPriors))
-          nullPriors <- getPriors.NB(nullPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
-          
-          repD@priors$priors <- list(list(nullPriors@priors$priors[[1]][[1]]), list(curNullsWithin@priors$priors[[1]][[rep]]))
-          repD@priors$sampled <- list(list(nullPriors@priors$sampled), list(curNullsWithin@priors$sampled))
-          repD@priors$weights <- list(list((1 - exp(cD@posteriors[nullPriors@priors$sampled[,1], rep])) * nullPriors@priors$weights), list(exp(curNullsWithinWeights[,rep])))
-          repD@priors$sampled[[1]][[1]][,1] <- -1
-          repD@priors$sampled[[2]][[1]][,1] <- -1
-          lD <- getLikelihoods.NB(cD = repD, bootStraps = 1, 
-                                  verbose = FALSE, returnPD = TRUE, 
-                                  subset = NULL, priorSubset = NULL, prs = c(0.5, 0.5), pET = "none", 
-                                  cl = cl)
-          message("...done.", appendLF = TRUE)
-          lD
-        }
-
-        repNull <- rep(NA, nrow(potNulls))
-        repLoci <- which(lociPD@posteriors[, rep])
-        repLociDP <- lociPD[repLoci, ]
-        postOver <- which(getOverlaps(coordinates = potNulls@annotation, segments = repLociDP@annotation, overlapType = "within", whichOverlaps = FALSE, cl = cl))
-        overLoci <- unique(c(postOver,
-                             unlist(lapply(unique(potNulls@annotation$chr), function(chrom)
-                                           which(potNulls@annotation$chr == chrom)[with(potNulls@annotation[potNulls@annotation$chr == chrom,],
-                                                   which(nullClass == "empty" &
-                                                         (end + 1) %in% c(repLociDP@annotation$start[repLociDP@annotation$chr == chrom], aD@chrs$len[aD@chrs$chr == chrom]) &
-                                                         (start - 1) %in% c(repLociDP@annotation$end[repLociDP@annotation$chr == chrom], 0)))]
-                                           ))
-                             ))
-        overLoci <- overLoci[!is.na(overLoci)]
-        
-        if (length(postOver > 0)) {
-          overNulls <- potNulls[overLoci,]
-          nullsWithin <- potNulls[postOver, ]
-          whichOverlaps <- 1:nrow(nullsWithin)
-          nullsPD <- getPosts(rep, psD = overNulls)
-          if(lR) {
-            repNull[overLoci] <- nullsPD[,1] > nullsPD[,2]
-          } else {
-
-            nullFilter <- filterSegments(overNulls@annotation[whichOverlaps,], runif(length(whichOverlaps)))
-            nullPosts <- getPosteriors(ps = nullsPD, pET = "BIC", groups = list(rep(1, sum(lociPD@replicates == rep)), rep(1, sum(lociPD@replicates == rep))), priorSubset = nullFilter, prs = c(0.1,0.9), cl = cl)
-            repNull[overLoci] <- nullPosts$posteriors[,1] > log(nullCutoff)
-          }
+          getPosts <- function(rep, psD) {
+            message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
             
-#            message(" Refining priors...", appendLF = FALSE)
-#            for (ii in 1:100) {
-#
-                                        #              nullFilter <- filterSegments(overNulls@annotation[whichOverlaps,], runif(length(whichOverlaps)))
-#              prs <- sum(nullsPD[nullFilter,1] < nullsPD[nullFilter,2]) / length(nullFilter)
-#              prs <- c(1 - prs, prs)
-#              
-                                        #              nullPosts <- getPosteriors(ps = nullsPD, pET = "none", groups = list(rep(1, sum(lociPD@replicates == rep)), rep(1, sum(lociPD@replicates == rep))), priorSubset = NULL, prs = prs, cl = cl)
-                                        #              nullsDP <- overNulls[which(nullPosts$posteriors[,1] > log(nullCutoff)), ]
-#              if (nrow(nullsDP) > 0) {
-#                newLoci <- which(!getOverlaps(coordinates = lociPD@annotation, segments = nullsDP@annotation, overlapType = "contains", whichOverlaps = FALSE, cl = NULL) & lociPD@posteriors[, rep])
-#                if ((all(newLoci %in% repLoci) & all(repLoci %in% newLoci)))
-#                  break()
-#                repLoci <- newLoci
-#                repLociDP <- lociPD[repLoci, ]
-#                whichOverlaps <- which(getOverlaps(coordinates = overNulls@annotation, 
-#                                                   segments = repLociDP@annotation, overlapType = "within", 
-#                                                   whichOverlaps = FALSE, cl = cl))
-#        }
-#              else break()
-#              message(".", appendLF = FALSE)
-#            }
-#          message("done.", appendLF = TRUE)
-#          repNull[overLoci] <- nullPosts$posteriors[, 1] > nullCutoff
+            repCol <- which(levels(psD@replicates) == rep)
+            repD <- psD[, psD@replicates == rep]
+            repD@priorType = "NB"
+            repD@replicates <- as.factor(rep(1, ncol(repD)))
+            
+            repD@groups <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
+            
+            nullPriors <- cD
+            nullPriors@locLikelihoods <- matrix(nrow = 0, ncol = 0)
+            nullPriors <- nullPriors[,nullPriors@replicates == rep]
+            nullPriors@replicates <- as.factor(rep(1, ncol(nullPriors)))
+            nullPriors@groups <- list(rep(1, ncol(nullPriors)), rep(1, ncol(nullPriors)))
+            nullPriors <- getPriors.NB(nullPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
+            
+            repD@priors$priors <- list(list(nullPriors@priors$priors[[1]][[1]]), list(curNullsWithin@priors$priors[[1]][[repCol]]))
+            repD@priors$sampled <- list(list(nullPriors@priors$sampled), list(curNullsWithin@priors$sampled))
+            repD@priors$weights <- list(list((1 - exp(cD@locLikelihoods[nullPriors@priors$sampled[,1], repCol])) * nullPriors@priors$weights), list(exp(curNullsWithinWeights[,repCol])))
+            repD@priors$sampled[[1]][[1]][,1] <- -1
+            repD@priors$sampled[[2]][[1]][,1] <- -1
+            lD <- getLikelihoods.NB(cD = repD, bootStraps = 1, 
+                                    verbose = FALSE, returnPD = TRUE, 
+                                    subset = NULL, priorSubset = NULL, prs = c(0.5, 0.5), pET = "none", 
+                                    cl = cl)
+            message("...done.", appendLF = TRUE)
+            lD
+          }
+          
+          repCol <- which(levels(lociPD@replicates) == rep)
+          
+          repNull <- rep(NA, nrow(potNulls))
+          repLoci <- which(lociPD@locLikelihoods[, repCol])
+          repLociDP <- lociPD[repLoci, ]
+          postOver <- which(getOverlaps(coordinates = potNulls@coordinates, segments = repLociDP@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
+          
+          
+          overLoci <- unique(c(postOver,
+                               unlist(lapply(levels(seqnames(potNulls@coordinates)), function(chrom)
+                                             which(seqnames(potNulls@coordinates) == chrom &
+                                                   (end(potNulls@coordinates) + 1) %in% c(start(repLociDP@coordinates[seqnames(repLociDP@coordinates) == chrom]), seqlengths(repLociDP@coordinates)[levels(seqnames(potNulls@coordinates)) == chrom]) &
+                                                   (start(potNulls@coordinates) - 1) %in% c(end(repLociDP@coordinates[seqnames(repLociDP@coordinates) == chrom]), 0))
+                                             ))))
+          
+          overLoci <- overLoci[!is.na(overLoci)]
+          
+          if (length(postOver > 0)) {
+            overNulls <- potNulls[overLoci,]
+            nullsWithin <- potNulls[postOver, ]
+            whichOverlaps <- 1:nrow(nullsWithin)
+            nullsPD <- getPosts(rep, psD = overNulls)
+            if(lR) {
+              repNull[overLoci] <- nullsPD[,1] > nullsPD[,2]
+            } else {
+              
+              nullFilter <- .filterSegments(overNulls@coordinates[whichOverlaps,], runif(length(whichOverlaps)))
+              nullPosts <- getPosteriors(ps = nullsPD, pET = "BIC", groups = list(rep(1, sum(lociPD@replicates == rep)), rep(1, sum(lociPD@replicates == rep))), priorSubset = nullFilter, prs = c(0.1,0.9), cl = cl)
+              repNull[overLoci] <- nullPosts$posteriors[,1] > log(nullCutoff)
+            }
+            
+          }
+          repNull
         }
-        repNull
-      }
-      message("Establishing likelihoods of nulls...", appendLF = TRUE)
-      potnullD@posteriors <- sapply(unique(potnullD@replicates), getNullPosteriors, lociPD = lociPD, potNulls = potnullD)
-      potnullD@posteriors <- log(potnullD@posteriors)
-      } else potnullD <- NULL
+        message("Establishing likelihoods of nulls...", appendLF = TRUE)
+        potnullD@locLikelihoods <- sapply(levels(potnullD@replicates), getNullPosteriors, lociPD = lociPD, potNulls = potnullD)
+        potnullD@locLikelihoods <- log(potnullD@locLikelihoods)
+      } else potnullD <- new("lociData")
+    } else potnullD <- new("lociData")
 
-  lociPD@posteriors <- log(lociPD@posteriors)
+  lociPD@locLikelihoods <- log(lociPD@locLikelihoods)
   
-    locMap <- .processPosteriors(lociPD, potnullD, chrs = sD@chrs, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
+    locMap <- .processPosteriors(lociPD, potnullD, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
   locMap
       }

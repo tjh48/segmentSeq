@@ -1,17 +1,18 @@
-.processPosteriors <- function(lociPD, nullPD, chrs, aD, lociCutoff = 0.5, nullCutoff = 0.9, getLikes = TRUE, cl)
+.processPosteriors <- function(lociPD, nullPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = TRUE, cl)
   {
-    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@posteriors >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
-    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@posteriors >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
+    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
+    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
       
     message("Checking overlaps...", appendLF = FALSE)
-    locAccept <- sapply(unique(selLoci@replicates), function(rep)
+    locAccept <- matrix(sapply(levels(selLoci@replicates), function(rep)
                         {
+                          repCol <- which(levels(selLoci@replicates) == rep)
                           accepts <- rep(FALSE, nrow(selLoci))
-                          repLoci <- which(selLoci@posteriors[,rep] >= log(lociCutoff))
-                          if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@annotation[repLoci,], selNull@annotation[selNull@posteriors[,rep] >= log(nullCutoff),], overlapType = "contains", whichOverlaps = FALSE, cl = cl) else accepts <- rep(TRUE, nrow(selLoci))
+                          repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
+                          if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = cl) else accepts <- rep(TRUE, nrow(selLoci))
                           message(".", appendLF = FALSE)
                           return(accepts)
-                        })
+                        }), nrow = nrow(lociPD))
     message("done.", appendLF = TRUE)
 
     message("Selecting loci...", appendLF = FALSE)
@@ -22,64 +23,75 @@
     gc()
     
     ordLSD <- NULL
-    ordLSD[order(rowSums(segAccept), lociSegs@annotation$end - lociSegs@annotation$start, decreasing = TRUE)] <- 1:nrow(lociSegs)
+    ordLSD[order(rowSums(segAccept), width(lociSegs@coordinates), decreasing = TRUE)] <- 1:nrow(lociSegs)
                  
-    filLSD <- filterSegments(lociSegs@annotation, orderOn = ordLSD, decreasing = FALSE)
+    filLSD <- .filterSegments(lociSegs@coordinates, orderOn = ordLSD, decreasing = FALSE)
     filSegs <- lociSegs[filLSD, ]
-    filSegs <- filSegs[with(filSegs@annotation, order(as.factor(chr), start, end)), ]
-    
-    potDiscards <- unique(unlist(lapply(unique(nullPD@annotation$chr), function(chrom)
-                                        which(nullPD@annotation$chr == chrom)[
-                                                with(nullPD@annotation[nullPD@annotation$chr == chrom,],
-                                             which(end - start + 1 < 300 & nullClass == "empty" &
-                                                   (end + 1) %in% c(filSegs@annotation$start[filSegs@annotation$chr == chrom], chrs$len[chrs$chr == chrom]) &
-                                                   (start - 1) %in% c(filSegs@annotation$end[filSegs@annotation$chr == chrom], 0)))
-                                                ]
-                                        )))
-
-    discardNulls <- nullPD[potDiscards,]
-
-    message("done!")
-
-    message("Extending loci...", appendLF = FALSE)
-    
-    leftExtendSeg <- unlist(lapply(unique(filSegs@annotation$chr), function(chrom) {
-      message(".", appendLF = FALSE)
-      which(filSegs@annotation$chr == chrom)[match(discardNulls@annotation$start[discardNulls@annotation$chr == chrom] - 1, filSegs@annotation$end[filSegs@annotation$chr == chrom])]
-    }))
-                          
-    rightExtendSeg <- unlist(lapply(unique(filSegs@annotation$chr), function(chrom) {
-      message(".", appendLF = FALSE)
-      which(filSegs@annotation$chr == chrom)[match(discardNulls@annotation$end[discardNulls@annotation$chr == chrom] + 1, filSegs@annotation$start[filSegs@annotation$chr == chrom])]
-    }))
-
-    extensions <- apply(cbind(potDiscards, leftExtendSeg, rightExtendSeg), 1, function(discards) {
-      leftExt <- !is.na(discards[2]) & !any(which(nullPD@posteriors[discards[1],] >= log(nullCutoff)) %in% which(filSegs@posteriors[discards[2],] >= log(lociCutoff)))
-      rightExt <- !is.na(discards[3]) & !any(which(nullPD@posteriors[discards[1],] >= log(nullCutoff)) %in% which(filSegs@posteriors[discards[3],] >= log(lociCutoff)))
-      if(!leftExt & !rightExt) return(c(0, 0))
-      if(leftExt & !rightExt) return(c(nullPD@seglens[discards[1],1], 0))
-      if(!leftExt & rightExt) return(c(0, nullPD@seglens[discards[1],1]))
-      if(leftExt & rightExt) {
-        lenweight <- filSegs@seglens[discards[2],1] + filSegs@seglens[discards[3],1]
-        extLeft <- round(nullPD@seglens[discards[1],1] * filSegs@seglens[discards[2],1] / lenweight + runif(1, -1e-3, 1e-3) * as.numeric(filSegs@seglens[discards[2],1] == filSegs@seglens[discards[3],1]))
-        extRight <- nullPD@seglens[discards[1],1] - extLeft
-        message(".", appendLF = FALSE)
-        return(c(extLeft, extRight))
-        
-      }
-    })
+    filSegs <- filSegs[order(as.character(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
 
     message("done!")
     
-    extSegs <- filSegs
-
-    if(length(extensions) > 0)
+    potDiscards <- unique(unlist(lapply(levels(seqnames(nullPD@coordinates)), function(chrom)
+                                        {
+                                          whChrom <- which(seqnames(nullPD@coordinates) == chrom)
+                                          nullChr <- ranges(nullPD@coordinates)[whChrom,]
+                                          
+                                          whChrom[which(width(nullChr) < 300 & rowSums(nullPD@data[whChrom,]) == 0 &
+                                                        (end(nullChr) + 1) %in% c(start(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom], seqlengths(nullPD@coordinates)[levels(seqnames(nullPD@coordinates)) == chrom]) &
+                                                        (start(nullChr) - 1) %in% c(end(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom], 0))
+                                                  ]
+                                        })))
+                                        
+    if(length(potDiscards) > 0)
       {
-        extSegs@annotation$end[leftExtendSeg[!is.na(leftExtendSeg)]] <- extSegs@annotation$end[leftExtendSeg[!is.na(leftExtendSeg)]] + extensions[1,!is.na(leftExtendSeg)]
-        extSegs@annotation$start[rightExtendSeg[!is.na(rightExtendSeg)]] <- extSegs@annotation$start[rightExtendSeg[!is.na(rightExtendSeg)]] - extensions[2,!is.na(rightExtendSeg)]
-      }
+        discardNulls <- nullPD[potDiscards,]
+        
+        
+        message("Extending loci...", appendLF = FALSE)
+        
+        leftExtendSeg <- unlist(lapply(levels(seqnames(filSegs@coordinates)), function(chrom) {
+          message(".", appendLF = FALSE)
+          which(seqnames(filSegs@coordinates) == chrom)[match(start(discardNulls@coordinates)[as.character(seqnames(discardNulls@coordinates)) == chrom] - 1,
+                          end(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom])]      
+        }))
+        
+        rightExtendSeg <- unlist(lapply(levels(seqnames(filSegs@coordinates)), function(chrom) {
+          message(".", appendLF = FALSE)
+          which(seqnames(filSegs@coordinates) == chrom)[match(end(discardNulls@coordinates)[as.character(seqnames(discardNulls@coordinates)) == chrom] + 1,
+                          start(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom])]      
+        }))
+        
+        extensions <- apply(cbind(potDiscards, leftExtendSeg, rightExtendSeg), 1, function(discards) {
+          leftExt <- !is.na(discards[2]) & !any(which(nullPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[2],] >= log(lociCutoff)))
+          rightExt <- !is.na(discards[3]) & !any(which(nullPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[3],] >= log(lociCutoff)))
+          if(!leftExt & !rightExt) return(c(0, 0))
+          if(leftExt & !rightExt) return(c(nullPD@seglens[discards[1],1], 0))
+          if(!leftExt & rightExt) return(c(0, nullPD@seglens[discards[1],1]))
+          if(leftExt & rightExt) {
+            lenweight <- filSegs@seglens[discards[2],1] + filSegs@seglens[discards[3],1]
+            extLeft <- round(nullPD@seglens[discards[1],1] * filSegs@seglens[discards[2],1] / lenweight + runif(1, -1e-3, 1e-3) * as.numeric(filSegs@seglens[discards[2],1] == filSegs@seglens[discards[3],1]))
+            extRight <- nullPD@seglens[discards[1],1] - extLeft
+            message(".", appendLF = FALSE)
+            return(c(extLeft, extRight))
+            
+          }
+        })
+        
+        message("done!")
+        
+        
+        extSegs <- filSegs
+        
+        if(length(extensions) > 0)
+          {
+            end(extSegs@coordinates)[leftExtendSeg[!is.na(leftExtendSeg)]] <- end(extSegs@coordinates)[leftExtendSeg[!is.na(leftExtendSeg)]] + extensions[1,!is.na(leftExtendSeg)]
+            start(extSegs@coordinates)[rightExtendSeg[!is.na(rightExtendSeg)]] <- start(extSegs@coordinates)[rightExtendSeg[!is.na(rightExtendSeg)]] - extensions[2,!is.na(rightExtendSeg)]
+          }
+      } else extSegs <- filSegs    
     
     if (getLikes & nrow(extSegs) > 1) likeSegs <- lociLikelihoods(aD = aD, cD = extSegs, cl = cl) else likeSegs <- extSegs
-        
+    
+    colnames(likeSegs@locLikelihoods) <- levels(likeSegs@replicates)
+    
     likeSegs
   }

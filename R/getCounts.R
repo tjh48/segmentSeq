@@ -1,6 +1,5 @@
-
 getCounts <-
-function(segments, aD, preFiltered = FALSE, cl)
+function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
   {     
     if(!is.null(cl))
       {
@@ -18,66 +17,71 @@ function(segments, aD, preFiltered = FALSE, cl)
       }
 
     alignments <- aD@alignments
-    if("tag" %in% names(alignments) && class(aD@alignments$tag) != "integer") alignments$tag <- as.integer(as.factor(alignments$tag)) else alignments$tag <- 1:nrow(alignments)
+    if("tag" %in% names(values(alignments)) && class(values(alignments)$tag) != "integer") values(alignments)$tag <- as.integer(as.factor(values(alignments)$tag)) else values(alignments)$tag <- 1:length(alignments)
     cdata <- aD@data
     
     if(!preFiltered)
       {
-        segnas <- is.na(segments$chr) | is.na(segments$start) | is.na(segments$end)
+        segnas <- as.vector(is.na(seqnames(segments)) | is.na(start(segments)) | is.na(end(segments)))
         segments <- segments[!segnas,]
 
-        rodering <- order(segments$chr, segments$start, segments$end)
+        rodering <- order(as.integer(seqnames(segments)), start(segments), end(segments))
         rodsegs <- segments[rodering,, drop = FALSE]
         dup <- which(!duplicated(rodsegs))
-        reps <- c(dup[-1], nrow(rodsegs) + 1) - c(dup)
+        reps <- c(dup[-1], length(rodsegs) + 1) - c(dup)
         redsegs <- rodsegs[dup,]
       } else redsegs <- segments
-
-    countsmat <- unlist(lapply(unique(redsegs$chr), function(cc)
-                               {
-                                 whchr <- alignments$chr == cc
+    
+    countsmat <- do.call("rbind", lapply(seqlevels(redsegs), function(cc)
+                               {                                 
                                  createIntervals <- function(inCluster = FALSE)
                                    {
-                                     cummaxEnd <- cummax(dupTags$end)
-                                     cumminStart <- cummax(dupTags$start)
+                                     cummaxEnd <- cummax(end(dupTags))
+                                     cumminStart <- cummax(start(dupTags))
                                      
-                                     fIns <- cbind(findInterval(chrsegs$start, cummaxEnd) + 1, 
-                                                   findInterval(chrsegs$end, cumminStart))
+                                     fIns <- cbind(findInterval(start(chrsegs), cummaxEnd) + 1, 
+                                                   findInterval(end(chrsegs), cumminStart))
                                      if(inCluster) assign("fIns", fIns, envir = .GlobalEnv) else return(fIns)
                                      return(NULL)
                                    }
+                                 
+                                 chrsegs <- IRanges(start = start(redsegs[seqnames(redsegs) == cc,]), end = end(redsegs[seqnames(redsegs) == cc,]))
 
+                                 whchr <- which(as.character(seqnames(alignments)) == cc & start(alignments) <= max(end(chrsegs)) & end(alignments) >= min(start(chrsegs)))
                                  
-                                 chrsegs <- data.frame(start = redsegs$start, end = redsegs$end)[redsegs$chr == cc,,drop = FALSE]
-                                 chrdata <- subset(cdata, subset = whchr)
+                                 chrdata <- cdata[whchr,]
+                                 intData <- sapply(1:ncol(chrdata), function(rr) as.integer(chrdata[,rr]))
+                                 
+                                 chralignments <- alignments[whchr,]
 
-                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag", "chunkDup")) else {
-                                     chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag"))
-                                     chralignments <- cbind(chralignments, chunkDup = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
-                                   }
+#                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag", "chunkDup")) else {
+#                                     chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag"))
+#                                     chralignments <- cbind(chralignments, chunkDup = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
+#                                   }
                                  
-                                 nondupTags <- subset(chralignments, subset = chralignments$chunkDup == FALSE, select = c("start", "end"))
-                                 nondupData <- chrdata[chralignments$chunkDup == FALSE,,drop = FALSE]
+                                 nondupTags <- ranges(chralignments)[!values(chralignments)$chunkDup,]
+                                 nondupData <- intData[!values(chralignments)$chunkDup,, drop = FALSE]
                                  
-                                 if(nrow(nondupTags) > 0)
+                                 if(length(nondupTags) > 0)
                                    {
-                                     ordTags <- order(nondupTags$start, nondupTags$end)
-                                     droTags <- order(nondupTags$end, nondupTags$start)
+                                     ordTags <- order(start(nondupTags), end(nondupTags))
+                                     droTags <- order(end(nondupTags), start(nondupTags))
+                                     
+                                     endsBelow <- findInterval(end(chrsegs), end(nondupTags)[droTags])
+                                     startsBelow <- findInterval(start(chrsegs) - 0.5, start(nondupTags)[ordTags])
                                      
                                      cens <- rbind(0L, apply(nondupData[droTags,,drop = FALSE], 2, cumsum))
-                                     
-                                     endsBelow <- findInterval(chrsegs$end, nondupTags$end[droTags])
                                      csts <- rbind(0L, apply(nondupData[ordTags,,drop = FALSE], 2, cumsum))
-                                     startsBelow <- findInterval(chrsegs[,1] - 0.5, nondupTags$start[ordTags])
-                                     
+
                                      chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
                                      chrUC[chrUC < 0] <- 0L
-                                   } else chrUC <- matrix(0L, ncol = ncol(chrdata), nrow = nrow(chrsegs))
+                                   } else chrUC <- matrix(0L, ncol = ncol(intData), nrow = nrow(chrsegs))
                                  
-                                 dupTags <- subset(chralignments, subset = chralignments$chunkDup == TRUE, select = c("start", "end", "tag"))
-                                 dupData <- chrdata[chralignments$chunkDup == TRUE,, drop = FALSE]
+                                 dupTags <- ranges(chralignments)[values(chralignments)$chunkDup,]
+                                 dupTagID <- values(chralignments)$tag[values(chralignments)$chunkDup]
+                                 dupData <- intData[values(chralignments)$chunkDup,, drop = FALSE]
                                  
-                                 if(nrow(dupTags) > 0)
+                                 if(length(dupTags) > 0)
                                    {
                                      if(!is.null(cl))
                                        {
@@ -85,6 +89,7 @@ function(segments, aD, preFiltered = FALSE, cl)
                                          clusterCall(cl, clusterAssign,
                                                      assignList = list(list(name = "chrsegs", data = chrsegs),
                                                        list(name = "dupTags", data = dupTags),
+                                                       list(name = "dupTagID", data = dupTagID),
                                                        list(name = "dupData", data = dupData)))
                                          clusterCall(cl, createIntervals, inCluster = TRUE)
                                        } else fIns <- createIntervals()
@@ -94,29 +99,33 @@ function(segments, aD, preFiltered = FALSE, cl)
                                          if(fIns[segii,1L] > fIns[segii,2L]) return(rep(0L, ncol(dupData)))
                                          seltags <- fIns[segii,1L]:fIns[segii,2L]
                                          tags <- dupTags[seltags,, drop = FALSE]
-                                         seltags <- seltags[tags$start <= chrsegs$end[segii] & tags$end >= chrsegs$start[segii]]
-                                         seltags <- seltags[!duplicated(dupTags$tag[seltags])]
+                                         seltags <- seltags[start(tags) <= end(chrsegs)[segii] & end(tags) >= start(chrsegs)[segii]]
+                                         seltags <- seltags[!duplicated(dupTagID[seltags])]
                                          as.integer(colSums(dupData[seltags,,drop = FALSE]))
                                        }
                                      
                                      if(!is.null(cl))
                                        environment(countNonUniques) <- getCountEnv
                                      
-                                     if(!is.null(cl)) chrNC <- parSapply(cl, 1:nrow(chrsegs), countNonUniques) else  chrNC <- sapply(1:nrow(chrsegs), countNonUniques)
-                                   } else chrNC <- matrix(0L, nrow = ncol(chrdata), ncol = nrow(chrsegs))
+                                     if(!is.null(cl)) chrNC <- parSapply(cl, 1:length(chrsegs), countNonUniques) else  chrNC <- sapply(1:length(chrsegs), countNonUniques)
+                                                               
+                                     
+                                   } else chrNC <- matrix(0L, nrow = ncol(intData), ncol = length(chrsegs))
                                  
-                                 t(chrUC + t(chrNC))
+                                 chrUC + t(chrNC)
                                }))
-    countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
-
+    #countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
+    
     if(!preFiltered) {
-      countsmat <- matrix(unlist(sapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = nrow(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
+      countsmat <- matrix(unlist(lapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = length(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
       countsmat <- countsmat[order(rodering),, drop = FALSE]
-
+      
       countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))
       countsnas[!segnas,] <- countsmat
     } else countsnas <- countsmat
 
-    countsnas
+    if(!as.matrix) countData <- do.call("DataFrame", lapply(1:ncol(countsnas), function(jj) Rle(countsnas[,jj]))) else countData <- countsnas      
+
+    countData
   }
 

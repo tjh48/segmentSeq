@@ -1,12 +1,12 @@
-filterSegments <- function(segs, orderOn, ...)
+.filterSegments <- function(segs, orderOn, ...)
   {    
-    chrfilter <- function(segs, suborderOn, ...)
+    chrfilter <- function(chrsegs, suborderOn, ...)
       {
-        cummaxEnd <- cummax(segs$end)
-        cumminStart <- cummax(segs$start)
+        cummaxEnd <- cummax(end(chrsegs))
+        cumminStart <- cummax(start(chrsegs))
         
-        fIns <- cbind(findInterval(segs$start, cummaxEnd) + 1, 
-                      findInterval(segs$end, cumminStart))
+        fIns <- cbind(findInterval(start(chrsegs) - 0.5, cummaxEnd) + 1, 
+                      findInterval(end(chrsegs), cumminStart))
         
         filtsegs <- order(suborderOn, ...)
     
@@ -18,7 +18,7 @@ filterSegments <- function(segs, orderOn, ...)
         while(length(filtsegs) > 0)
           {
             chsam <- filtsegs[ss:min(ss + winsize -1, length(filtsegs))]
-            oL <- lapply(chsam, function(x) setdiff((fIns[x,1L]:fIns[x,2L])[segs$end[fIns[x,1L]:fIns[x,2L]] >= segs$start[x] & segs$start[fIns[x,1L]:fIns[x,2L]] <= segs$end[x]], x))
+            oL <- lapply(chsam, function(x) setdiff((fIns[x,1L]:fIns[x,2L])[end(chrsegs)[fIns[x,1L]:fIns[x,2L]] >= start(chrsegs)[x] & start(chrsegs)[fIns[x,1L]:fIns[x,2L]] <= end(chrsegs)[x]], x))
             if(any(chsam %in% unlist(oL))) accsam <- !chsam %in% unlist(oL) else accsam <- rep(TRUE, length(chsam))
             accsam[1L] <- TRUE
             
@@ -30,19 +30,19 @@ filterSegments <- function(segs, orderOn, ...)
         filteredsegs
       }
 
-    chrs <- unique(segs$chr)
+    chrs <- levels(seqnames(segs))
 
     filtlist <- unlist(lapply(chrs, function(cc, orderOn, ...)
                               {
-                                chrsamp <- segs$chr == cc
-                                chrsegs <- subset(segs, chrsamp, select = c(start, end))
+                                chrsamp <- which(seqnames(segs) == cc)
+                                chrsegs <- ranges(segs)[chrsamp,]
 
-                                rod <- order(chrsegs$start, chrsegs$end)
+                                rod <- order(start(chrsegs), end(chrsegs))
                                 suborderOn <- (orderOn[chrsamp])[rod]
                                 rodsegs <- chrsegs[rod,,drop = FALSE]
                                 
                                 chrfil <- chrfilter(rodsegs, suborderOn, ...)
-                                which(chrsamp)[rod[chrfil]]
+                                chrsamp[rod[chrfil]]
                               }, orderOn = orderOn, ...))
     
     filtlist

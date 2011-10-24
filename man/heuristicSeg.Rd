@@ -5,7 +5,7 @@ A (fast) heuristic method for creation of a genome segment map.
 }
 \description{
 This method identifies by heuristic methods a set of loci from a
-'segData' object. It does this by identifying within replicate groups
+\code{segData} object. It does this by identifying within replicate groups
 regions of the genome that satisfy the criteria for being a locus and
 have no region within them that satisfies the criteria for being a
 null. These criteria can be defined by the user or inferred from the
@@ -15,20 +15,20 @@ data.
 heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subRegion
 = NULL, getLikes = TRUE, verbose = TRUE, cl)
 }
-%- maybe also 'usage' for other objects documented here.
+%- maybe also `usage' for other objects documented here.
 \arguments{
   \item{aD}{
     An \code{\linkS4class{alignmentData}} object.
   }
   \item{sD}{
-    A \code{\linkS4class{segData}} object derived from the 'aD' object.
+    A \code{\linkS4class{segData}} object derived from the `aD' object.
   }
   \item{bimodality}{Should the criteria for loci be inferred from the
-    (likely) bimodaly structure of the data?}
+    (likely) bimodal structure of the data?}
   \item{RKPM}{What RKPM (reads per kilobase per million reads) distinguishes
-    between a locus and a null region? Ignored if bimodality = TRUE.}
+    between a locus and a null region? Ignored if \code{bimodality = TRUE}.}
   \item{gap}{What is the minimum length of a null region? Ignored if
-    bimodality = TRUE.}
+    \code{bimodality = TRUE}.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
     the genome to be segmented. If NULL (default), the whole genome is segmented.}
   \item{getLikes}{Should posterior likelihoods for the new segmented
@@ -42,12 +42,13 @@ heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subRegion
   Passing NULL to this variable will cause the function to run in non-parallel mode.
 }
 \value{
-  A \code{\link[baySeq:countData]{countData}} object, containing count
+  A \code{\link{lociData}} object, containing count
   information on all the segments discovered.
 }
 \references{
-    Hardcastle T.J., and Kelly, K.A. (2010). Genome Segmentation From
-    High-Throughput Sequencing Data. In preparation.
+Hardcastle T.J., Kelly, K.A. and Balcombe D.C. (2011). Identifying small
+RNA loci from high-throughput sequencing data. In press.
+
 }
 \author{
 Thomas J. Hardcastle
@@ -59,7 +60,7 @@ Thomas J. Hardcastle
   tags to the genome (together with the segments defined by this
   function).
   \code{\link[baySeq:baySeq-package]{baySeq}}, a package for discovering
-  differential expression in \code{\link[baySeq:countData]{countData}} objects.
+  differential expression in \code{\link{lociData}} objects.
 }
 
 \examples{
@@ -77,13 +78,13 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
-# Process the files to produce an 'alignmentData' object.
+# Process the files to produce an `alignmentData' object.
 
-alignData <- processTags(file = libfiles, dir = datadir, replicates =
+alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 200)
+chrlens, gap = 100)
 
-# Process the alignmentData object to produce a 'segData' object.
+# Process the alignmentData object to produce a `segData' object.
 
 sD <- processAD(alignData, cl = NULL)
 
@@ -92,7 +93,7 @@ sD <- processAD(alignData, cl = NULL)
 segD <- heuristicSeg(sD = sD, aD = alignData, subRegion = data.frame(chr = ">Chr1", start =
 1, end = 1e5), cl = NULL)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
+% Add one or more standard keywords, see file `KEYWORDS' in the
 % R documentation directory.
 \keyword{manip}
 \keyword{classif}

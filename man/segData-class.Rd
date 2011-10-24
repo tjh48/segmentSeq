@@ -18,40 +18,24 @@ Objects can be created by calls of the form \code{new("segData", ...,
 }
 \section{Slots}{
   \describe{
-    \item{\code{data}:}{Object of class \code{"matrix"}. Contains the
+    \item{\code{data}:}{Object of class \code{\link[IRanges]{DataFrame}}. Contains the
       number of counts observed for each sample in each potential
       segment.}
-    \item{\code{leftData}:}{Object of class \code{"matrix"}. Contains
-      the number of counts observed for the region to the left of the
-      potential segment.}
-    \item{\code{rightData}:}{Object of class \code{"matrix"}. Contains
-      the number of counts observed for the region to the right of the
-      potential segment.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes for each sample.}
-    \item{\code{chrs}:}{Object of class \code{"data.frame"}. Should contain
-      two columns 'chr' and 'len' giving the chromosome names and
-      lengths of each chromosome respectively.}
-    \item{\code{replicates}:}{Object of class \code{"numeric"}. The
-      replicate structure for the samples. This should be a vector of
-      consecutive integers starting with 1.}
-    \item{\code{priorType}:}{Character string describing the type of prior
-      information available in slot \code{'priors'}.}
-    \item{\code{priors}:}{Prior parameter information, estimated from the
-      data (or otherwise acquired). See Details.}
-    \item{\code{segInfo}:}{Object of class \code{"data.frame"}. A data.frame containing the following columns;
-      'chr', 'start', 'end', 'leftSpace', 'rightSpace'. See Details.}
+    \item{\code{replicates}:}{Object of class \code{"factor"}. The
+      replicate structure for the samples.}
+    \item{\code{coordinates}:}{Object of class \code{"data.frame"}. A
+      \code{\link[GenomicRanges]{GRanges}} object defining the
+      coordinates of the segments.}
   }
 }
 
 \section{Details}{
-  The \code{@segInfo} slot contains information on each of the potential
+  The \code{@coordinates} slot contains information on each of the potential
   segments; specifically, chromosome, start and end of the segment,
-  together with the distance from each segment to the next segment on the
-  left and right hand sides. These data are contained in the columns
-  'chr', 'start', 'end', 'leftSpace', 'rightSpace' respectively. Each
-  row of the \code{@segInfo} slot should correspond to the same row of
-  the \code{@data} slot.
+  together. Each row of the \code{@coordinates} slot should correspond to
+  the same row of the \code{@data} slot.
 
   In almost all cases objects of this class should be produced by the
   \code{\link{processAD}} function.
@@ -88,9 +72,9 @@ replicates <- c(1,1,2,2)
 
 # Process the files to produce an 'alignmentData' object.
 
-alignData <- processTags(file = libfiles, dir = datadir, replicates =
+alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 200)
+chrlens, gap = 100)
 
 # Process the alignmentData object to produce a 'segData' object.
 

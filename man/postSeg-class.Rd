@@ -1,59 +1,82 @@
-\name{postSeg-class}
+\name{lociData-class}
 \docType{class}
-\alias{postSeg}
-\alias{postSeg-class}
-\alias{dim,postSeg-method}
-\alias{[,postSeg-method}
-\alias{show,postSeg-method}
+\alias{lociData}
+\alias{lociData-class}
+\alias{dim,lociData-method}
+\alias{[,lociData-method}
+\alias{[,lociData,ANY,ANY-method}
+\alias{show,lociData-method}
 
-\title{baySeq - classes}
+\title{Class "lociData"}
 
 \description{
-  The \code{postSeg} class is identical to the
-  \code{\link[baySeq:countData]{countData}} class defined in the
-  'baySeq' package, but has a different structure in the '@posteriors'
-  slot and so is given a different class to avoid confusion.
+  The \code{lociData} class is based on the
+  \code{\link{lociData}} class defined in the
+  `baySeq' package, but includes a `coordinates' slot giving the
+  coordinates of genomic loci and a `locLikelihoods' slot which contains
+  the estimated likelihoods that each annotated region is a locus in
+  each replicate group and a coordinates structure giving the locations
+  of the loci.
 }
 
 \section{Slots}{
-  Objects of the \code{'postSeg'} class should contain the following components:  
-  \tabular{ll}{
-    \code{data}:\tab Count data (matrix).\cr
-    \code{libsizes}:\tab Vector of library size for each sample.\cr
-    \code{groups}:\tab Group (model) structure to test on the data
-    (list). \cr
-    \code{annotation}:\tab Annotation data for each count (data.frame). \cr
-    \code{priorType}:\tab Character string describing the type of prior
-    information available in slot \code{'priors'}. \cr
-    \code{priors}:\tab Prior parameter information. \cr
-    \code{posteriors}:\tab Estimated posterior likelihoods for each
-  replicate group of a potential segment being a null
-  (matrix). \cr
-    \code{estProps}:\tab Estimated proportion of tags belonging to each
-    group (numeric). Calculated by the functions described in
-    \code{\link{getLikelihoods}}. \cr
-    \code{nullPosts}:\tab If calculated, the posterior likelihoods for
-  the data having no true expression of any kind. \cr
-    \code{seglens}:\tab Lengths of segments containing the counts
-    described in \code{data}. A matrix, but may be initialised with a
-  vector, or ignored altogether. See Details. \cr
-}}
+  \describe{
+    \item{\code{locLikelihoods}:}{Object of class \code{"matrix"}
+  describing estimated likelihoods that each region defined in
+  `coordinates' is a locus in each replicate group.}
+    \item{\code{coordinates}:}{Object of class \code{"GRanges"} defining
+  the coordinates of the genomic loci.}
+    \item{\code{data}:}{Object of class \code{"matrix"} defining count
+  data for each locus defined in `coordinates'}
+    \item{\code{replicates}:}{Object of class \code{"factor"} defining
+  the replicate structure of the data.}
+    \item{\code{libsizes}:}{Object of class \code{"numeric"} describing
+  the library size (scaling factor) for each sample.}
+    \item{\code{groups}:}{Object of class \code{"list"} defing the group
+  (model) structure of the data (see the
+  \code{\link[baySeq:baySeq-package]{baySeq} package})}.
+    \item{\code{annotation}:}{Object of class \code{"data.frame"} giving
+  any additional annotation information for each locus.}
+    \item{\code{priorType}:}{Object of class \code{"character"}
+  describing the type of prior information available in slot \code{'priors'}.}
+    \item{\code{priors}:}{Object of class \code{"list"} defing the prior
+      parameter information. Calculated by
+      the \link[baySeq:baySeq-package]{baySeq} package.}
+    \item{\code{posteriors}:}{Object of class \code{"matrix"} giving the
+  estimated posterior likelihoods for each replicate group. Calculated by
+  the \link[baySeq:baySeq-package]{baySeq} package.}
+    \item{\code{nullPosts}:}{Object of class \code{"numeric"} which, if
+  calculated, defines the posterior likelihoods for the data having no
+  true expression of any kind. Calculated by
+  the \link[baySeq:baySeq-package]{baySeq} package.}
+    \item{\code{estProps}:}{Object of class \code{"numeric"} giving the
+  estimated proportion of tags belonnging to each group. Calculated by
+  the \link[baySeq:baySeq-package]{baySeq} package.}
+    \item{\code{seglens}:}{Object of class \code{"matrix"} defining the
+  lengths of each segment containing the counts described in the
+  \code{'data'} slot. May be initialised with a vector, or ignored altogether.}
+  }
+}
+
+\section{Extends}{
+Class \code{"\linkS4class{lociData}"}, directly.
+}
 
 \section{Details}{
 The \code{seglens} slot describes, for each row of the \code{data}
-object, the length of the 'segment' that contains the number of counts
+object, the length of the segment that contains the number of counts
 described by that row. For example, if we are looking at the number of
 hits matching genes, the \code{seglens} object would consist of
 transcript lengths. Exceptionally, we may want to use different segment
 lengths for different samples and so the slot takes the form of a
 matrix. If the matrix has only one column, it is duplicated for all
 samples. Otherwise, it should have the same number of columns as the
-'@data' slot. If the slot is the empty matrix, then it is assumed that
+'data' slot. If the slot is the empty matrix, then it is assumed that
 all segments have the same length.
 }
 
 \section{Methods}{
-  Methods 'new', 'dim', '[' and 'show' have been defined for this class.
+  Methods `new', `dim', `[' and `show' have been defined for this class.
 }
 
 \author{Thomas J. Hardcastle}

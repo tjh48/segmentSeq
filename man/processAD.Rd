@@ -1,10 +1,10 @@
 \name{processAD}
 \alias{processAD}
-\title{Processes an 'alignmentData' object into a 'segData' object for segmentation.
+\title{Processes an `alignmentData' object into a `segData' object for segmentation.
 }
 \description{
 In order to discover segments of the genome with a high density of
-sequenced data, a 'segData' object must be produced. This is an object
+sequenced data, a `segData' object must be produced. This is an object
 containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
@@ -35,15 +35,14 @@ processAD(aD, gap = NULL, verbose = TRUE, cl)
     exists in the \code{\linkS4class{alignmentData}} object. A potential
     segment then exists from this start point to the end of all regions
     of overlapping alignments such that there is no region in the
-    segment of at least length 'gap'  where no tag aligns. The
-    \code{'gap'} argument thus defines the maximum gap that can exist
-    between tags in a segment of high density of alignments. The number
+    segment of at least length `gap'  where no tag aligns. The number
     of potential segments can therefore be increased by increasing this 
     limit, or (usually more usefully) decreased by decreasing this limit
     in order to save computational effort.
 
-    The 'gap' argument is now by default specified in the \code{\link{processTags}}
-    function used to create the 'aD' object, and so 'gap' can be left as
+    The `gap' argument is now by default specified in the
+    \code{\link{readGeneric}} and \code{\link{readBAM}} functions
+    used to create the `aD' object, and so `gap' can be left as
     NULL providing this has been done.
 
     A \code{'cluster'} object (package: snow) is recommended for
@@ -82,15 +81,15 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
-# Process the files to produce an 'alignmentData' object.
+# Process the files to produce an `alignmentData' object.
 
-alignData <- processTags(file = libfiles, dir = datadir, replicates =
+alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 200)
+chrlens, gap = 100)
 
-# Process the alignmentData object to produce a 'segData' object.
+# Process the alignmentData object to produce a `segData' object.
 
-sD <- processAD(alignData, gap = 200, cl = NULL)
+sD <- processAD(alignData, gap = 100, cl = NULL)
 
 }
 \keyword{manip}

@@ -17,10 +17,10 @@ NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{sD}{
-    A \code{\linkS4class{segData}} object derived from the 'aD' object.
+    A \code{\linkS4class{segData}} object derived from the `aD' object.
 }
   \item{cD}{
-    A \code{\link[baySeq:countData]{countData}} object containing an
+    A \code{\link{lociData}} object containing an
     already existing segmentation map, or NULL.
 }
   \item{aD}{
@@ -30,7 +30,7 @@ NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...)
     for a region to be treated as a locus.}
   \item{nullCutoff}{The minimum posterior likelihood of being a null for
     a region to be treated as a null.}
-  \item{subRegion}{A \code{'data.frame'} object defining the subregions of
+  \item{subRegion}{A \code{data.frame} object defining the subregions of
     the genome to be segmented. If NULL (default), the whole genome is
     segmented.}
   \item{getLikes}{Should posterior likelihoods for the new segmented
@@ -46,31 +46,32 @@ NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...)
 }
 \details{
 This function acquires empirical distributions of sequence tag density
-from the segmentation map defined by the 'cD' argument (if 'cD = NULL' then the
-\code{\link{heuristicSeg}} function is used to define a segmentation map. It
-uses these empirical distributions to acquire posterior likelihoods on
-each potential segment being either a true segment or a null
-region. These posterior likelihoods are then used to define the segment map.
+from the segmentation map defined by the `cD' argument (if `cD' is NULL
+or missing, then the \code{\link{heuristicSeg}} function is used to
+define a segmentation map. It uses these empirical distributions to
+acquire posterior likelihoods on each potential segment being either a
+true segment or a null region. These posterior likelihoods are then used
+to define the segment map. 
 }
 \value{
-  A \code{\link{postSeg}} object, containing the
+  A \code{\link{lociData}} object, containing the
   segmentation map discovered. 
 }
 \references{
-  Hardcastle T.J., and Kelly, K.A. (2010). Genome Segmentation From
-  High-Throughput Sequencing Data. In preparation.
+Hardcastle T.J., Kelly, K.A. and Balcombe D.C. (2011). Identifying small
+RNA loci from high-throughput sequencing data. In press.
 }
 \author{
 Thomas J. Hardcastle
 }
 
 \seealso{
-  \code{\link{heuristicSeg}} fast heuristic alternative to this function.
+  \code{\link{heuristicSeg}} a fast heuristic alternative to this function.
   \code{\link{plotGenome}}, a function for plotting the alignment of
   tags to the genome (together with the segments defined by this
   function).
   \code{\link[baySeq:baySeq-package]{baySeq}}, a package for discovering
-  differential expression in \code{\link[baySeq:countData]{countData}} objects.
+  differential expression in \code{\link{lociData}} objects.
 }
 \examples{
 # Define the chromosome lengths for the genome of interest.
@@ -87,17 +88,17 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c(1,1,2,2)
 
-# Process the files to produce an 'alignmentData' object.
+# Process the files to produce an `alignmentData' object.
 
-alignData <- processTags(file = libfiles, dir = datadir, replicates =
+alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 200)
+chrlens, gap = 100)
 
-# Process the alignmentData object to produce a 'segData' object.
+# Process the alignmentData object to produce a `segData' object.
 
 sD <- processAD(alignData, cl = NULL)
 
-# Use the classifySeg function on the segData object to produce a postSeg object.
+# Use the classifySeg function on the segData object to produce a lociData object.
 
 pS <- classifySeg(aD = alignData, sD = sD, subRegion = data.frame(chr = ">Chr1", start = 1, end = 1e5), getLikes = TRUE, cl = NULL)
 

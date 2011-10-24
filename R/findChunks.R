@@ -1,35 +1,31 @@
-findChunks <- function(aD, gap)
+findChunks <- function(alignments, gap)
 {
-    fastUniques <- function(x)
-      if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
-  
-  aD@alignments$chunk <- NA
+  chunks <- Rle()
   maxChunk <- 0L
-  for(chr in aD@chrs$chr) {
-    chraD <- aD@alignments$chr == chr
-    if(any(chraD))
+
+  for(chr in seqlevels(alignments)) {
+    chraD <- which(seqnames(alignments) == chr)
+    if(length(chraD) > 0)
       {
-        chral <- subset(aD@alignments, subset = chraD, select = c("start", "end"))
-        chunkNum <- c(0L, which(chral$start[-1] - cummax(chral$end[-nrow(chral)]) > gap))
-        chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, nrow(chral))))
+        chral <- ranges(alignments[chraD,])
+        chunkNum <- c(0L, which(start(chral)[-1] - cummax(end(chral)[-length(chral)]) > gap))
+        chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, length(chral))))
         maxChunk <- as.integer(max(chunkID))
-        aD@alignments$chunk[chraD] <- chunkID
+        chunks[chraD] <- chunkID
       }
   }
 
-  aD@alignments$chunkDup <- NA
-  aligns <- subset(aD@alignments, select = c("chunk", "tag"))
-  rodal <- order(aligns$chunk, as.factor(aligns$tag))
-  aligns <- aligns[rodal,]
-  chunkDups <- which(!fastUniques(aligns))
-  chunkDups <- union(chunkDups, chunkDups - 1L)
+  values(alignments)$chunk <- chunks
+  chunkDup <- Rle()
+  tags <- (as.character(values(alignments)$tag))
+  rodal <- order(as.integer(chunks), tags)
   
-  aligns <- data.frame(aligns, chunkDup = FALSE)
-  aligns$chunkDup[chunkDups] <- TRUE
-  aD@alignments$chunkDup[rodal] <- aligns$chunkDup
+  dups <- which(as.integer(chunks)[rodal] == c(as.integer(chunks)[rodal[-1]], Inf) & tags[rodal] == c(tags[rodal[-1]], Inf))
+
+  chunkDups <- rep(FALSE, length(tags))
+  chunkDups[c(dups, dups + 1L)] <- TRUE
+
+  values(alignments)$chunkDup <- chunkDups[order(rodal)]
   
-  fastUniques <- function(x)
-    if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
-  
-  aD
+  alignments
   }

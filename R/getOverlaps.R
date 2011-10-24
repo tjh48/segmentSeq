@@ -1,40 +1,44 @@
 getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whichOverlaps = TRUE, cl)
   {
     if(overlapType == "overlapping") {
-      segord <- order(as.factor(segments$chr), segments$start, segments$end)
+      segord <- order(as.factor(seqnames(segments)), start(segments), end(segments))
     } else if (overlapType == "contains") {
-      segord <- order(as.factor(segments$chr), segments$end, segments$start)
+      segord <- order(as.factor(seqnames(segments)), end(segments), start(segments))
     } else if(overlapType == "within") {
-      segord <- order(as.factor(segments$chr), segments$start, segments$end)
+      segord <- order(as.factor(seqnames(segments)), start(segments), end(segments))
     }
     
-    coordord <- order(as.factor(coordinates$chr), coordinates$start, coordinates$end)
+    coordord <- order(as.factor(seqnames(coordinates)), start(coordinates), end(coordinates))
       
     seg <- segments[segord,, drop = FALSE]
     coord <- coordinates[coordord,, drop = FALSE]
 
-    chrOverlaps <- lapply(unique(coord$chr), function(chr) {
-      whchr <- which(coord$chr == chr)
+    chrOverlaps <- lapply(seqlevels(coordinates), function(chr) {
+      whchr <- which(seqnames(coord) == chr)
       chrcoord <- coord[whchr,, drop = FALSE]
-      whseg <- which(seg$chr == chr)
+      whseg <- which(seqnames(seg) == chr)
       chrseg <- seg[whseg,,drop = FALSE]
 
+      if(length(chrcoord) == 0) return()
+      if(length(chrseg) == 0 & !whichOverlaps) return(rep(FALSE, length(chrcoord)))
+      if(length(chrseg) == 0 & whichOverlaps) return(rep(NA, length(chrcoord)))
+
       if(overlapType == "overlapping") {
-        fIns <- cbind(findInterval(chrcoord$start, cummax(chrseg$end)) + 1,
-                      findInterval(chrcoord$end, cummax(chrseg$start)))
+        fIns <- cbind(findInterval(start(chrcoord), cummax(end(chrseg))) + 1,
+                      findInterval(end(chrcoord), cummax(start(chrseg))))
       } else if (overlapType == "contains") {
-        fIns <- cbind(findInterval(chrcoord$start - 0.5, cummax(chrseg$start)) + 1,
-                      findInterval(chrcoord$end, chrseg$end))
+        fIns <- cbind(findInterval(start(chrcoord) - 0.5, cummax(start(chrseg))) + 1,
+                      findInterval(end(chrcoord), end(chrseg)))
       } else if(overlapType == "within") {
-        fIns <- cbind(findInterval(chrcoord$end - 0.5, cummax(chrseg$end)) + 1,
-                      findInterval(chrcoord$start, chrseg$start))
+        fIns <- cbind(findInterval(end(chrcoord) - 0.5, cummax(end(chrseg))) + 1,
+                      findInterval(start(chrcoord), start(chrseg)))
       }
         
       if(!whichOverlaps & overlapType %in% c("overlapping", "contains"))
         return(chrOverlaps <- as.list(fIns[,2] >= fIns[,1]))          
 
       chrOverlaps <- list()
-      chrOverlaps[1:nrow(chrcoord)] <- NA
+      chrOverlaps[1:length(chrcoord)] <- NA
       
       if(!whichOverlaps & overlapType == "within")
         {
@@ -42,14 +46,14 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
           chrOverlaps[!coordCheck] <- FALSE
           if(any(coordCheck))
             {
-              rodseg <- chrseg[with(chrseg, order(start, -end)),,drop = FALSE]
-              chrOverlaps[which(coordCheck)[which(rodseg$end[match(chrseg$start[fIns[coordCheck,1]], rodseg$start)] >= chrcoord$end[coordCheck])]] <- TRUE
+              rodseg <- chrseg[order(start(chrseg), -end(chrseg)),,drop = FALSE]
+              chrOverlaps[which(coordCheck)[which(end(rodseg)[match(start(chrseg)[fIns[coordCheck,1]], start(rodseg))] >= end(chrcoord)[coordCheck])]] <- TRUE
             }
           coordCheck <- is.na(chrOverlaps)
           if(any(coordCheck))
             {
-              rodseg <- chrseg[with(chrseg, order(end, start)),, drop = FALSE]
-              chrOverlaps[which(coordCheck)[which(rodseg$start[match(chrseg$end[fIns[coordCheck,2]], rodseg$end)] <= chrcoord$start[coordCheck])]] <- TRUE
+              rodseg <- chrseg[order(end(chrseg), start(chrseg)),, drop = FALSE]
+              chrOverlaps[which(coordCheck)[which(start(rodseg)[match(end(chrseg)[fIns[coordCheck,2]], end(rodseg))] <= start(chrcoord)[coordCheck])]] <- TRUE
             }
           coordCheck <- which(is.na(chrOverlaps))
           if(length(coordCheck) == 0) return(chrOverlaps)
@@ -72,19 +76,18 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
               
               selseg <- rseg[rfIStart:rfIEnd,,drop = FALSE]
               if(overlapType == "overlapping") {
-                return(segord[rwhseg[(rfIStart:rfIEnd)[selseg$end >= start & selseg$start <= end]]])
+                return(segord[rwhseg[(rfIStart:rfIEnd)[end(selseg) >= start & start(selseg) <= end]]])
               } else if(overlapType == "within") {
-                whichWithin <- selseg$start <= start & selseg$end >= end
+                whichWithin <- start(selseg) <= start & end(selseg) >= end
                 if(whichOverlaps) {
                   if(any(whichWithin)) return(segord[rwhseg[(rfIStart:rfIEnd)[whichWithin]]]) else return(NA)
                 } else {
                   if(any(whichWithin)) return(TRUE) else return(FALSE)
                 }
               } else if(overlapType == "contains") {
-                return(segord[rwhseg[(rfIStart:rfIEnd)[selseg$start >= start & selseg$end <= end]]])
+                return(segord[rwhseg[(rfIStart:rfIEnd)[start(selseg) >= start & end(selseg) <= end]]])
               }
             }
-
           
           if(!is.null(cl))
             {
@@ -107,14 +110,14 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
           chkCoord <- chrcoord[coordCheck,,drop = FALSE]
           fIns <- fIns[coordCheck,, drop = FALSE]
           
-          numwin <- ceiling(nrow(chkCoord) / min(5000, nrow(chkCoord)))
-          ends <- round(quantile(chkCoord$end, probs = 1:numwin / numwin))
+          numwin <- ceiling(length(chkCoord) / min(50000, length(chkCoord)))
+          ends <- round(quantile(end(chkCoord), probs = 1:numwin / numwin))
           windows <- data.frame(start = c(1, ends[-length(ends)] + 1), end = ends)
           
           for(ii in 1:nrow(windows))
             {
               if(ii %% 10 == 0) message(".", appendLF = FALSE)
-              wrcoord <- which(chkCoord$end >= windows$start[ii] & chkCoord$end <= windows$end[ii])
+              wrcoord <- which(end(chkCoord) >= windows$start[ii] & end(chkCoord) <= windows$end[ii])
               rcoord <- chkCoord[wrcoord,, drop = FALSE]
               rfIns <- fIns[wrcoord,, drop = FALSE]
               adj <- min(rfIns) - 1
@@ -138,8 +141,8 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
               rfIns <- rfIns - adj
 
               if(!is.null(cl)) {
-                apResult <- parApply(cl, cbind(rcoord$start, rcoord$end, rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
-              } else apResult <- apply(cbind(rcoord$start, rcoord$end, rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
+                apResult <- parApply(cl, cbind(start(rcoord), end(rcoord), rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
+              } else apResult <- apply(cbind(start(rcoord), end(rcoord), rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
 
               if(whichOverlaps) {
                 if(is.matrix(apResult)) apResult <- as.list(as.data.frame(apResult))
@@ -148,7 +151,6 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
             }
           
         }
-
       
       chrOverlaps
       
@@ -158,10 +160,11 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
       clusterEvalQ(cl, rm(list = ls()))
 
     overlaps <- list()
-    for(chr in unique(coord$chr))
+    for(chr in seqlevels(coord))
       {
-        whchr <- which(coord$chr == as.character(chr))
-        overlaps[coordord[whchr]] <- chrOverlaps[[which(unique(coord$chr) == chr)]]        
+        whchr <- which(seqnames(coord) == as.character(chr))
+        if(length(whchr) > 0)
+          overlaps[coordord[whchr]] <- chrOverlaps[[which(unique(seqnames(coord)) == chr)]]        
       }
     if(whichOverlaps)
       {

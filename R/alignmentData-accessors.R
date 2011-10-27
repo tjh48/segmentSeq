@@ -19,7 +19,7 @@ setMethod("[", "alignmentData", function(x, i, j, ..., drop = FALSE) {
 setValidity("alignmentData", function(object) {
   valid <- TRUE
   validmess <- c()
-  if(nrow(object@data) != nrow(object@alignments))
+  if(nrow(object@data) != length(object@alignments))
     {
       valid <- FALSE
       validmess <- c(validmess, "The number of the rows in the '@data' slot must equal the number of rows in the '@alignments' slot.")

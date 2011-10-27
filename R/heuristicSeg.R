@@ -47,7 +47,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     potlociD@replicates <- sD@replicates
     potlociD@seglens <- seglens
     potlociD@data <- sapply(1:ncol(sD@data), function(jj) as.integer(sD@data[selLoc,jj]))
-    potlociD@coordinates <- subset(sD@coordinates, subset = selLoc, select = c("chr", "start", "end"))
+    potlociD@coordinates <- subset(sD@coordinates, subset = selLoc)
     potlociD@locLikelihoods <- log(locM[selLoc,,drop = FALSE])
 
     potnullD <- with(sD@coordinates, new("lociData",

@@ -5,7 +5,7 @@ function(aD, gap = NULL, verbose = TRUE, cl)
 
     if("tag" %in% colnames(values(cTags))) {      
       values(cTags)$tag <- as.integer(as.factor(values(cTags)$tag))
-    } else values(cTags)$tag <- 1:nrow(cTags)
+    } else values(cTags)$tag <- 1:length(cTags)
 
     if(!is.null(gap))
       cTags <- findChunks(cTags, gap)

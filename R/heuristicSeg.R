@@ -149,8 +149,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
 #    }    
     
     if (is.null(subRegion)) {
-      locSub <- 1:nrow(potlociD)
-      
+      locSub <- 1:nrow(potlociD)      
     } else locSub <- sort(unique(c(unlist(apply(subRegion, 1, 
                                                 function(sR) which(as.character(seqnames(potlociD@coordinates)) == as.character(sR[1]) &
                                                                    start(potlociD@coordinates) >= as.numeric(sR[2]) &

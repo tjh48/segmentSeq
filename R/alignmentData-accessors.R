@@ -39,7 +39,7 @@ setValidity("alignmentData", function(object) {
       valid <- FALSE
       validmess <- c(validmess, "The length of the '@replicates' slot must equal the length of the '@libnames' slot.")
     }
-  if(!all(apply(object@data, c(1,2), function(x) x == as.integer(x))))
+  if(!all(sapply(1:ncol(object), function(ii) all(as.integer(object@data[,ii]) == object@data[,ii]))))
     {
       valid <- FALSE
       validmess <- c(validmess, "All members of the '@data' matrix must be castable as integers.")

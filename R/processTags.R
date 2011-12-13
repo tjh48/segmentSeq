@@ -9,6 +9,10 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     
     chrs <- as.character(chrs)
     replicates <- as.factor(replicates)
+
+    if(!all(levels(replicates) %in% replicates))
+      stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
+    
     if(any(chrlens != as.integer(chrlens)))
       stop("The 'chrlens' vector must be castable as an integer")
     chrlens <- as.integer(chrlens)    
@@ -82,6 +86,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                         #    if(any(replicates != as.integer(replicates)))
                                         #      stop("The 'replicates' vector must be castable as an integer")
     replicates <- as.factor(replicates)
+    
+    if(!all(levels(replicates) %in% replicates))
+      stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
+
+    
     if(any(chrlens != as.integer(chrlens)))
       stop("The 'chrlens' vector must be castable as an integer")
     chrlens <- as.integer(chrlens)    
@@ -185,9 +194,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       if(tagPresent & countPresent)
         {
           aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir, tag = Rle(filetags[chrtags, tagcol]), count = Rle(as.integer(filetags[chrtags, countcol])))
+          if(strandPresent) strand(aln) <- Rle(as.character(filetags[chrtags,strandcol]))
         } else if(tagPresent) {
           aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir, tag = Rle(filetags[chrtags, tagcol]), count = 1)
-          aln <- aln[order(as.character(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
+          if(strandPresent) strand(aln) <- Rle(as.character(filetags[chrtags,strandcol]))
+          aln <- aln[order(as.character(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]          
           dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
                              start(aln) == c(start(aln)[-1], Inf) &
                              end(aln) == c(end(aln)[-1], Inf) &
@@ -196,7 +207,6 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
           aln <- aln[dupTags,]
           values(aln)$count <- diff(c(0, dupTags))
         } else aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir)
-      if(strandPresent) strand(aln) <- as.character(filetags[chrtags,strandcol]) else Rle(rep("*", nrow(aln)))
       
       rm(filetags, chrtags)
       gc()

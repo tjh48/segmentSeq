@@ -1,7 +1,10 @@
-.processPosteriors <- function(lociPD, nullPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = TRUE, cl)
+.processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = TRUE, cl)
   {
     if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
     if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
+
+    if(missing(emptyPD))
+      emptyPD <- nullPD[rowSums(nullPD@data) == 0,]
       
     message("Checking overlaps...", appendLF = FALSE)
     locAccept <- matrix(sapply(levels(selLoci@replicates), function(rep)
@@ -17,34 +20,36 @@
 
     message("Selecting loci...", appendLF = FALSE)
     
-    lociSegs <- selLoci[rowSums(locAccept) > 0,]
+    selLoci <- selLoci[rowSums(locAccept) > 0,]
     segAccept <- locAccept[rowSums(locAccept) > 0,,drop = FALSE]
 
+    rm(selNull, locAccept)
+    
     gc()
     
     ordLSD <- NULL
-    ordLSD[order(rowSums(segAccept), width(lociSegs@coordinates), decreasing = TRUE)] <- 1:nrow(lociSegs)
+    ordLSD[order(rowSums(segAccept), width(selLoci@coordinates), decreasing = TRUE)] <- 1:nrow(selLoci)
                  
-    filLSD <- .filterSegments(lociSegs@coordinates, orderOn = ordLSD, decreasing = FALSE)
-    filSegs <- lociSegs[filLSD, ]
+    filLSD <- .filterSegments(selLoci@coordinates, orderOn = ordLSD, decreasing = FALSE)
+    filSegs <- selLoci[filLSD, ]
     filSegs <- filSegs[order(as.character(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
 
     message("done!")
     
-    potDiscards <- unique(unlist(lapply(levels(seqnames(nullPD@coordinates)), function(chrom)
+    potDiscards <- unique(unlist(lapply(seqlevels(emptyPD@coordinates), function(chrom)
                                         {
-                                          whChrom <- which(seqnames(nullPD@coordinates) == chrom)
-                                          nullChr <- ranges(nullPD@coordinates)[whChrom,]
+                                          whChrom <- which(seqnames(emptyPD@coordinates) == chrom)
+                                          nullChr <- ranges(emptyPD@coordinates)[whChrom,]
                                           
-                                          whChrom[which(width(nullChr) < 300 & rowSums(nullPD@data[whChrom,]) == 0 &
-                                                        (end(nullChr) + 1) %in% c(start(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom], seqlengths(nullPD@coordinates)[levels(seqnames(nullPD@coordinates)) == chrom]) &
+                                          whChrom[which(
+                                                        (end(nullChr) + 1) %in% c(start(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom], seqlengths(emptyPD@coordinates)[levels(seqnames(emptyPD@coordinates)) == chrom]) &
                                                         (start(nullChr) - 1) %in% c(end(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom], 0))
                                                   ]
                                         })))
                                         
     if(length(potDiscards) > 0)
       {
-        discardNulls <- nullPD[potDiscards,]
+        discardNulls <- emptyPD[potDiscards,]
         
         
         message("Extending loci...", appendLF = FALSE)
@@ -59,19 +64,18 @@
           message(".", appendLF = FALSE)
           which(seqnames(filSegs@coordinates) == chrom)[match(end(discardNulls@coordinates)[as.character(seqnames(discardNulls@coordinates)) == chrom] + 1,
                           start(filSegs@coordinates)[as.character(seqnames(filSegs@coordinates)) == chrom])]      
-        }))
+        }))        
         
         extensions <- apply(cbind(potDiscards, leftExtendSeg, rightExtendSeg), 1, function(discards) {
-          leftExt <- !is.na(discards[2]) & !any(which(nullPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[2],] >= log(lociCutoff)))
-          rightExt <- !is.na(discards[3]) & !any(which(nullPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[3],] >= log(lociCutoff)))
+          leftExt <- !is.na(discards[2]) & !any(which(emptyPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[2],] >= log(lociCutoff)))
+          rightExt <- !is.na(discards[3]) & !any(which(emptyPD@locLikelihoods[discards[1],] >= log(nullCutoff)) %in% which(filSegs@locLikelihoods[discards[3],] >= log(lociCutoff)))
           if(!leftExt & !rightExt) return(c(0, 0))
-          if(leftExt & !rightExt) return(c(nullPD@seglens[discards[1],1], 0))
-          if(!leftExt & rightExt) return(c(0, nullPD@seglens[discards[1],1]))
+          if(leftExt & !rightExt) return(c(width(emptyPD@coordinates)[discards[1]], 0))
+          if(!leftExt & rightExt) return(c(0, width(emptyPD@coordinates)[discards[1]]))
           if(leftExt & rightExt) {
-            lenweight <- filSegs@seglens[discards[2],1] + filSegs@seglens[discards[3],1]
-            extLeft <- round(nullPD@seglens[discards[1],1] * filSegs@seglens[discards[2],1] / lenweight + runif(1, -1e-3, 1e-3) * as.numeric(filSegs@seglens[discards[2],1] == filSegs@seglens[discards[3],1]))
-            extRight <- nullPD@seglens[discards[1],1] - extLeft
-            message(".", appendLF = FALSE)
+            lenweight <- width(filSegs@coordinates)[discards[2]] + width(filSegs@coordinates)[discards[3]]
+            extLeft <- round(width(emptyPD@coordinates)[discards[1]] * width(filSegs@coordinates)[discards[2]] / lenweight + runif(1, -1e-3, 1e-3) * as.numeric(width(filSegs@coordinates)[discards[2]] == width(filSegs@coordinates)[discards[3]]))
+            extRight <- width(emptyPD@coordinates)[discards[1]] - extLeft
             return(c(extLeft, extRight))
             
           }

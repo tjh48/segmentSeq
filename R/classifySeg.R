@@ -30,19 +30,6 @@
         {
           seglen <- rep(seglen, length(cts))
 
-#          wsInfo <- which(numintSamp[,1] == number)
-#          weights[numintSamp[wsInfo,2],] <- weights[numintSamp[wsInfo,2],] - numintSamp[wsInfo,-(1:2)]
-
-#          likes <- rowSums(
-#                           matrix(
-#                                  dnbinom(rep(cts, each = (nzWts)),
-#                                          size = 1 / priors[nzWts,2],
-#                                          mu = rep(libsizes * seglen, each = sum(nzWts)) * priors[nzWts,1], log = TRUE),
-#                                  ncol = length(cts))
-#                           )
-#
-#          apply(log(weights[nzWts,]) + likes, 2, logsum) - log(colSums(weights[nzWts,]))
-
           likes <- rowSums(
                            matrix(
                                   dnbinom(rep(cts, each = nrow(priors)),
@@ -50,10 +37,7 @@
                                           mu = rep(libsizes * seglen, each = nrow(priors)) * priors[,1], log = TRUE),
                                   ncol = length(cts))
                            )
-
-          apply(log(weights) + likes, 2, logsum) - log(colSums(weights))          
-
-          
+          apply(log(weights) + likes, 2, logsum) - log(colSums(weights))                    
         }
 
       number <- us[1]
@@ -93,11 +77,7 @@
         clusterCall(cl, clustAssign, numintSamp, "numintSamp")
         clusterCall(cl, clustAssign, libsizes, "libsizes")
         clusterCall(cl, clustAssign, priorWeights, "priorWeights")
-#        environment(constructWeights) <- getLikelihoodsEnv
-#        clusterCall(cl, constructWeights, TRUE)
       }
-    
-#    message("...", appendLF = FALSE)
     
     if (is.null(cl)) {
       ps <- t(apply(cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,,drop = FALSE], 1, NBdens))
@@ -125,8 +105,6 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
         cD <- NULL
     if (is.null(cD)) 
         cD <- heuristicSeg(sD = sD, aD = aD, subRegion = subRegion, getLikes = TRUE, ..., cl = cl)
-#    if (class(cD) == "countData") 
-#        cD <- lociLikelihoods(cD = cD, aD = aD, cl = cl)
 
     if(lR) {
       pET <- "none"
@@ -164,11 +142,11 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
                  coordinates = sD@coordinates[subLoc,])
 
     
-    prepD@groups <- list(prepD@replicates)
+    groups(prepD) <- list(prepD@replicates)
     prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = FALSE, cl = cl)
     weights <- cD@locLikelihoods[unlist(getOverlaps(coordinates = prepD@coordinates[prepD@priors$sampled[,1], ], segments = cD@coordinates, overlapType = "within", cl = cl)),]
     repWeights <- sapply(levels(potlociD@replicates), function(rep) {
-      repWeights <- weights[,rep]
+      repWeights <- weights[,levels(potlociD@replicates) == rep]
       repWeights[rowSums(prepD@data[prepD@priors$sampled[,1], potlociD@replicates == rep, drop = FALSE]) == 0] <- NA
       repWeights
     })
@@ -189,20 +167,7 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
                    coordinates = sD@coordinates)
 
       repD@priorType = "NB"
-      repD@groups <- list(rep(1, ncol(repD)))#, rep(1, ncol(repD)))
-
-#      subset <- which(rowSums(repD@data) > 0)
-#      subLoc <- getOverlaps(coordinates = repD@annotation[subset,],
-#                            segments = cD@annotation, overlapType = "within", 
-#                            whichOverlaps = FALSE, cl = cl)
-#      sampSubset <- (subset[subLoc])[.filterSegments(repD@annotation[subset[subLoc],], runif(sum(subLoc)))]
-
-#      repWeights <- cD@posteriors[unlist(getOverlaps(coordinates = repD@annotation[sampSubset,],
-#                                                     segments = cD@annotation, overlapType = "within", 
-#                                                     whichOverlaps = TRUE, cl = cl)),rep]
-      
-#      repD <- getPriors.NB(repD, verbose = FALSE, cl = cl, samplingSubset = sampSubset)
-#      withinWeights <- cD@posteriors[unlist(getOverlaps(coordinates = repD@annotation[repD@priors$sampled[,1], ], segments = cD@annotation, overlapType = "within", cl = cl)),rep]
+      groups(repD) <- list(rep(1, ncol(repD)))
 
       withinWeights <- exp(repWeights[, rep])
 
@@ -211,7 +176,6 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
       } else if (all(withinWeights == 0, na.rm = TRUE)) {
         repLoci <- rep(FALSE, nrow(repD))
       } else {        
-#        repD@priors$priors <- repD@priors$priors[[1]][[1]]
         repD@priors$priors <- priors[[1]][[which(levels(psD@replicates) == rep)]]
 
         repD@priors$weights <- cbind(1-(withinWeights), withinWeights)
@@ -221,21 +185,10 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
                 
         subset <- intersect(locSubset, which(rowSums(repD@data) > 0))
 
-#        subset <- c(1:1000, 8261628)
-        
         lD <- .getLocLikelihoods(repD, subset = subset, cl = cl)
 
         if(lR) repLoci <- lD[,2] > lD[,1] else {
           
-          #repSmall <- smallLoci[rowSums(repD@data[smallLoci,,drop = FALSE]) > 0]
-          #whichPriorSubset <- unlist(lapply(levels(repD@annotation$chr), function(chr) {
-          #  chrrep <- repD@annotation$chr == chr
-          #  which(chrrep & repD@annotation$start %in% repD@annotation$start[intersect(which(chrrep), repSmall)] & repD@annotation$end %in% repD@annotation$end[intersect(which(chrrep), repSmall)])
-          #}))                      
-          #priorSubset <- whichPriorSubset[.filterSegments(repD@annotation[whichPriorSubset, ], runif(length(whichPriorSubset)))]
-                  
-          #priorLoc <- sum(lD[priorSubset,2] > lD[priorSubset,1], na.rm = TRUE) / length(priorSubset)
-          #ps <- c(1-priorLoc, priorLoc)
           ps <- c(1-locps[rep], locps[rep])
           
           rps <- t(t(lD) + log(ps))
@@ -349,15 +302,15 @@ classifySeg <- function (sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegi
             repCol <- which(levels(psD@replicates) == rep)
             repD <- psD[, psD@replicates == rep]
             repD@priorType = "NB"
-            repD@replicates <- as.factor(rep(1, ncol(repD)))
+            replicates(repD) <- as.factor(rep(1, ncol(repD)))
             
-            repD@groups <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
+            groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
             
             nullPriors <- cD
             nullPriors@locLikelihoods <- matrix(nrow = 0, ncol = 0)
             nullPriors <- nullPriors[,nullPriors@replicates == rep]
-            nullPriors@replicates <- as.factor(rep(1, ncol(nullPriors)))
-            nullPriors@groups <- list(rep(1, ncol(nullPriors)), rep(1, ncol(nullPriors)))
+            replicates(nullPriors) <- as.factor(rep(1, ncol(nullPriors)))
+            groups(nullPriors) <- list(rep(1, ncol(nullPriors)), rep(1, ncol(nullPriors)))
             nullPriors <- getPriors.NB(nullPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
             
             repD@priors$priors <- list(list(nullPriors@priors$priors[[1]][[1]]), list(curNullsWithin@priors$priors[[1]][[repCol]]))

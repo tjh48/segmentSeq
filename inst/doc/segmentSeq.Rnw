@@ -38,7 +38,7 @@ If \verb'snow' is not present, we can proceed anyway with a \verb'NULL' cluster.
   cl <- NULL
 @ 
 
-There is a convenience function, \verb'processTags' which is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
+There is a convenience function, \verb'readGeneric' which is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
 
 <<>>=
 chrlens <- c(1e6, 2e5)
@@ -56,7 +56,6 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 
 <<>>=
 sD <- processAD(aD, cl = cl)
-
 sD
 @ 
 
@@ -91,9 +90,9 @@ By one of these methods, we finally acquire an annotated \verb'countData' object
 We can use this \verb'countData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
 
 <<fig = FALSE, label=segPlot, height = 10, width = 12>>=
-  par(mfrow = c(2,1), mar = c(2,6,2,2))
-plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 3e5), showNumber = FALSE)
-plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 3e5), showNumber = FALSE)
+par(mfrow = c(2,1), mar = c(2,6,2,2))
+plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 1e5), showNumber = FALSE, cap = 50)
+plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5), showNumber = FALSE, cap = 50)
 @
 
 \begin{sidewaysfigure}[!ht]

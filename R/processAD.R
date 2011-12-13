@@ -32,7 +32,7 @@ function(aD, gap = NULL, verbose = TRUE, cl)
               message("Finding start-stop co-ordinates...", appendLF = FALSE)
             }
 
-            startstop <- reduce(chrSS@ranges)
+            startstop <- reduce(chrSS@ranges, min.gapwidth = 0)
             ssChunk <- values(chrSS)$chunk[match(start(startstop), start(chrSS))]
             chunkDiff <- runLength(ssChunk)
                        
@@ -74,7 +74,7 @@ function(aD, gap = NULL, verbose = TRUE, cl)
                                           
                                           getCounts(
                                                     segments = segments, 
-                                                    aD = waD, preFiltered = TRUE, cl = cl)
+                                                    aD = waD, preFiltered = FALSE, cl = cl)
                                         })
                                         ))
 

@@ -12,7 +12,7 @@ null. These criteria can be defined by the user or inferred from the
 data. 
 }
 \usage{
-heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subRegion
+heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRegion
 = NULL, getLikes = TRUE, verbose = TRUE, cl)
 }
 %- maybe also `usage' for other objects documented here.

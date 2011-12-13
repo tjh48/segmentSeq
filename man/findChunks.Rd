@@ -5,12 +5,15 @@
 This function identifies chunks of data within a set of aligned reads by looking for gaps within the alignments; regions where no reads align. If we assume that a locus should not contain a gap of sufficient length, then we can separate the analysis of the data into chunks defined by these gaps, reducing the complexity of the problem of segmentation.
 }
 \usage{
-findChunks(alignments, gap)
+findChunks(alignments, gap, checkDuplication = TRUE)
 }
 \arguments{
   \item{alignments}{A \code{\linkS4class{GRanges}} object
     defining a set of aligned reads.}
-  \item{gap}{The minimum length of a gap across which it is assumed that no locus can exist.}
+  \item{gap}{The minimum length of a gap across which it is assumed that
+    no locus can exist.}
+  \item{checkDuplication}{Should we check whether or not reads are
+    duplicated within a chunk? Defaults to TRUE.}
 }
 
 \details{This function is called by the \code{\link{readGeneric}} and
@@ -19,10 +22,13 @@ findChunks(alignments, gap)
   the data present, or to increase the computational effort required for
   subsequent analysis. The lower the `gap' parameter used to define the
   chunks, the faster (though potentially less accurate) any subsequent
-  analyses will be. 
+  analyses will be.
 }
 \value{
-A modified \code{\link{GRanges}} object, now containing columns `chunk' and `chunkDup', identifying the chunk to which the alignment belongs and whether the alignment of the tag is duplicated within the chunk respectively.
+A modified \code{\link{GRanges}} object, now containing columns `chunk'
+  and `chunkDup' (if 'checkDuplication' is TRUE), identifying the chunk
+  to which the alignment belongs and whether the alignment of the tag is
+  duplicated within the chunk respectively.
 }
 \author{
 Thomas J. Hardcastle

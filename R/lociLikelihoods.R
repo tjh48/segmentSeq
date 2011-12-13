@@ -7,6 +7,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
     if(inferNulls)
       {                
         nulls <- gaps(loci)
+        nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]
         nulls <- nulls[strand(nulls) == "*",]
 
         nullLens <- width(nulls)
@@ -27,17 +28,17 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
         
         mD <- new("lociData", data = countLoci,
                   seglens = lociLens,
-                  libsizes = as.double(aD@libsizes),
-                  replicates = aD@replicates, 
+                  libsizes = as.double(cD@libsizes),
+                  replicates = cD@replicates, 
                   coordinates = loci,
                   locLikelihoods = cD@locLikelihoods)
       }
 
     mD@groups <- list(mD@replicates)
-
+    mD <- getPriors.NB(mD, verbose = TRUE, cl = cl)
+    
     if(usePosteriors)
       {
-        mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
         lociWeights <- sapply(levels(mD@replicates), function(rep) {
           repCol <- which(levels(mD@replicates) == rep)
           locW <- 1 - exp(mD@locLikelihoods[mD@priors$sampled[,1],repCol])
@@ -56,8 +57,8 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
             
           message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
           repD <- mD[,mD@replicates == rep]
-          repD@replicates <- as.factor(rep(1, ncol(repD)))
-          repD@groups <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
+          replicates(repD) <- as.factor(rep(1, ncol(repD)))
+          groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- locW
           
@@ -66,15 +67,14 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
           message("...done!", appendLF = TRUE)
           repD@posteriors[,2]
         })
-      } else {
-        mD <- getPriors.NB(mD, verbose = FALSE, cl = cl)
-        
+      } else {        
         lociWeights <- sapply(levels(mD@replicates), function(rep) {
           
           message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
           repD <- mD[,mD@replicates == rep]
-          repD@replicates <- rep(1, ncol(repD))
-          repD@groups <- list(rep(1, ncol(repD)))
+          replicates(repD) <- rep(1, ncol(repD))
+          groups(repD) <- list(rep(1, ncol(repD)))
+          repCol <- which(levels(mD@replicates) == rep)
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- NULL
           

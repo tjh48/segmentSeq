@@ -1,7 +1,8 @@
-heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
+heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
   {
-    if((missing(aD) || class(aD) != "alignmentData") & getLikes)
+    if((missing(aD) || class(aD) != "alignmentData") & getLikes) {
       stop("I can't assess the likelihoods of clustered data without an alignmentData object 'aD'")
+    } else if(missing(aD)) aD <- NULL    
      
     fastUniques <- function(x)
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
@@ -44,16 +45,18 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     selLoc <- rowSums(locM) > 0
     potlociD <- new("lociData")
     potlociD@libsizes <- sD@libsizes
-    potlociD@replicates <- sD@replicates
+    potlociD@replicates <- as.factor(sD@replicates)
     potlociD@seglens <- seglens
     potlociD@data <- sapply(1:ncol(sD@data), function(jj) as.integer(sD@data[selLoc,jj]))
     potlociD@coordinates <- subset(sD@coordinates, subset = selLoc)
     potlociD@locLikelihoods <- log(locM[selLoc,,drop = FALSE])
 
-    potnullD <- with(sD@coordinates, new("lociData",
-                                     libsizes = sD@libsizes,
-                                     replicates = sD@replicates,
-                                     data = matrix(nrow = 0, ncol = ncol(sD))))
+    potnullD <- new("lociData",
+                    libsizes = sD@libsizes,
+                    replicates = sD@replicates,
+                    data = matrix(nrow = 0, ncol = ncol(sD)))
+
+    emptyPD <- new("lociData", libsizes = sD@libsizes, replicates = sD@replicates, data = matrix(nrow = 0, ncol = ncol(sD)))
     
 #    if(examineNulls) {
       emptyNulls <- gaps(sD@coordinates[dupStarts,])
@@ -63,23 +66,34 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
         emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
         gap <- 10^(bimodalSep(log10(end(emptyNulls) - start(emptyNulls) + 1)))
       }
-      
-      emptyNulls <- emptyNulls[width(emptyNulls) > as.integer(floor(gap)),]
-      whover <- getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
-      emptyNulls <- emptyNulls[whover,]
 
-      expandRanges <- suppressWarnings(do.call("c", lapply(levels(seqnames(sD@coordinates)), function(ii) {
-        subRange <- ranges(sD@coordinates[seqnames(sD@coordinates) == ii,])
-        right <- c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])[findInterval(end(subRange) - 0.5, c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])) + 1] - 1
-        left <- c(0, unique(end(subRange)))[findInterval(start(subRange), unique(end(subRange))) + 1] + 1
-        
-        c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])[findInterval(end(subRange) - 0.5, c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])) + 1] - 1
-        GRanges(seqnames = ii, IRanges(start = left, end = right))
-      })))
+    emptyPD@coordinates <- emptyNulls[width(emptyNulls) <= as.integer(floor(gap)),]
+    emptyPD@locLikelihoods <- matrix(-Inf, ncol = length(levels(sD@replicates)), nrow = length(emptyPD@coordinates))
+    emptyPD@data <- matrix(0, ncol = length(sD@replicates), nrow = length(emptyPD@coordinates))
+    
+    emptyNulls <- emptyNulls[width(emptyNulls) > as.integer(floor(gap)),]
+    whover <- getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
+    emptyNulls <- emptyNulls[whover,]
+    
+    expandRanges <- suppressWarnings(do.call("c", lapply(seqlevels(sD@coordinates), function(ii) {
+      subRange <- ranges(sD@coordinates[seqnames(sD@coordinates) == ii,])
+      right <- c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])[findInterval(end(subRange) - 0.5, c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])) + 1] - 1
+      left <- c(0, unique(end(subRange)))[findInterval(start(subRange), unique(end(subRange))) + 1] + 1
 
+      if(length(subRange) > 0) {
+        chrRanges <- GRanges(seqnames = ii, IRanges(start = left, end = right))
+        chlevels <- rep(NA, length(seqlevels(sD@coordinates)))
+        chlevels[seqlevels(sD@coordinates) == ii] <- 1L
+        seqinfo(chrRanges, new2old = chlevels) <- seqinfo(sD@coordinates)
+      } else {
+        chrRanges <- GRanges()
+        seqinfo(chrRanges) <- seqinfo(sD@coordinates)
+      }
+      chrRanges
+    })))
 
-      whSDboth <- which(start(expandRanges) != start(sD@coordinates) & end(expandRanges) != end(sD@coordinates))
-      whSDboth <- whSDboth[getOverlaps(expandRanges[whSDboth,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+    whSDboth <- which(start(expandRanges) != start(sD@coordinates) & end(expandRanges) != end(sD@coordinates))
+    whSDboth <- whSDboth[getOverlaps(expandRanges[whSDboth,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
     bothAnn <- expandRanges[whSDboth,]
     whSDboth <- whSDboth[width(bothAnn) > gap]
     bothAnn <- bothAnn[width(bothAnn) > gap,]
@@ -160,7 +174,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 30, gap = 100, subReg
     potlociD <- potlociD[locSub,]
     
     gc()
-    
-    seg <- .processPosteriors(potlociD, potnullD, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
+
+    seg <- .processPosteriors(lociPD = potlociD, nullPD = potnullD, emptyPD = emptyPD, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
     seg
   }

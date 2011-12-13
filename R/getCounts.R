@@ -17,19 +17,19 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
       }
 
     alignments <- aD@alignments
-    if("tag" %in% names(values(alignments)) && class(values(alignments)$tag) != "integer") values(alignments)$tag <- as.integer(as.factor(values(alignments)$tag)) else values(alignments)$tag <- 1:length(alignments)
+    if("tag" %in% names(values(alignments)) && class(values(alignments)$tag) != "integer") values(alignments)$tag <- as.integer(as.factor(values(alignments)$tag)) else if(!("tag" %in% names(values(alignments)))) values(alignments)$tag <- 1:length(alignments)
     cdata <- aD@data
     
     if(!preFiltered)
       {
         segnas <- as.vector(is.na(seqnames(segments)) | is.na(start(segments)) | is.na(end(segments)))
-        segments <- segments[!segnas,]
+        segments <- segments[!segnas,,drop = FALSE]
 
         rodering <- order(as.integer(seqnames(segments)), start(segments), end(segments))
         rodsegs <- segments[rodering,, drop = FALSE]
         dup <- which(!duplicated(rodsegs))
         reps <- c(dup[-1], length(rodsegs) + 1) - c(dup)
-        redsegs <- rodsegs[dup,]
+        redsegs <- rodsegs[dup,,drop = FALSE]
       } else redsegs <- segments
     
     countsmat <- do.call("rbind", lapply(seqlevels(redsegs), function(cc)
@@ -46,7 +46,8 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                    }
                                  
                                  chrsegs <- IRanges(start = start(redsegs[seqnames(redsegs) == cc,]), end = end(redsegs[seqnames(redsegs) == cc,]))
-
+                                 if(length(chrsegs) == 0) return(matrix(ncol = ncol(cdata), nrow = 0))
+                                 
                                  whchr <- which(as.character(seqnames(alignments)) == cc & start(alignments) <= max(end(chrsegs)) & end(alignments) >= min(start(chrsegs)))
                                  
                                  chrdata <- cdata[whchr,]
@@ -54,11 +55,6 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                  
                                  chralignments <- alignments[whchr,]
 
-#                                 if("chunkDup" %in% colnames(alignments)) chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag", "chunkDup")) else {
-#                                     chralignments <- subset(alignments, subset = whchr, select = c("start", "end", "tag"))
-#                                     chralignments <- cbind(chralignments, chunkDup = chralignments$tag %in% chralignments$tag[duplicated(chralignments$tag)])
-#                                   }
-                                 
                                  nondupTags <- ranges(chralignments)[!values(chralignments)$chunkDup,]
                                  nondupData <- intData[!values(chralignments)$chunkDup,, drop = FALSE]
                                  
@@ -67,13 +63,17 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                      ordTags <- order(start(nondupTags), end(nondupTags))
                                      droTags <- order(end(nondupTags), start(nondupTags))
                                      
-                                     endsBelow <- findInterval(end(chrsegs), end(nondupTags)[droTags])
-                                     startsBelow <- findInterval(start(chrsegs) - 0.5, start(nondupTags)[ordTags])
-                                     
+#                                     endsBelow <- findInterval(end(chrsegs), end(nondupTags)[droTags])
+#                                     startsBelow <- findInterval(start(chrsegs) - 0.5, start(nondupTags)[ordTags])                                     
+#                                     chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
+
                                      cens <- rbind(0L, apply(nondupData[droTags,,drop = FALSE], 2, cumsum))
                                      csts <- rbind(0L, apply(nondupData[ordTags,,drop = FALSE], 2, cumsum))
-
-                                     chrUC <- (cens[endsBelow + 1L,] - csts[startsBelow + 1L,])
+                                     
+                                     endsAbove <- findInterval(end(chrsegs) + 0.5, start(nondupTags)[ordTags])
+                                     startsAbove <- findInterval(start(chrsegs), end(nondupTags)[droTags])
+                                     
+                                     chrUC <- csts[endsAbove + 1L,] - cens[startsAbove + 1L,]
                                      chrUC[chrUC < 0] <- 0L
                                    } else chrUC <- matrix(0L, ncol = ncol(intData), nrow = nrow(chrsegs))
                                  

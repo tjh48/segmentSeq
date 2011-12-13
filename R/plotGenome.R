@@ -69,9 +69,10 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
                        if(length(cpu) > 0)
                          {
                            rectcpu <- matrix(cbind(start(cpu), uu - 0.45, end(cpu), runValue(cpu)), ncol = 4)
-                           rectcpu <- rectcpu[rectcpu[,4] > 0,,drop = FALSE]
                            rectcpu[,4] <- sapply(rectcpu[,4], min, cap)
+                           rectcpu <- rectcpu[rectcpu[,4] > 0,,drop = FALSE]                           
                            rectcpu[,4] <- rectcpu[,4] / sum(values(sTags)$count[tags]) * as.integer(pAD@data[ii,samples[uu]])
+                           
                          }
                      }
                    rectcpu
@@ -133,7 +134,7 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
                                 (rep(c(0,1,0), ceiling(length(brlims) / 3)))[1:length(brlims)], alpha = alpha)
                   angle <- rep(c(45, 115, 165), ceiling(length(brlims) / 3))
                   rect(start(bps)[alpha > 0.1], -.5 + ss, end(bps)[alpha>0.1], ss + .5, density = density, col = brcols[alpha > 0.1], border = brcols[alpha > 0.1], angle = angle[alpha > 0.1])
-                  segments(start(bps), -.5 + ss, end(bps), ss + .5, col = brcols)
+                  segments(start(bps)[alpha > 0.1], -.5 + ss, end(bps)[alpha > 0.1], ss + .5, col = brcols[alpha > 0.1])
                 }
             })
           } else {

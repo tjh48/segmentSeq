@@ -5,6 +5,8 @@ setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
       x@coordinates <- x@coordinates[i,,drop = FALSE]
 #      if(nrow(x@seglens) > 0)
 #        x@seglens <- x@seglens[i,,drop = FALSE]
+      if(nrow(x@locLikelihoods) > 0)
+        x@locLikelihoods <- x@locLikelihoods[i,,drop = FALSE]
     }
 
   if(!missing(j))
@@ -13,8 +15,7 @@ setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
       x@data <- x@data[,j,drop = FALSE]
       x@libsizes <- x@libsizes[j]
 #      if(ncol(x@seglens) > 1) x@seglens <- x@seglens[,j,drop = FALSE]
-    }
-
+    }  
   x
 })
 

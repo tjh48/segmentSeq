@@ -30,7 +30,7 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 
 <<results = hide, eval = FALSE>>=
   library(snow)
-cl <- makeCluster(7, "MPI")
+cl <- makeCluster(8, "MPI")
 @
 
 If \verb'snow' is not present, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
@@ -80,7 +80,7 @@ select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, cl = cl, lociCutoff = 0.9, nullCutoff = 0.9)
+classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, lociCutoff = 0.9, nullCutoff = 0.9, cl = cl)
 classSegs
 @ 
 

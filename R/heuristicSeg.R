@@ -26,7 +26,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
                                                       as.integer(sD@data[,jj]) / seglens[,jj] / sD@libsizes[jj])) / sum(replicates == rep)
                                        ))
 
-                                                                              
+
     if(!bimodality) locM <- locDens * 1e9 > RKPM else {
       message("Finding cutoff values...", appendLF = FALSE)
       logDens <- log10(locDens)
@@ -43,33 +43,33 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
     gc()
 
     selLoc <- rowSums(locM) > 0
-    potlociD <- new("lociData")
+    potlociD <- new("segData")
     potlociD@libsizes <- sD@libsizes
     potlociD@replicates <- as.factor(sD@replicates)
-    potlociD@seglens <- seglens
-    potlociD@data <- sapply(1:ncol(sD@data), function(jj) as.integer(sD@data[selLoc,jj]))
+#    potlociD@seglens <- seglens
+    potlociD@data <- sD@data[selLoc,]
     potlociD@coordinates <- subset(sD@coordinates, subset = selLoc)
-    potlociD@locLikelihoods <- log(locM[selLoc,,drop = FALSE])
+    potlociD@locLikelihoods <- DataFrame(log(locM[selLoc,,drop = FALSE]))
 
-    potnullD <- new("lociData",
+    potnullD <- new("segData",
                     libsizes = sD@libsizes,
                     replicates = sD@replicates,
-                    data = matrix(nrow = 0, ncol = ncol(sD)))
+                    data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
 
-    emptyPD <- new("lociData", libsizes = sD@libsizes, replicates = sD@replicates, data = matrix(nrow = 0, ncol = ncol(sD)))
+    emptyPD <- new("segData", libsizes = sD@libsizes, replicates = sD@replicates, data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
     
 #    if(examineNulls) {
-      emptyNulls <- gaps(sD@coordinates[dupStarts,])
-      emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
-      
-      if(bimodality) {
-        emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
-        gap <- 10^(bimodalSep(log10(end(emptyNulls) - start(emptyNulls) + 1)))
-      }
-
+    emptyNulls <- gaps(sD@coordinates[dupStarts,])
+    emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
+    
+    if(bimodality) {
+      emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
+      gap <- 10^(bimodalSep(log10(end(emptyNulls) - start(emptyNulls) + 1)))
+    }
+    
     emptyPD@coordinates <- emptyNulls[width(emptyNulls) <= as.integer(floor(gap)),]
-    emptyPD@locLikelihoods <- matrix(-Inf, ncol = length(levels(sD@replicates)), nrow = length(emptyPD@coordinates))
-    emptyPD@data <- matrix(0, ncol = length(sD@replicates), nrow = length(emptyPD@coordinates))
+    emptyPD@locLikelihoods <- DataFrame(matrix(-Inf, ncol = length(levels(sD@replicates)), nrow = length(emptyPD@coordinates)))
+    emptyPD@data <- DataFrame(matrix(0, ncol = length(sD@replicates), nrow = length(emptyPD@coordinates)))
     
     emptyNulls <- emptyNulls[width(emptyNulls) > as.integer(floor(gap)),]
     whover <- getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
@@ -98,46 +98,46 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
     whSDboth <- whSDboth[width(bothAnn) > gap]
     bothAnn <- bothAnn[width(bothAnn) > gap,]
 
-      whSDleft <- which(start(expandRanges) != start(sD@coordinates))
-      whSDleft <- whSDleft[getOverlaps(sD@coordinates[whSDleft,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
-      leftAnn <- expandRanges[whSDleft,]
-      end(leftAnn) <- end(sD@coordinates[whSDleft])
+    whSDleft <- which(start(expandRanges) != start(sD@coordinates))
+    whSDleft <- whSDleft[getOverlaps(sD@coordinates[whSDleft,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+    leftAnn <- expandRanges[whSDleft,]
+    end(leftAnn) <- end(sD@coordinates[whSDleft])
     whSDleft <- whSDleft[width(leftAnn) > gap]
     leftAnn <- leftAnn[width(leftAnn) > gap,]
       
-      whSDright <- which(end(expandRanges) != end(sD@coordinates))
-      whSDright <- whSDright[getOverlaps(sD@coordinates[whSDright,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
-      rightAnn <- expandRanges[whSDright,]
-      start(rightAnn) <- start(sD@coordinates[whSDright])
+    whSDright <- which(end(expandRanges) != end(sD@coordinates))
+    whSDright <- whSDright[getOverlaps(sD@coordinates[whSDright,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+    rightAnn <- expandRanges[whSDright,]
+    start(rightAnn) <- start(sD@coordinates[whSDright])
     whSDright <- whSDright[width(rightAnn) > gap]
     rightAnn <- rightAnn[width(rightAnn) > gap,]
 
-      gc()
-
-      zeroData <- do.call("DataFrame", sapply(1:ncol(sD), function(x) Rle(0, length(emptyNulls))))
-      colnames(zeroData) <- colnames(sD@data)
-      
-      nullData <- rbind(zeroData,
-                        sD@data[whSDboth,,drop = FALSE],
-                        sD@data[whSDleft,,drop = FALSE],
-                        sD@data[whSDright,,drop = FALSE])
-      nullAnnotation <- c(emptyNulls, bothAnn, leftAnn, rightAnn)
-
-      rm(whSDboth, whSDleft, whSDright, bothAnn, leftAnn, rightAnn, emptyNulls, expandRanges, zeroData)
-      gc()      
+    gc()
     
-      if(nrow(nullData) > 0)
-        {
-          nulDens <- do.call("cbind", lapply(levels(replicates), function(rep)       
-                                             rowSums(sapply(which(replicates == rep), function(jj)
-                                                            as.integer(nullData[,jj]) / width(nullAnnotation) / sD@libsizes[jj])) / sum(replicates == rep)
-                                             ))
-          
-          if(!bimodality) nulM <- (nulDens * 1e9 < RKPM) & width(nullAnnotation) > gap else {
-            nulM <- (log10(nulDens) < locCutoff) & width(nullAnnotation) > gap
-          }
-        }
+    zeroData <- do.call("DataFrame", sapply(1:ncol(sD), function(x) Rle(0, length(emptyNulls))))
+    colnames(zeroData) <- colnames(sD@data)
 
+    nullData <- rbind(zeroData,
+                      sD@data[whSDboth,,drop = FALSE],
+                      sD@data[whSDleft,,drop = FALSE],
+                      sD@data[whSDright,,drop = FALSE])
+    nullAnnotation <- c(emptyNulls, bothAnn, leftAnn, rightAnn)
+    
+    rm(whSDboth, whSDleft, whSDright, bothAnn, leftAnn, rightAnn, emptyNulls, expandRanges, zeroData)
+    gc()      
+
+    if(nrow(nullData) > 0)
+      {
+        nulDens <- do.call("cbind", lapply(levels(replicates), function(rep)       
+                                           rowSums(sapply(which(replicates == rep), function(jj)
+                                                          as.integer(nullData[,jj]) / width(nullAnnotation) / sD@libsizes[jj])) / sum(replicates == rep)
+                                           ))
+        
+        if(!bimodality) nulM <- (nulDens * 1e9 < RKPM) & width(nullAnnotation) > gap else {
+          nulM <- (log10(nulDens) < locCutoff) & width(nullAnnotation) > gap
+        }
+      }
+    
       whNull <- which(rowSums(nulM) > 0)
       nulM <- nulM[whNull,,drop = FALSE]
       nullData <- nullData[whNull,,drop = FALSE]
@@ -150,17 +150,13 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
                                                   function(sR) which(seqnames(nullAnnotation) == as.character(sR[1]) &
                                                                      start(nullAnnotation) >= as.numeric(sR[2]) &
                                                                      end(nullAnnotation) <= as.numeric(sR[3])))))))
-      if(length(nullAnnotation) == 0) nulSub <- NULL
-      potnullD@data <- sapply(1:ncol(nullData), function(jj) as.integer(nullData[nulSub,jj]))
-      potnullD@coordinates <- nullAnnotation[nulSub,]
-      potnullD@seglens <- matrix(width(nullAnnotation), ncol = 1)
-      potnullD@locLikelihoods <- log(nulM[nulSub,, drop = FALSE])      
-      
-      rm(nullData, nullAnnotation, nulM)      
-#    } else {
-#      potnullD <- potlociD
-#      potnullD@locLikelihoods <- log(1 - exp(potnullD@locLikelihoods))
-#    }    
+
+    if(length(nullAnnotation) == 0) nulSub <- NULL
+    potnullD@data <- nullData[nulSub,]
+    potnullD@coordinates <- nullAnnotation[nulSub,]
+    potnullD@locLikelihoods <- DataFrame(log(nulM[nulSub,, drop = FALSE]))
+    
+    rm(nullData, nullAnnotation, nulM)
     
     if (is.null(subRegion)) {
       locSub <- 1:nrow(potlociD)      
@@ -168,7 +164,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
                                                 function(sR) which(as.character(seqnames(potlociD@coordinates)) == as.character(sR[1]) &
                                                                    start(potlociD@coordinates) >= as.numeric(sR[2]) &
                                                                    end(potlociD@coordinates) <= as.numeric(sR[3])))))))
-    
+
     if(nrow(potlociD) == 0) locSub <- NULL
     
     potlociD <- potlociD[locSub,]

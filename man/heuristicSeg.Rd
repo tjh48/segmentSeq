@@ -12,8 +12,8 @@ null. These criteria can be defined by the user or inferred from the
 data. 
 }
 \usage{
-heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRegion
-= NULL, getLikes = TRUE, verbose = TRUE, cl)
+heuristicSeg(sD, aD, RKPM = 1000, gap = 100, subRegion
+= NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -23,14 +23,16 @@ heuristicSeg(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRegion
   \item{sD}{
     A \code{\linkS4class{segData}} object derived from the `aD' object.
   }
-  \item{bimodality}{Should the criteria for loci be inferred from the
-    (likely) bimodal structure of the data?}
+%  \item{bimodality}{Should the criteria for loci be inferred from the
+%    (likely) bimodal structure of the data?}
   \item{RKPM}{What RKPM (reads per kilobase per million reads) distinguishes
     between a locus and a null region? Ignored if \code{bimodality = TRUE}.}
   \item{gap}{What is the minimum length of a null region? Ignored if
     \code{bimodality = TRUE}.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
-    the genome to be segmented. If NULL (default), the whole genome is segmented.}
+    the genome to be segmented. If NULL (default), the whole genome is
+    segmented.}
+  \item{largeness}{The maximum size for a split analysis.}
   \item{getLikes}{Should posterior likelihoods for the new segmented
     genome (loci and nulls) be assessed?}
   \item{verbose}{Should the function be verbose? Defaults to TRUE.}
@@ -90,8 +92,9 @@ sD <- processAD(alignData, cl = NULL)
 
 # Use the segData object to produce a segmentation of the genome.
 
-segD <- heuristicSeg(sD = sD, aD = alignData, subRegion = data.frame(chr = ">Chr1", start =
-1, end = 1e5), cl = NULL)
+segD <- heuristicSeg(sD = sD, aD = alignData,
+subRegion = data.frame(chr = ">Chr1", start = 1, end = 1e5),
+cl = NULL)
 }
 % Add one or more standard keywords, see file `KEYWORDS' in the
 % R documentation directory.

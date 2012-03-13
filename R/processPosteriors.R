@@ -10,7 +10,8 @@
       emptyPD <- nullPD[rowSums(sapply(1:ncol(nullPD), function(jj) as.integer(nullPD@data[,jj]))) == 0,]
     
     message("Checking overlaps...", appendLF = FALSE)
-    locAccept <- matrix(sapply(levels(selLoci@replicates), function(rep)
+    locAccept <- matrix(
+                        sapply(levels(selLoci@replicates), function(rep)
                                {
                                  repCol <- which(levels(selLoci@replicates) == rep)
                                  accepts <- rep(FALSE, nrow(selLoci))
@@ -18,7 +19,8 @@
                                  if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL) else accepts <- rep(TRUE, nrow(selLoci))
                                  message(".", appendLF = FALSE)
                                  return(accepts)
-                               }), nrow = nrow(lociPD))
+                               })
+                        , ncol = ncol(lociPD@locLikelihoods))
     message("done.", appendLF = TRUE)
     
     message("Selecting loci...", appendLF = FALSE)
@@ -35,7 +37,7 @@
                  
     filLSD <- .filterSegments(selLoci@coordinates, orderOn = ordLSD, decreasing = FALSE)
     filSegs <- selLoci[filLSD, ]
-    filSegs <- filSegs[order(as.character(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
+    filSegs <- filSegs[order(as.factor(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
 
     message("done!")
 

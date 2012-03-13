@@ -50,8 +50,8 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                  
                                  whchr <- which(as.character(seqnames(alignments)) == cc & start(alignments) <= max(end(chrsegs)) & end(alignments) >= min(start(chrsegs)))
                                  
-                                 chrdata <- cdata[whchr,]
-                                 intData <- sapply(1:ncol(chrdata), function(rr) as.integer(chrdata[,rr]))
+                                 chrdata <- cdata[whchr,,drop = FALSE]
+                                 intData <- do.call("cbind", lapply(1:ncol(chrdata), function(rr) as.integer(chrdata[,rr])))
                                  
                                  chralignments <- alignments[whchr,]
 
@@ -71,9 +71,9 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                      csts <- rbind(0L, apply(nondupData[ordTags,,drop = FALSE], 2, cumsum))
                                      
                                      endsAbove <- findInterval(end(chrsegs) + 0.5, start(nondupTags)[ordTags])
-                                     startsAbove <- findInterval(start(chrsegs), end(nondupTags)[droTags])
+                                     startsAbove <- findInterval(start(chrsegs) - 0.5, end(nondupTags)[droTags])
                                      
-                                     chrUC <- csts[endsAbove + 1L,] - cens[startsAbove + 1L,]
+                                     chrUC <- csts[endsAbove + 1L,,drop = FALSE] - cens[startsAbove + 1L,,drop = FALSE]
                                      chrUC[chrUC < 0] <- 0L
                                    } else chrUC <- matrix(0L, ncol = ncol(intData), nrow = nrow(chrsegs))
                                  
@@ -107,17 +107,18 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                      if(!is.null(cl))
                                        environment(countNonUniques) <- getCountEnv
                                      
-                                     if(!is.null(cl)) chrNC <- parSapply(cl, 1:length(chrsegs), countNonUniques) else  chrNC <- sapply(1:length(chrsegs), countNonUniques)
+                                     if(!is.null(cl)) chrNC <- parLapply(cl, 1:length(chrsegs), countNonUniques) else  chrNC <- lapply(1:length(chrsegs), countNonUniques)
+                                     chrNC <- do.call("rbind", chrNC)
                                                                
                                      
-                                   } else chrNC <- matrix(0L, nrow = ncol(intData), ncol = length(chrsegs))
+                                   } else chrNC <- matrix(0L, ncol = ncol(intData), nrow = length(chrsegs))
                                  
-                                 chrUC + t(chrNC)
+                                 chrUC + chrNC
                                }))
     #countsmat <- matrix(countsmat, nrow = nrow(redsegs), ncol = length(aD@replicates), byrow = TRUE)
     
     if(!preFiltered) {
-      countsmat <- matrix(unlist(lapply(1:length(reps), function(x) rep(countsmat[x,], reps[x]))), nrow = length(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
+      countsmat <- matrix(unlist(lapply(1:length(reps), function(x) rep(countsmat[x,,drop = FALSE], reps[x]))), nrow = length(rodsegs), ncol = length(aD@replicates), byrow = TRUE)
       countsmat <- countsmat[order(rodering),, drop = FALSE]
       
       countsnas <- matrix(NA, nrow = length(segnas), ncol = ncol(countsmat))

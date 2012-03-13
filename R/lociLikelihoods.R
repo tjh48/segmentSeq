@@ -90,7 +90,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNull
 
     #mD@annotation <- subset(mD@annotation, select = c("chr", "start", "end"))
 
-    mD <- mD[order(as.character(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
+    mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
 
     mD
   }

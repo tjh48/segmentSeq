@@ -26,8 +26,8 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
       if(length(chrseg) == 0 & whichOverlaps) return(rep(NA, length(chrcoord)))
 
       if(overlapType == "overlapping") {
-        fIns <- cbind(findInterval(start(chrcoord), cummax(end(chrseg))) + 1,
-                      findInterval(end(chrcoord), cummax(start(chrseg))))
+        fIns <- cbind(findInterval(start(chrcoord) - 0.5, cummax(end(chrseg))) + 1,
+                      findInterval(end(chrcoord) + 0.5, cummax(start(chrseg))))
       } else if (overlapType == "contains") {
         fIns <- cbind(findInterval(start(chrcoord) - 0.5, cummax(start(chrseg))) + 1,
                       findInterval(end(chrcoord), end(chrseg)))

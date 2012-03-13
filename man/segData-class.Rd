@@ -25,9 +25,11 @@ Objects can be created by calls of the form \code{new("segData", ...,
       library sizes for each sample.}
     \item{\code{replicates}:}{Object of class \code{"factor"}. The
       replicate structure for the samples.}
-    \item{\code{coordinates}:}{Object of class \code{"data.frame"}. A
-      \code{\link[GenomicRanges]{GRanges}} object defining the
-      coordinates of the segments.}
+    \item{\code{coordinates}:}{A \code{\link[GenomicRanges]{GRanges}}
+      object defining the coordinates of the segments.}
+    \item{\code{locLikelihoods}:}{Object of class \code{"DataFrame"}
+      describing estimated likelihoods that each region defined in
+      `coordinates' is a locus in each replicate group.}
   }
 }
 

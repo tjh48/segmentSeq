@@ -12,7 +12,8 @@ order to define a new (and improved) segment map.
 }
 \usage{
 classifySeg(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion =
-NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...) 
+NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, largeness = 1e8,
+tempDir = NULL, cl) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -41,8 +42,10 @@ NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, cl, ...)
   \item{samplesize}{The sample size to be used when estimating the prior
     distribution of the data with the
     \code{\link[baySeq:getPriors.NB]{getPriors.NB}} function.}
+  \item{largeness}{The maximum size for a split analysis.}
+  \item{tempDir}{A directory for storing temporary files produced during
+    the segmentation.}
   \item{cl}{A SNOW cluster object, or NULL. See Details.}
-  \item{...}{Any additional parameters to be passed to \code{\link{heuristicSeg}}.}
 }
 \details{
 This function acquires empirical distributions of sequence tag density

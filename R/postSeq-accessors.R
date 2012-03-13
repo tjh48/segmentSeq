@@ -3,12 +3,19 @@ setMethod("show", "lociData", function(object) {
   callNextMethod()  
   if(nrow(object@locLikelihoods) > 0)
     {
-      cat('\nSlot "locLikelihoods":\n')
-      if(nrow(object@locLikelihoods) > 5)
+      if(any(exp(object@locLikelihoods) > 1, na.rm = TRUE))
         {
-          print(exp(object@locLikelihoods[1:5,]))
+          cat('\nSlot "locLikelihoods":\n')
+          modFunction <- identity
+        } else {          
+          cat('\nSlot "locLikelihoods" (stored on log scale):\n')        
+          modFunction <- exp
+        }
+      if(nrow(object@locLikelihoods) > 5)
+        {          
+          print(modFunction(object@locLikelihoods[1:5,]))
           cat(paste(nrow(object) - 5), "more rows...\n")
-        } else print(exp(object@locLikelihoods))
+        } else print(modFunction(object@locLikelihoods))
     }
 })
 

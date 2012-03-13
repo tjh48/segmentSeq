@@ -2,10 +2,12 @@ readBAM <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
          gap = 200, polyLength, estimationType = "quantile", verbose = TRUE)
   {
+    if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
       suppressWarnings(apply(matrix(c(".", rep(polybase, polyLength + 1)),
                                     nrow = polyLength + 1, ncol = polyLength + 1), 1, paste, sep = "", collapse = ""))
     }))
+    if(length(files) != length(replicates)) stop("The 'replicates' vector needs to be the same length as the 'files' vector")
     
     chrs <- as.character(chrs)
     replicates <- as.factor(replicates)
@@ -31,24 +33,22 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     sampleNumbers <- 1:length(files)
 
     Tags <- lapply(sampleNumbers, function(ii) {
+
+      tags <- scanBam(files[ii])[[1]]
       if(!is.null(countID)) {
-        tags <- scanBam(files[ii], param = ScanBamParam(flag = scanBamFlag(isUnmappedQuery = FALSE), tag=countID))[[1]]
-        counts <- Rle(tags$tag[[1]])
-      } else {
-        tags <- scanBam(files[ii], param = ScanBamParam(flag = scanBamFlag(isUnmappedQuery = FALSE)))[[1]]
-        counts <- Rle(rep(1L, length(tags$seq)))
-      }
+        counts <- Rle(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
+      } else counts <- Rle(rep(1L, length(tags$seq)))
+      
       ir <- IRanges(start = as.integer(tags$pos), width = tags$qwidth)
       aln <- GRanges(seqnames = tags$rname, ir, strand = tags$strand, tag = Rle(as.character(tags$seq)), count = counts)
       aln <- aln[as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs),]
 
-      if(missing(polyLength)) polyLength <- NULL
       if(!is.null(polyLength)) {
         polyBaseRemove <- unique(unlist(lapply(polyBase, grep, as.character(values(aln)$tag))))
         if(length(polyBaseRemove) > 0) aln <- aln[-polyBaseRemove,]
       }
         if(is.null(countID)) {
-          aln <- aln[order(as.character(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
+          aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
           dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
                              start(aln) == c(start(aln)[-1], Inf) &
                              end(aln) == c(end(aln)[-1], Inf) &
@@ -108,7 +108,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
         if(any(c(!("count" %in% names(cols)), is.na(cols[names(cols) == "count"]))))
           {
             countPresent <- FALSE
-            warning("No 'count' column specified in 'cols' argument; 'processTags' will assume that the file contains non-redundant reads")
+            warning("No 'count' column specified in 'cols' argument; I'll assume that the file contains non-redundant reads")
           }
         if(any(c(!("tag" %in% names(cols)), is.na(cols[names(cols) == "tag"]))))
           {
@@ -156,7 +156,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
               countcol <- which(names(filetags) == "count")
             } else {
               countPresent <- FALSE
-              warning("No 'count' column found in file; 'processTags' will assume that the file contains non-redundant reads")
+              warning("No 'count' column found in file; I'll assume that the file contains non-redundant reads")
             }
           if("strand" %in% names(filetags)) strandcol <- which(names(filetags) == "strand") else strandPresent <- FALSE
             
@@ -198,7 +198,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
         } else if(tagPresent) {
           aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir, tag = Rle(filetags[chrtags, tagcol]), count = 1)
           if(strandPresent) strand(aln) <- Rle(as.character(filetags[chrtags,strandcol]))
-          aln <- aln[order(as.character(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]          
+          aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]          
           dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
                              start(aln) == c(start(aln)[-1], Inf) &
                              end(aln) == c(end(aln)[-1], Inf) &
@@ -225,39 +225,49 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 
 .processTags <- function(GTags, gap, estimationType, verbose = TRUE, seqinf, libnames, replicates)
   {
-
     if(verbose)
       message("Analysing tags...", appendLF = FALSE)
     
     unqTags <- do.call("c", lapply(seqlevels(seqinf), function(x) {
       chrTag <- GTags[[1]][seqnames(GTags[[1]]) == x,]
-      
-      for(ii in 2:length(GTags)) {
-        chrTag <- c(chrTag, GTags[[ii]][seqnames(GTags[[ii]]) == x,])
-        
-        ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag))
 
-        purgeTags <- which(start(chrTag)[ordTag] == c(start(chrTag)[ordTag[-1]], Inf) & end(chrTag)[ordTag] == c(end(chrTag)[ordTag[-1]], Inf) & (values(chrTag)$tag[ordTag]) == (c(values(chrTag)$tag[ordTag[-1]], "!"))) + 1
-        if(length(purgeTags) > 0)
-          chrTag <- chrTag[-ordTag[purgeTags],]
-        message(".", appendLF = FALSE)        
-      }
+      if(length(GTags) > 1)
+        {
+          for(ii in 2:length(GTags)) {
+            chrTag <- c(chrTag, GTags[[ii]][seqnames(GTags[[ii]]) == x,])            
+            ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag))
+            
+            purgeTags <- which(start(chrTag)[ordTag] == c(start(chrTag)[ordTag[-1]], Inf) &
+                               end(chrTag)[ordTag] == c(end(chrTag)[ordTag[-1]], Inf) &
+                               as.character(strand(chrTag)[ordTag]) == c(as.character(strand(chrTag)[ordTag[-1]]), "!") &
+                               (values(chrTag)$tag[ordTag] == c(values(chrTag)$tag[ordTag[-1]], "!") | is.na(values(chrTag)$tag[ordTag]) == is.na(c(values(chrTag)$tag[ordTag[-1]], NA)))) + 1
+            if(length(purgeTags) > 0)
+              chrTag <- chrTag[-ordTag[purgeTags],]
+            message(".", appendLF = FALSE)        
+          }
+        }
       chrTag
     }))
     
     unqTags <- unqTags[order(as.integer(seqnames(unqTags)), as.integer(start(unqTags)), as.integer(end(unqTags)), as.character(values(unqTags)$tag)),]
     values(unqTags)$count <- 0
 
-    counts <- do.call("DataFrame", lapply(GTags, function(GTag) {
-      do.call("c", lapply(seqlevels(seqinf), function(x) {
-        chrTag <- c(GTag[seqnames(GTag) == x,], unqTags[seqnames(unqTags) == x,])
-        ordTag <- chrTag[order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag)),]
-        purgeTags <- which(start(ordTag) == c(start(ordTag)[-1], Inf) & end(ordTag) == c(end(ordTag)[-1], Inf) & as.character(values(ordTag)$tag) == as.character(c(values(ordTag)$tag[-1], "!"))) + 1
-        if(length(purgeTags) > 0)
-          chrTag <- ordTag[-purgeTags,]
-        message(".", appendLF = FALSE)
-        values(chrTag)[,2]
-      }))}))
+    counts <- do.call("DataFrame",
+                      lapply(GTags, function(GTag) {
+                        do.call("c",
+                                
+                                lapply(seqlevels(seqinf), function(x) {
+                                  chrTag <- c(GTag[seqnames(GTag) == x,], unqTags[seqnames(unqTags) == x,])
+                                  ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag), as.character(strand(chrTag)))
+                                  purgeTags <- which(start(chrTag)[ordTag] == c(start(chrTag)[ordTag[-1]], Inf) &
+                                                     end(chrTag)[ordTag] == c(end(chrTag)[ordTag[-1]], Inf) &
+                                                     as.character(strand(chrTag)[ordTag]) == c(as.character(strand(chrTag)[ordTag[-1]]), "!") &
+                                                     (values(chrTag)$tag[ordTag] == c(values(chrTag)$tag[ordTag[-1]], "!") | is.na(values(chrTag)$tag[ordTag]) == is.na(c(values(chrTag)$tag[ordTag[-1]], NA)))) + 1
+                                  
+                                  message(".", appendLF = FALSE)
+                                  if(length(purgeTags) > 0) return(values(chrTag)$count[ordTag[-purgeTags]]) else return(values(chrTag)$count[ordTag])
+                                }))})
+                      )
 
     colnames(counts) <- libnames
 

@@ -1,18 +1,20 @@
 findChunks <- function(alignments, gap, checkDuplication = TRUE)
 {
-  chunks <- Rle()
-  maxChunk <- 0L
+  chunks <- Rle(rep(NA, length(alignments)))
+  chunkID <- maxChunk <- 0L
 
   for(chr in seqlevels(alignments)) {
     chraD <- which(seqnames(alignments) == chr)
-    if(length(chraD) > 0)
+    if(length(chraD) == 1) {
+      chunks[chraD] <- maxChunk + 1
+    } else if(length(chraD) > 1)
       {
         chral <- ranges(alignments[chraD,])
         chunkNum <- c(0L, which(start(chral)[-1] - cummax(end(chral)[-length(chral)]) > gap))
         chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, length(chral))))
-        maxChunk <- as.integer(max(chunkID))
         chunks[chraD] <- chunkID
       }
+    maxChunk <- max(chunks, na.rm = TRUE)
   }
   
   values(alignments)$chunk <- chunks
@@ -20,15 +22,16 @@ findChunks <- function(alignments, gap, checkDuplication = TRUE)
   if(checkDuplication)
     {  
       chunkDup <- Rle()
-      tags <- (as.character(values(alignments)$tag))
-      rodal <- order(as.integer(chunks), tags)
-      
-      dups <- which(as.integer(chunks)[rodal] == c(as.integer(chunks)[rodal[-1]], Inf) & tags[rodal] == c(tags[rodal[-1]], Inf))
-      
-      chunkDups <- rep(FALSE, length(tags))
-      chunkDups[c(dups, dups + 1L)] <- TRUE
-      
-      values(alignments)$chunkDup <- chunkDups[order(rodal)]
+
+      if("tag" %in% names(values(alignments))) {
+        tags <- (as.character(values(alignments)$tag))
+        rodal <- order(as.integer(chunks), tags)
+        
+        dups <- which(as.integer(chunks)[rodal] == c(as.integer(chunks)[rodal[-1]], Inf) & tags[rodal] == c(tags[rodal[-1]], Inf))      
+        chunkDups <- rep(FALSE, length(tags))
+        chunkDups[c(dups, dups + 1L)] <- TRUE      
+        values(alignments)$chunkDup <- chunkDups[order(rodal)]
+      } else values(alignments)$chunkDup <- FALSE
     }
       
   alignments

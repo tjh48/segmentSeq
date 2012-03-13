@@ -66,7 +66,7 @@ We can now construct a segment map from these potential segments.
 A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
 
 <<>>=
-clustSegs <- heuristicSeg(sD = sD, aD = aD, bimodality = FALSE, getLikes = TRUE, cl = cl)
+clustSegs <- heuristicSeg(sD = sD, aD = aD, RKPM = 300, largeness = 1e8, cl = cl)
 clustSegs
 @ 
 

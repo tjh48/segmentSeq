@@ -1,4 +1,33 @@
-heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
+heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
+  {
+    if(!is.null(subRegion))
+      {
+        sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
+        aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
+      }
+        
+    
+    if(prod(dim(sD)) > largeness)
+      {
+        sDsplit <- .splitSD(sD, largeness)
+        
+        message("Segmentation split into ", length(sDsplit), " parts.")
+        
+        splitSeg <- lapply(1:length(sDsplit), function(ii) {
+          message("Segmenting; Part ", ii, " of ", length(sDsplit))
+          .partheuristicSeg(sDsplit[[ii]], getLikes = FALSE, bimodality = FALSE, verbose = FALSE, cl = NULL, RKPM = RKPM, gap = gap)      
+        })
+        
+        lD <- .mergeListLoci(splitSeg)
+      } else lD <- .partheuristicSeg(sD, getLikes = FALSE, bimodality = FALSE, verbose = FALSE, cl = NULL, RKPM = RKPM, gap = gap)
+        
+    if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")
+
+    lD
+  }
+
+
+.partheuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 1000, gap = 100, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
   {
     if((missing(aD) || class(aD) != "alignmentData") & getLikes) {
       stop("I can't assess the likelihoods of clustered data without an alignmentData object 'aD'")
@@ -7,7 +36,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
     fastUniques <- function(x)
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
 
-    sD <- sD[order(as.character(seqnames(sD@coordinates)), as.integer(start(sD@coordinates)), as.integer(end(sD@coordinates))),]
+    sD <- sD[order(as.factor(seqnames(sD@coordinates)), as.integer(start(sD@coordinates)), as.integer(end(sD@coordinates))),]
 
     dupStarts <- which(fastUniques(cbind(as.character(seqnames(sD@coordinates)), as.integer(start(sD@coordinates)))))
 
@@ -47,7 +76,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
     potlociD@libsizes <- sD@libsizes
     potlociD@replicates <- as.factor(sD@replicates)
 #    potlociD@seglens <- seglens
-    potlociD@data <- sD@data[selLoc,]
+    potlociD@data <- sD@data[selLoc,,drop = FALSE]
     potlociD@coordinates <- subset(sD@coordinates, subset = selLoc)
     potlociD@locLikelihoods <- DataFrame(log(locM[selLoc,,drop = FALSE]))
 
@@ -77,8 +106,9 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
     
     expandRanges <- suppressWarnings(do.call("c", lapply(seqlevels(sD@coordinates), function(ii) {
       subRange <- ranges(sD@coordinates[seqnames(sD@coordinates) == ii,])
-      right <- c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])[findInterval(end(subRange) - 0.5, c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])) + 1] - 1
-      left <- c(0, unique(end(subRange)))[findInterval(start(subRange), unique(end(subRange))) + 1] + 1
+      right <- c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])[findInterval(end(subRange), c(start(subRange), 1 + seqlengths(sD@coordinates)[ii])) + 1] - 1
+      left <- c(0, unique(end(subRange)))[findInterval(start(subRange), unique(end(subRange)) + 0.5) + 1] + 1      
+
 
       if(length(subRange) > 0) {
         chrRanges <- GRanges(seqnames = ii, IRanges(start = left, end = right))
@@ -152,7 +182,7 @@ heuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 300, gap = 100, subRe
                                                                      end(nullAnnotation) <= as.numeric(sR[3])))))))
 
     if(length(nullAnnotation) == 0) nulSub <- NULL
-    potnullD@data <- nullData[nulSub,]
+    potnullD@data <- nullData[nulSub,,drop = FALSE]
     potnullD@coordinates <- nullAnnotation[nulSub,]
     potnullD@locLikelihoods <- DataFrame(log(nulM[nulSub,, drop = FALSE]))
     

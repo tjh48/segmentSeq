@@ -21,6 +21,7 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
       whseg <- which(seqnames(seg) == chr)
       chrseg <- seg[whseg,,drop = FALSE]
 
+      
       if(length(chrcoord) == 0) return()
       if(length(chrseg) == 0 & !whichOverlaps) return(rep(FALSE, length(chrcoord)))
       if(length(chrseg) == 0 & whichOverlaps) return(rep(NA, length(chrcoord)))
@@ -66,31 +67,9 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
           chrOverlaps[fIns[,1] == fIns[,2]] <- segord[whseg[fIns[fIns[,1] == fIns[,2],1]]]
           coordCheck <- which(fIns[,1] < fIns[,2])
         }
-        
+
       if(length(coordCheck) > 0)
-        {
-          checkOverlaps <- function(co, whichOverlaps = TRUE)
-            {
-              start <- co[1]
-              end <- co[2]
-              rfIStart <- co[3]
-              rfIEnd <- co[4]
-              
-              selseg <- rseg[rfIStart:rfIEnd,,drop = FALSE]
-              if(overlapType == "overlapping") {
-                return(segord[rwhseg[(rfIStart:rfIEnd)[end(selseg) >= start & start(selseg) <= end]]])
-              } else if(overlapType == "within") {
-                whichWithin <- start(selseg) <= start & end(selseg) >= end
-                if(whichOverlaps) {
-                  if(any(whichWithin)) return(segord[rwhseg[(rfIStart:rfIEnd)[whichWithin]]]) else return(NA)
-                } else {
-                  if(any(whichWithin)) return(TRUE) else return(FALSE)
-                }
-              } else if(overlapType == "contains") {
-                return(segord[rwhseg[(rfIStart:rfIEnd)[start(selseg) >= start & end(selseg) <= end]]])
-              }
-            }
-          
+        {          
           if(!is.null(cl))
             {
               clustAssign <- function(object, name)
@@ -100,7 +79,6 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
                 }
               overlapsEnv <- new.env(parent = .GlobalEnv)
               environment(clustAssign) <- overlapsEnv
-              environment(checkOverlaps) <- overlapsEnv
               clusterCall(cl, clustAssign, fIns, "fIns")
               clusterCall(cl, clustAssign, chrseg, "chrseg")
               clusterCall(cl, clustAssign, chrcoord, "chrcoord")
@@ -118,13 +96,40 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
 
           for(ii in 1:nrow(windows))
             {
-              if(ii %% 10 == 0) message(".", appendLF = FALSE)
+
+              checkOverlaps <- function(co, whichOverlaps = TRUE)
+                {
+                  start <- co[1]
+                  end <- co[2]
+                  rfIStart <- co[3]
+                  rfIEnd <- co[4]
+                  
+                  selseg <- rseg[rfIStart:rfIEnd,,drop = FALSE]
+                  if(overlapType == "overlapping") {
+                    return(segord[rwhseg[(rfIStart:rfIEnd)[end(selseg) >= start & start(selseg) <= end]]])
+                  } else if(overlapType == "within") {
+                    whichWithin <- start(selseg) <= start & end(selseg) >= end
+                    if(whichOverlaps) {
+                      if(any(whichWithin)) return(segord[rwhseg[(rfIStart:rfIEnd)[whichWithin]]]) else return(NA)
+                    } else {
+                      if(any(whichWithin)) return(TRUE) else return(FALSE)
+                    }
+                  } else if(overlapType == "contains") {
+                    return(segord[rwhseg[(rfIStart:rfIEnd)[start(selseg) >= start & end(selseg) <= end]]])
+                  }
+                }
+
+              
+              if(ii %% 100 == 0) message(".", appendLF = FALSE)
               wrcoord <- which(end(chkCoord) >= windows$start[ii] & end(chkCoord) <= windows$end[ii])
               rcoord <- chkCoord[wrcoord,, drop = FALSE]
               rfIns <- fIns[wrcoord,, drop = FALSE]
               adj <- min(rfIns) - 1
 
-              if(!is.null(cl))
+              rseg <- chrseg[min(rfIns):max(rfIns),, drop = FALSE]
+              rwhseg <- whseg[min(rfIns):max(rfIns)]
+              
+              if(!is.null(cl) & length(rcoord) > 1)
                 {
                   clustRedSeg <- function(minseg, maxseg) {
                     library(GenomicRanges)
@@ -134,21 +139,15 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
                     assign("rwhseg", rwhseg, envir = .GlobalEnv)
                     NULL
                   }
+
+                  environment(checkOverlaps) <- overlapsEnv
+                  environment(clustRedSeg) <- overlapsEnv                  
                   
-                  environment(clustRedSeg) <- overlapsEnv
-
                   clusterCall(cl, clustRedSeg, min(rfIns), max(rfIns))
-
-                } else{
-                  rseg <- chrseg[min(rfIns):max(rfIns),, drop = FALSE]
-                  rwhseg <- whseg[min(rfIns):max(rfIns)]
+                  apResult <- parApply(cl, cbind(start(rcoord), end(rcoord), rfIns - adj), 1, checkOverlaps, whichOverlaps = whichOverlaps)                  
+                } else {
+                  apResult <- apply(cbind(start(rcoord), end(rcoord), rfIns - adj), 1, checkOverlaps, whichOverlaps = whichOverlaps)
                 }
-
-              rfIns <- rfIns - adj
-
-              if(!is.null(cl)) {
-                apResult <- parApply(cl, cbind(start(rcoord), end(rcoord), rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
-              } else apResult <- apply(cbind(start(rcoord), end(rcoord), rfIns), 1, checkOverlaps, whichOverlaps = whichOverlaps)
 
               if(whichOverlaps) {
                 if(is.matrix(apResult)) apResult <- as.list(as.data.frame(apResult))

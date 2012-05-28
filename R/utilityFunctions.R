@@ -1,3 +1,4 @@
+
 .filterSegments <- function(segs, orderOn, maxReport = Inf, ...)
   {    
     chrfilter <- function(chrsegs, suborderOn, ...)
@@ -92,14 +93,28 @@
 
 .convertSegToLoci <- function(sD)
   {
-    lD <- new("lociData",
-              data = matrix(ncol = ncol(sD@data), nrow = length(sD@coordinates)),
-              libsizes = sD@libsizes,
-              replicates = sD@replicates,
-              coordinates = sD@coordinates,
-              seglens = width(sD@coordinates))
-    if(nrow(sD@data) > 0)
-      lD@data <- sapply(1:ncol(sD), function(jj) as.integer(sD@data[,jj]))
+    if(class(sD) == "segData") {
+      lD <- new("lociData",
+                data = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
+                libsizes = sD@libsizes,
+                replicates = sD@replicates,
+                coordinates = sD@coordinates,
+                seglens = width(sD@coordinates))
+      if(nrow(sD@data) > 0)
+        lD@data <- sapply(1:ncol(sD), function(jj) as.integer(sD@data[,jj]))      
+    } else if (class(sD) == "methSegs")
+      {
+        lD <- new("methData",
+                  data = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
+                  pairData = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
+                  replicates = sD@replicates,
+                  coordinates = sD@coordinates,
+                  seglens = width(sD@coordinates))
+        if(nrow(sD@Ts) > 0)
+          lD@pairData <- sapply(1:ncol(sD), function(jj) as.integer(sD@Ts[,jj]))      
+        if(nrow(sD@Cs) > 0)
+          lD@data <- sapply(1:ncol(sD), function(jj) as.integer(sD@Cs[,jj]))      
+      }
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
       lD@seglens <- sapply(1:ncol(sD), function(jj) as.numeric(sD@seglens[,jj]))
     if(nrow(sD@locLikelihoods) > 0)
@@ -150,11 +165,11 @@
 
 .splitSD <- function(sD, largeness = 1e8)
   {
-    winsize <- round(largeness / ncol(sD))
+    winsize <- round(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
     
     chunkSD <- values(findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE))$chunk
     chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
-    dupWin <- which(!duplicated(round(chunkWindows[,2] / winsize)))
+    dupWin <- which(!duplicated(ceiling(chunkWindows[,2] / winsize)))
     dupWin <- cbind(dupWin, c(dupWin[-1] - 1, nrow(chunkWindows)))
     windowChunks <- lapply(1:nrow(dupWin), function(ii) unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]])
     
@@ -173,22 +188,39 @@
 }
 
 .mergeListLoci <- function(splitSeg) {
-  new("lociData",
-      locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
-      coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-      data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
-      replicates = splitSeg[[1]]@replicates,
-      libsizes = splitSeg[[1]]@libsizes,
-      groups = splitSeg[[1]]@groups,
-      annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
-      seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))
+  mergeSeg <- new(class(splitSeg[[1]]),
+                  locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
+                  coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
+                  data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
+                  replicates = splitSeg[[1]]@replicates,
+                  libsizes = splitSeg[[1]]@libsizes,
+                  groups = splitSeg[[1]]@groups,
+                  annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
+                  seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))
+  if(class(mergeSeg) == "methData")
+    mergeSeg@pairData <- do.call("rbind", lapply(splitSeg, function(x) x@pairData))
+  mergeSeg
 }
 
 .mergeSegData <- function(splitSeg) {
-  new("segData",
-      locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
-      coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-      data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
-      replicates = splitSeg[[1]]@replicates,
-      libsizes = splitSeg[[1]]@libsizes)
+
+  message("Merging...", appendLF = FALSE)
+  locLikelihoods <- do.call("DataFrame", lapply(1:ncol(splitSeg[[1]]@locLikelihoods), function(ii) {
+    message(".", appendLF = FALSE)
+    do.call("c", lapply(splitSeg, function(x) x@locLikelihoods[,ii]))
+  }))
+  data <- do.call("DataFrame", lapply(1:ncol(splitSeg[[1]]@data), function(ii) {
+    message(".", appendLF = FALSE)
+    do.call("c", lapply(splitSeg, function(x) x@data[,ii]))
+  }))
+
+  
+  mergeSeg <- new("segData",                                                 
+                  locLikelihoods = locLikelihoods,
+                  coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
+                  data = data,
+                  replicates = splitSeg[[1]]@replicates,
+                  libsizes = splitSeg[[1]]@libsizes)
+  message("done.")
+  mergeSeg
 }

@@ -1,7 +1,7 @@
 setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
   if(!missing(i))
     {
-      x@data <- x@data[i,, drop = FALSE]
+      if(nrow(x@data) > 0) x@data <- x@data[i,, drop = FALSE]
       x@coordinates <- x@coordinates[i,,drop = FALSE]
 #      if(nrow(x@seglens) > 0)
 #        x@seglens <- x@seglens[i,,drop = FALSE]
@@ -20,29 +20,29 @@ setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
 })
 
 setMethod("dim", "segData", function(x) {
-  dim(x@data)
+  c(max(length(x@coordinates), nrow(x@data)), length(x@replicates))
 })
 
 
 setValidity("segData", function(object) {
   validmess <- c()
   valid <- TRUE
-  if(length(object@libsizes) != ncol(object@data))
+  if(length(object@libsizes) != ncol(object))
     {
       valid <- FALSE
-      validmess <- c(validmess, "Length of '@libsizes' slot must equal number of columns of '@data' slot.")
+      validmess <- c(validmess, "Length of '@libsizes' slot must equal length of '@replicates' slot.")
     }
-  if(length(object@coordinates) != nrow(object@data))
+  if(nrow(object@data) != length(object@coordinates) & nrow(object@data) != 0 & length(object@coordinates) != 0)
     {
       valid <- FALSE
-      validmess <- c(validmess, "Number of rows of '@coordinates' slot not same as '@data' slot.")
+      validmess <- c(validmess, "Number of rows of '@data' slot (if not zero) must be the same as '@coordinates' slot (if not zero).")
     }
-  if(length(object@replicates) != ncol(object@data))
+  if(length(object@replicates) != ncol(object))
     {
       valid <- FALSE
-      validmess <- c(validmess, "Length of '@replicates' slot must equal number of columns of '@data' slot.")
+      validmess <- c(validmess, "Length of '@replicates' slot must equal length of '@replicates' slot.")
     }
-  if(!all(sapply(1:ncol(object), function(ii) all(as.integer(object@data[,ii]) == object@data[,ii]))))
+  if(ncol(object@data) > 0 && !all(sapply(1:ncol(object@data), function(ii) all(as.integer(object@data[,ii]) == object@data[,ii]))))
     {
       valid <- FALSE
       validmess <- c(validmess, "All members of the '@data' matrix must be castable as integers.")
@@ -55,7 +55,7 @@ setMethod("show", "segData", function(object) {
   cat(paste('An object of class "', class(object), '"\n', sep = ""))
   cat(paste(nrow(object), 'rows and', ncol(object), 'columns\n'))
   cat('\nSlot "data":\n')
-  if(nrow(object) > 5)
+  if(nrow(object@data) > 5)
     {
       print(object@data[1:5,])
       cat(paste(nrow(object) - 5), "more rows...\n")

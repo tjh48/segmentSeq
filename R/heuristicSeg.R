@@ -1,4 +1,4 @@
-heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
+heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
   {
     if(!is.null(subRegion))
       {
@@ -15,11 +15,11 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
         
         splitSeg <- lapply(1:length(sDsplit), function(ii) {
           message("Segmenting; Part ", ii, " of ", length(sDsplit))
-          .partheuristicSeg(sDsplit[[ii]], getLikes = FALSE, bimodality = FALSE, verbose = FALSE, cl = NULL, RKPM = RKPM, gap = gap)      
+          .partheuristicSeg(sDsplit[[ii]], getLikes = FALSE, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop)      
         })
         
         lD <- .mergeListLoci(splitSeg)
-      } else lD <- .partheuristicSeg(sD, getLikes = FALSE, bimodality = FALSE, verbose = FALSE, cl = NULL, RKPM = RKPM, gap = gap)
+      } else lD <- .partheuristicSeg(sD, getLikes = FALSE, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop)
         
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")
 
@@ -27,7 +27,7 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
   }
 
 
-.partheuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 1000, gap = 100, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
+.partheuristicSeg <- function(sD, aD, bimodality = TRUE, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, getLikes = TRUE, verbose = TRUE, cl)
   {
     if((missing(aD) || class(aD) != "alignmentData") & getLikes) {
       stop("I can't assess the likelihoods of clustered data without an alignmentData object 'aD'")
@@ -46,50 +46,82 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
 
 #    seglens <- sD@seglens
 #    if(nrow(seglens) == 0)
-      seglens <- matrix(width(ranges(sD@coordinates)), ncol = 1)
+
 #    if(ncol(seglens) == 1)
-      seglens <- matrix(seglens, ncol = ncol(sD), nrow = nrow(seglens))
+    
+    seglens <- matrix(width(ranges(sD@coordinates)), ncol = 1)
+    seglens <- matrix(seglens, ncol = ncol(sD), nrow = nrow(seglens))
 
-    locDens <- do.call("cbind", lapply(levels(replicates), function(rep)       
-                                       rowSums(sapply(which(replicates == rep), function(jj)
-                                                      as.integer(sD@data[,jj]) / seglens[,jj] / sD@libsizes[jj])) / sum(replicates == rep)
-                                       ))
-
-
-    if(!bimodality) locM <- locDens * 1e9 > RKPM else {
-      message("Finding cutoff values...", appendLF = FALSE)
-      logDens <- log10(locDens)
-      locCutoff <- apply(logDens, 2, function(x) {
+    densityFunction <- function(rep, sD, seglens, RKPM, gap, bimodality)
+      {
+        locDens <- rowSums(sapply(which(sD@replicates == rep), function(jj)
+                       as.integer(sD@data[,jj]) / seglens[,jj] / sD@libsizes[jj])) / sum(sD@replicates == rep)
         message(".", appendLF = FALSE)
-        nzlocs <- which(x != -Inf)
-        bimodalSep(x[nzlocs], bQ = c(0, 1))
-      })
-      message("done!")
-      locM <- t(t(logDens) > locCutoff)
-    }
+        
+        if(!bimodality) return(locDens * 1e9 > RKPM) else {
+          logDens <- log10(locDens)          
+          nzlocs <- which(logDens != -Inf)
+          bimodalSep(logDens[nzlocs], bQ = c(0, 1))
+          message("done!")
+          return(logDens > locCutoff)
+        }
+      }
 
-    rm(locDens)
+    methFunction <- function(sD, prop = 0.2)
+      {
+        Cs <- sapply(1:ncol(sD@Cs), function(ii) as.integer(sD@Cs[,ii]))
+        Ts <- sapply(1:ncol(sD@Cs), function(ii) as.integer(sD@Ts[,ii]))
+
+        combCs <- sapply(levels(sD@replicates), function(rep) rowSums(Cs[,sD@replicates == rep,drop = FALSE]))
+        combTs <- sapply(levels(sD@replicates), function(rep) rowSums(Ts[,sD@replicates == rep,drop = FALSE]))
+
+        pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log = FALSE, lower.tail = FALSE)))
+        pbetas[combCs > 0 & combTs == 0] <- 1
+        pbetas[combCs == 0 & combTs > 0] <- -Inf
+        
+        locM <- pbetas > log(0.5)
+      }
+
+    if(class(sD) == "methSegs") {
+      locM <- methFunction(sD, prop = 0.2)
+      sD@locLikelihoods <- DataFrame(log(locM))
+      potnullD <- sD
+      potnullD@locLikelihoods <- DataFrame(log(!locM))
+      message("...done!")
+      seg <- .processPosteriors(lociPD = sD, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = getLikes, cl = cl)
+      return(seg)
+
+      } else locM <- do.call("cbind", lapply(levels(sD@replicates), densityFunction, sD = sD, seglens = seglens, RKPM = RKPM, gap = gap, bimodality = bimodality))
+
     gc()
-
-    selLoc <- rowSums(locM) > 0
-    potlociD <- new("segData")
-    potlociD@libsizes <- sD@libsizes
-    potlociD@replicates <- as.factor(sD@replicates)
-#    potlociD@seglens <- seglens
-    potlociD@data <- sD@data[selLoc,,drop = FALSE]
-    potlociD@coordinates <- subset(sD@coordinates, subset = selLoc)
+    
+    selLoc <- rowSums(locM, na.rm = TRUE) > 0
+    potlociD <- sD[selLoc,]
+    
+    potlociD@replicates <- as.factor(sD@replicates)    
     potlociD@locLikelihoods <- DataFrame(log(locM[selLoc,,drop = FALSE]))
 
-    potnullD <- new("segData",
-                    libsizes = sD@libsizes,
-                    replicates = sD@replicates,
-                    data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+    if(class(sD) == "segData") {
+      potnullD <- new("segData",
+                      libsizes = sD@libsizes,
+                      replicates = sD@replicates,
+                      data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+      emptyPD <- new("segData", libsizes = sD@libsizes, replicates = sD@replicates, data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+    } else if(class(sD) == "methSegs") {
+      potnullD <- new("methSegs",
+                      replicates = sD@replicates,
+                      Cs = DataFrame(matrix(nrow = 0, ncol = ncol(sD))),
+                      Ts = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+      emptyPD <- new("methSegs", replicates = sD@replicates,
+                     Cs = DataFrame(matrix(nrow = 0, ncol = ncol(sD))),
+                     Ts = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+    }
 
-    emptyPD <- new("segData", libsizes = sD@libsizes, replicates = sD@replicates, data = DataFrame(matrix(nrow = 0, ncol = ncol(sD))))
+    
     
 #    if(examineNulls) {
     emptyNulls <- gaps(sD@coordinates[dupStarts,])
-    emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
+    emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]    
     
     if(bimodality) {
       emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
@@ -98,6 +130,7 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
     
     emptyPD@coordinates <- emptyNulls[width(emptyNulls) <= as.integer(floor(gap)),]
     emptyPD@locLikelihoods <- DataFrame(matrix(-Inf, ncol = length(levels(sD@replicates)), nrow = length(emptyPD@coordinates)))
+    
     emptyPD@data <- DataFrame(matrix(0, ncol = length(sD@replicates), nrow = length(emptyPD@coordinates)))
     
     emptyNulls <- emptyNulls[width(emptyNulls) > as.integer(floor(gap)),]

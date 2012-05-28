@@ -22,12 +22,12 @@ setValidity("alignmentData", function(object) {
   if(nrow(object@data) != length(object@alignments))
     {
       valid <- FALSE
-      validmess <- c(validmess, "The number of the rows in the '@data' slot must equal the number of rows in the '@alignments' slot.")
+      validmess <- c(validmess, "The number of rows in the '@data' slot must equal the number of rows in the '@alignments' slot.")
     }
   if(ncol(object@data) != length(object@libnames))
     {
       valid <- FALSE
-      validmess <- c(validmess, "The number of the rows in the '@data' slot must equal the length of the '@libnames' slot.")
+      validmess <- c(validmess, "The number of columns in the '@data' slot must equal the length of the '@libnames' slot.")
     }
   if(length(object@libnames) != length(object@libsizes))
     {

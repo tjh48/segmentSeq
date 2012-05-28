@@ -12,6 +12,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     chrs <- as.character(chrs)
     replicates <- as.factor(replicates)
 
+    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
+
     if(!all(levels(replicates) %in% replicates))
       stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
     
@@ -59,13 +61,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
       }
 
       message(".", appendLF = FALSE)
-
+      seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
       aln
       })
 
     message(".done!")
-
-    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
     
     .processTags(Tags, verbose = verbose, gap = gap, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
     
@@ -86,6 +86,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                         #    if(any(replicates != as.integer(replicates)))
                                         #      stop("The 'replicates' vector must be castable as an integer")
     replicates <- as.factor(replicates)
+
+    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
     
     if(!all(levels(replicates) %in% replicates))
       stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
@@ -211,13 +213,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       rm(filetags, chrtags)
       gc()
       message(".", appendLF = FALSE)
-      
+      seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
       aln
     }, cols = cols, header = header)
 
     message(".done!")
-
-    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
     
     .processTags(Tags, verbose = verbose, estimationType = estimationType, gap = gap, seqinf = seqinf, libnames = libnames, replicates = replicates)
   }
@@ -228,14 +228,14 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     if(verbose)
       message("Analysing tags...", appendLF = FALSE)
     
-    unqTags <- do.call("c", lapply(seqlevels(seqinf), function(x) {
+    unqTags <- do.call("c", lapply(seqlevels(seqinf), function(x) {                       
       chrTag <- GTags[[1]][seqnames(GTags[[1]]) == x,]
 
       if(length(GTags) > 1)
         {
           for(ii in 2:length(GTags)) {
             chrTag <- c(chrTag, GTags[[ii]][seqnames(GTags[[ii]]) == x,])            
-            ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag))
+            ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag), as.character(strand(chrTag)))
             
             purgeTags <- which(start(chrTag)[ordTag] == c(start(chrTag)[ordTag[-1]], Inf) &
                                end(chrTag)[ordTag] == c(end(chrTag)[ordTag[-1]], Inf) &
@@ -249,13 +249,12 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       chrTag
     }))
     
-    unqTags <- unqTags[order(as.integer(seqnames(unqTags)), as.integer(start(unqTags)), as.integer(end(unqTags)), as.character(values(unqTags)$tag)),]
+    unqTags <- unqTags[order(as.integer(seqnames(unqTags)), as.integer(start(unqTags)), as.integer(end(unqTags)), as.character(values(unqTags)$tag), as.character(strand(unqTags))),]
     values(unqTags)$count <- 0
 
     counts <- do.call("DataFrame",
                       lapply(GTags, function(GTag) {
-                        do.call("c",
-                                
+                        do.call("c",                                
                                 lapply(seqlevels(seqinf), function(x) {
                                   chrTag <- c(GTag[seqnames(GTag) == x,], unqTags[seqnames(unqTags) == x,])
                                   ordTag <- order(as.integer(start(chrTag)), as.integer(end(chrTag)), as.character(values(chrTag)$tag), as.character(strand(chrTag)))
@@ -266,8 +265,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                   
                                   message(".", appendLF = FALSE)
                                   if(length(purgeTags) > 0) return(values(chrTag)$count[ordTag[-purgeTags]]) else return(values(chrTag)$count[ordTag])
-                                }))})
-                      )
+                                }))
+                      }))                      
 
     colnames(counts) <- libnames
 

@@ -12,11 +12,15 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     sD <- .massiveClassifyLoci(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)
     nullD <- .massiveClassifyNulls(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, nullCutoff = nullCutoff, tempDir = tempDir, largeness = largeness, recoverOld = FALSE, cl = cl)
 
-    lD <- .processPosteriors(lociPD = sD, nullPD = nullD, getLikes = FALSE, cl = cl)
+    if(nrow(nullD) > 0) {
+      nullPD <- nullD[!values(nullD@coordinates)$empty,]
+      emptyPD = nullD[values(nullD@coordinates)$empty,]
+    } else nullPD <- emptyPD <- nullD
+    
+    lD <- .processPosteriors(lociPD = sD, nullPD = nullPD, emptyPD = emptyPD, getLikes = FALSE, cl = cl)
 
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")      
     lD
-
   }
     
 
@@ -35,16 +39,23 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       pET <- "BIC"
     }
     
-    message("Finding candidate priors...")
+    message("Finding candidate priors...", appendLF = FALSE)
     
     subLoc <- getOverlaps(coordinates = sD@coordinates,
                           segments = cD@coordinates, overlapType = "within", 
                           whichOverlaps = FALSE, cl = NULL)
     subLoc <- which(subLoc)[.filterSegments(sD@coordinates[subLoc,], runif(sum(subLoc)))]
     prepD <- .convertSegToLoci(sD[subLoc,])
+
+    message("done.")
     
     groups(prepD) <- list(prepD@replicates)
-    prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
+    if(class(sD) == "segData") {
+      prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
+    } else if(class(sD) == "methSegs") prepD <- getPriors.BB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
+
+    if(!is.null(tempDir)) save(prepD, file = paste(tempDir, "/prepD.RData", sep = ""))
+    
     weights <- cD@locLikelihoods[unlist(getOverlaps(coordinates = prepD@coordinates[prepD@priors$sampled[,1], ], segments = cD@coordinates, overlapType = "within", cl = cl)),,drop = FALSE]
     repWeights <- sapply(levels(sD@replicates), function(rep) {
       repWeights <- weights[,levels(sD@replicates) == rep]
@@ -52,7 +63,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       repWeights
     })
 
-    if(!is.null(tempDir)) save(prepD, file = paste(tempDir, "/prepD.RData", sep = ""))
+    if(!is.null(tempDir)) save(repWeights, prepD, file = paste(tempDir, "/prepD.RData", sep = ""))
     
     sDsplit <- .splitSD(sD, largeness)
 
@@ -143,11 +154,19 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
               potnullD <- .constructNulls(emptyNulls, sD[withinX,], x@coordinates, withinOnly = FALSE)
               potnullD@locLikelihoods <- DataFrame(log(sapply(levels(potnullD@replicates), .classifyNulls, lociPD = x, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))
             } else potnullD <- NULL
-          if(!is.null(tempDir)) save(potnullD, file = paste(tempDir, "/subNull_", ii, ".RData", sep = ""))
-              potnullD
+          emptyD <- rowSums(sapply(1:ncol(potnullD), function(jj) as.integer(potnullD@data[,jj]))) == 0
+          values(potnullD@coordinates)$empty <- FALSE
+          values(potnullD@coordinates)$empty[emptyD] <- TRUE
+          potnullD <- potnullD[rowSums(sapply(1:ncol(potnullD@locLikelihoods), function(ii) potnullD@locLikelihoods[,ii] > -Inf), na.rm = TRUE) > 0 | emptyD,]
+          potnullD@data <- DataFrame(matrix(ncol = length(potnullD@replicates), nrow = 0))
+          potnullD
+
+          if(!is.null(tempDir)) save(potnullD, file = paste(tempDir, "/subNull_", ii, ".RData", sep = ""))          
         })
 
-        potnullD <- .mergeSegData(splitNulls)
+        if(any(!sapply(splitNulls, is.null)))
+          potnullD <- .mergeSegData(splitNulls[!sapply(splitNulls, is.null)]) else potnullD <- new("lociData")
+        
 
       } else potnullD <- new("lociData")
     } else potnullD <- new("lociData")
@@ -183,14 +202,11 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       
       PDgivenr.NB <- function (number, cts, seglen, libsizes, priors, weights)
         {
-          logRowSum <- function(z)
-            {
-              maxes <- do.call(pmax, c(as.list(data.frame(z)), list(na.rm = TRUE)))
-              pmax(maxes, maxes + log(rowSums(exp(z - maxes), na.rm = TRUE)), na.rm = TRUE)
-            }
+          `logsum` <-
+            function(x)
+              max(x, max(x, na.rm = TRUE) + log(sum(exp(x - max(x, na.rm = TRUE)), na.rm = TRUE)), na.rm = TRUE)          
           
           seglen <- rep(seglen, length(cts))
-
           likes <- rowSums(
                            matrix(
                                   dnbinom(rep(cts, each = nrow(priors)),
@@ -198,7 +214,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                                           mu = rep(libsizes * seglen, each = nrow(priors)) * priors[,1], log = TRUE),
                                   ncol = length(cts))
                            )
-          logRowSum(t(log(weights) + likes)) - log(colSums(weights))
+
+          c(logsum(log(weights[,1]) + likes), logsum(log(weights[,2]) + likes)) - log(colSums(weights))
         }
       
       number <- us[1]
@@ -210,14 +227,60 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       pd
     }
     
+    BBdens <- function(us) {
+      
+      PDgivenr.BB <- function (number, cts, secondCts, priors, weights)
+        {
+          `logsum` <-
+            function(x)
+              max(x, max(x, na.rm = TRUE) + log(sum(exp(x - max(x, na.rm = TRUE)), na.rm = TRUE)), na.rm = TRUE)
+
+          .dbetabinom <- function(x, y, alpha, beta, p, disp, log = FALSE)
+            {    
+              if(missing(alpha) | missing(beta)) {      
+                alpha <- p / exp(disp)
+                beta <- (1-p) / exp(disp)
+                dispLarge <- disp > -10 & !is.na(disp)
+              } else dispLarge <- rep(TRUE, length(alpha))
+              
+              if(is.vector(x)) x <- matrix(x, ncol = 1, nrow = length(x))
+              if(is.vector(y)) y <- matrix(y, ncol = 1, nrow = length(y))
+              
+              ps <- matrix(NA, ncol = ncol(x), nrow = nrow(x))
+              
+              if(log) {
+                ps[which(dispLarge),] <- lchoose(x[which(dispLarge),,drop = FALSE] + y[which(dispLarge),,drop = FALSE], x[which(dispLarge),,drop = FALSE]) + suppressWarnings(lbeta(x[which(dispLarge),,drop = FALSE] + alpha[which(dispLarge)], y[which(dispLarge),,drop = FALSE] + beta[which(dispLarge)])) - suppressWarnings(lbeta(alpha[which(dispLarge)], beta[which(dispLarge)]))
+                if(any(!dispLarge, na.rm = TRUE)) ps[which(!dispLarge),] <- dbinom(x[which(!dispLarge),,drop = FALSE], x[which(!dispLarge),,drop = FALSE]+y[which(!dispLarge),,drop = FALSE], p[which(!dispLarge)], log = TRUE)
+              } else ps <- (choose(x + y, y) * suppressWarnings(beta(x + alpha, y + beta)) / suppressWarnings(beta(alpha, beta)))
+              ps[is.na(ps)] <- NA
+              if(ncol(ps) == 1) ps <- ps[,1,drop= TRUE]
+              ps
+            }          
+          
+          likes <- rowSums(
+                           .dbetabinom(matrix(cts, ncol = length(cts), nrow = nrow(priors), byrow = TRUE),
+                                       matrix(secondCts, ncol = length(secondCts), nrow = nrow(priors), byrow = TRUE),
+                                       disp = priors[,2],
+                                       p = priors[,1], log = TRUE))
+                                  
+          c(logsum(log(weights[,1]) + likes), logsum(log(weights[,2]) + likes)) - log(colSums(weights))
+        }
+      
+      number <- us[1]
+      cts <- us[2:((length(us) - 1) / 2 + 1)]
+      secondCts <- us[((length(us) - 1) / 2 + 2):length(us)]
+      
+      pd <- PDgivenr.BB(number = number, cts = cts, secondCts = secondCts, priors = NBpriors, weights = priorWeights)
+      pd
+    }
+    
     if(!is.null(cl))
       {
         clustAssign <- function(object, name)
           {
             assign(name, object, envir = .GlobalEnv)
             NULL
-          }
-        
+          }        
         getLikelihoodsEnv <- new.env(parent = .GlobalEnv)
         environment(clustAssign) <- getLikelihoodsEnv
         environment(NBdens) <- getLikelihoodsEnv
@@ -240,13 +303,23 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         clusterCall(cl, clustAssign, libsizes, "libsizes")
         clusterCall(cl, clustAssign, priorWeights, "priorWeights")
       }
-    
-    if (is.null(cl)) {
-      ps <- t(apply(cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,,drop = FALSE], 1, NBdens))
-    } else {      
-      ps <- parRapply(cl, cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,, drop = FALSE], NBdens)
-      ps <- matrix(ps, ncol = 2, byrow = TRUE)
-    }
+
+    if(class(pcD) == "lociData")
+      {
+        if (is.null(cl)) {
+          ps <- t(apply(cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,,drop = FALSE], 1, NBdens))
+        } else {      
+          ps <- parRapply(cl, cbind(1:nrow(pcD@data), seglens, pcD@data)[subset,, drop = FALSE], NBdens)
+          ps <- matrix(ps, ncol = 2, byrow = TRUE)
+        }
+      } else if(class(pcD) == "methData") {
+        if (is.null(cl)) {
+          ps <- t(apply(cbind(1:nrow(pcD@data), pcD@data, pcD@secondData)[subset,,drop = FALSE], 1, BBdens))
+        } else {      
+          ps <- parRapply(cl, cbind(1:nrow(pcD@data), pcD@data, pcD@secondData)[subset,, drop = FALSE], BBdens)
+          ps <- matrix(ps, ncol = 2, byrow = TRUE)
+        }
+      }
 
     rps <- matrix(NA, ncol = 2, nrow = nrow(pcD@data))
     rps[subset,] <- ps
@@ -343,22 +416,34 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
   {
     getLikeLoci <- function(rep, potlociD, priors, repWeights, sampled, ...) {
       message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
-      
-      repD <- new("lociData",
-                  data = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@data[,ii])),
-                  seglens = width(potlociD@coordinates),
-                  libsizes = potlociD@libsizes[potlociD@replicates == rep],
-                  replicates = as.factor(rep(1, sum(potlociD@replicates == rep))),
-                  coordinates = potlociD@coordinates)
-      
-      repD@priorType = "NB"
-      groups(repD) <- list(rep(1, ncol(repD)))
+
+      if(class(potlociD) == "segData")
+        {
+          repD <- new("lociData",
+                      data = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@data[,ii])),
+                      seglens = width(potlociD@coordinates),
+                      libsizes = potlociD@libsizes[potlociD@replicates == rep],
+                      replicates = as.factor(rep(1, sum(potlociD@replicates == rep))),
+                      coordinates = potlociD@coordinates,
+                      groups = list(rep(1, sum(potlociD@replicates == rep))))
+          repD@priorType = "NB"
+        } else if(class(potlociD) == "methSegs") {
+          repD <- new("methData",
+                      data = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@Cs[,ii])),
+                      secondData = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@Ts[,ii])),
+                      replicates = as.factor(rep(1, sum(potlociD@replicates == rep))),
+                      coordinates = potlociD@coordinates,
+                      groups = list(rep(1, sum(potlociD@replicates == rep))))
+          repD@priorType = "BB"
+        }     
       
       withinWeights <- exp(repWeights[, rep])
       
       if (all(withinWeights == 1, na.rm = TRUE)) {
+        warning(paste("I didn't find any non-loci to establish weights for the", rep, "replicate group."))
         repLoci <- rep(TRUE, nrow(repD))
       } else if (all(withinWeights == 0, na.rm = TRUE)) {
+        warning(paste("I didn't find any loci to establish weights for the", rep, "replicate group."))
         repLoci <- rep(FALSE, nrow(repD))
       } else {        
         repD@priors$priors <- priors[[1]][[which(levels(potlociD@replicates) == rep)]]
@@ -369,12 +454,20 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         repD@priors$sampled <- sampled
         
         subset <- intersect(locSubset, which(rowSums(repD@data) > 0))        
-        
-        orddat <- do.call("order", c(lapply(1:ncol(repD@seglens), function(ii) repD@seglens[,ii]), lapply(1:ncol(repD), function(ii) repD@data[,ii])))
-        whunq <- .fastUniques(cbind(repD@seglens, repD@data)[orddat,])
 
-        lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
-        lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
+        if(class(potlociD) == "segData")
+          {            
+            orddat <- do.call("order", c(lapply(1:ncol(repD@seglens), function(ii) repD@seglens[,ii]), lapply(1:ncol(repD), function(ii) repD@data[,ii])))        
+            whunq <- .fastUniques(cbind(repD@seglens, repD@data)[orddat,])
+            lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
+            lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
+          } else if(class(potlociD) == "methSegs") {
+            orddat <- do.call("order", c(lapply(1:ncol(repD@data), function(ii) repD@data[,ii]), lapply(1:ncol(repD@secondData), function(ii) repD@secondData[,ii])))
+            whunq <- .fastUniques(cbind(repD@data, repD@secondData)[orddat,])
+            lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
+            lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
+          }
+
         
         if(lR) repLoci <- lD[,2] > lD[,1] else {
           

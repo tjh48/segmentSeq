@@ -1,4 +1,4 @@
-.processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = TRUE, cl)
+.processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
   {
     if(!is.null(cl))
       clusterEvalQ(cl, rm(list = ls()))
@@ -16,7 +16,8 @@
                                  repCol <- which(levels(selLoci@replicates) == rep)
                                  accepts <- rep(FALSE, nrow(selLoci))
                                  repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
-                                 if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL) else accepts <- rep(TRUE, nrow(selLoci))
+                                 accepts[repLoci] <- TRUE
+                                 if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL)
                                  message(".", appendLF = FALSE)
                                  return(Rle(accepts))
                                }))                           

@@ -188,17 +188,27 @@
 }
 
 .mergeListLoci <- function(splitSeg) {
-  mergeSeg <- new(class(splitSeg[[1]]),
-                  locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
-                  coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-                  data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
-                  replicates = splitSeg[[1]]@replicates,
-                  libsizes = splitSeg[[1]]@libsizes,
-                  groups = splitSeg[[1]]@groups,
-                  annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
-                  seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))
-  if(class(mergeSeg) == "methData")
-    mergeSeg@pairData <- do.call("rbind", lapply(splitSeg, function(x) x@pairData))
+  if(class(splitSeg[[1]]) != "methData") {
+    mergeSeg <- new(class(splitSeg[[1]]),
+                    locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
+                    coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
+                    data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
+                    replicates = splitSeg[[1]]@replicates,
+                    libsizes = splitSeg[[1]]@libsizes,
+                    groups = splitSeg[[1]]@groups,
+                    annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
+                    seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))
+  } else if(class(splitSeg[[1]]) == "methData")
+    mergeSeg <- new(class(splitSeg[[1]]),
+                    locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
+                    coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
+                    data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
+                    pairData = do.call("rbind", lapply(splitSeg, function(x) x@pairData)),
+                    replicates = splitSeg[[1]]@replicates,
+                    libsizes = splitSeg[[1]]@libsizes,
+                    groups = splitSeg[[1]]@groups,
+                    annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
+                    seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))    
   mergeSeg
 }
 

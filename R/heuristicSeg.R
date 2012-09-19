@@ -19,8 +19,10 @@
   }      
 
 
-heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
+heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
   {
+    prop = 0.2
+    
     if(!is.null(subRegion))
       {
         sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
@@ -88,11 +90,11 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, prop = 0.2, subRegion =
         # Beta-distribution here is derived from being the improper (B(0,0)) conjugate prior of a binomial
         
         if(!nullP) {
-          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log = FALSE, lower.tail = FALSE)))        
+          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log.p = FALSE, lower.tail = FALSE)))        
           pbetas[combCs > 0 & combTs == 0] <- 1
           pbetas[combCs == 0 & combTs > 0] <- -Inf
         } else {
-          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log = FALSE, lower.tail = TRUE)))
+          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log.p = FALSE, lower.tail = TRUE)))
           pbetas[combCs > 0 & combTs == 0] <- -Inf
           pbetas[combCs == 0 & combTs > 0] <- 0
         }

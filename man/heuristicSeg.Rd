@@ -12,8 +12,8 @@ null. These criteria can be defined by the user or inferred from the
 data. 
 }
 \usage{
-heuristicSeg(sD, aD, RKPM = 1000, gap = 100, subRegion
-= NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl)
+heuristicSeg(sD, aD, RKPM = 1000, gap = 100, subRegion =
+NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -36,8 +36,9 @@ heuristicSeg(sD, aD, RKPM = 1000, gap = 100, subRegion
   \item{getLikes}{Should posterior likelihoods for the new segmented
     genome (loci and nulls) be assessed?}
   \item{verbose}{Should the function be verbose? Defaults to TRUE.}
-  \item{cl}{A SNOW cluster object, or NULL. See Details.}
+  \item{cl}{A SNOW cluster object, or NULL. Defaults to NULL. See Details.}
 }
+
 \details{
   A \code{'cluster'} object (package: snow) may be used for
   parallelisation of parts of this function when examining large data sets.

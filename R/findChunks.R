@@ -5,16 +5,18 @@ findChunks <- function(alignments, gap, checkDuplication = TRUE)
 
   for(chr in seqlevels(alignments)) {
     chraD <- which(seqnames(alignments) == chr)
-    if(length(chraD) == 1) {
-      chunks[chraD] <- maxChunk + 1
-    } else if(length(chraD) > 1)
-      {
-        chral <- ranges(alignments[chraD,])
-        chunkNum <- c(0L, which(start(chral)[-1] - cummax(end(chral)[-length(chral)]) > gap))
-        chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, length(chral))))
-        chunks[chraD] <- chunkID
-      }
-    maxChunk <- max(chunks, na.rm = TRUE)
+    if(length(chraD) > 0) {
+      if(length(chraD) == 1) {
+        chunks[chraD] <- maxChunk + 1
+      } else if(length(chraD) > 1)
+        {
+          chral <- ranges(alignments[chraD,])
+          chunkNum <- c(0L, which(start(chral)[-1] - cummax(end(chral)[-length(chral)]) > gap))
+          chunkID <- rep(1L:as.integer(length(chunkNum)) + maxChunk, diff(c(chunkNum, length(chral))))
+          chunks[chraD] <- chunkID
+        }
+      maxChunk <- max(chunks, na.rm = TRUE)
+    }
   }
   
   values(alignments)$chunk <- chunks

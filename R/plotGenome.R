@@ -43,13 +43,13 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
                  dTags <- dTags[order(start(dTags), end(dTags)),]
                  dTags <- dTags[values(dTags)$count > 0,, drop = FALSE]
                  
-                 if(nrow(uTags) > 0)
+                 if(length(uTags) > 0)
                    {
                      cpu <- coverage(IRanges(start=rep(start(uTags), as.integer(values(uTags)$count)),
                                              end=rep(end(uTags), as.integer(values(uTags)$count))))
                      rectcpu <- cbind(start(cpu), uu, end(cpu), runValue(cpu))                     
                    } else rectcpu <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
-                 if(nrow(dTags) > 0)
+                 if(length(dTags) > 0)
                    {
                      cpd <- coverage(IRanges(start=rep(start(dTags), as.integer(values(dTags)$count)),
                                              end=rep(end(dTags), as.integer(values(dTags)$count))))
@@ -72,10 +72,15 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
                            rectcpu[,4] <- sapply(rectcpu[,4], min, cap)
                            rectcpu <- rectcpu[rectcpu[,4] > 0,,drop = FALSE]                           
                            rectcpu[,4] <- rectcpu[,4] / sum(values(sTags)$count[tags]) * as.integer(pAD@data[ii,samples[uu]])
-                           
+                           if(any(rectcpu[,4] <= 0)) {
+                             warning("There are non-zero count tags whose summed count is zero - something's gone wrong with the input data.")
+                             rectcpu <- rectcpu[rectcpu[,4] > 0,,drop = FALSE]
+                           }
                          }
                      }
+                   if(any(rectcpu[,4] == 0)) message(ii)
                    rectcpu
+                   
                  }))
                }
                

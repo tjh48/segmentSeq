@@ -33,7 +33,7 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
       } else redsegs <- segments
     
     countsmat <- do.call("rbind", lapply(seqlevels(redsegs), function(cc)
-                               {                                 
+                               {
                                  createIntervals <- function(inCluster = FALSE)
                                    {
                                      cummaxEnd <- cummax(end(dupTags))
@@ -75,7 +75,7 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                      
                                      chrUC <- csts[endsAbove + 1L,,drop = FALSE] - cens[startsAbove + 1L,,drop = FALSE]
                                      chrUC[chrUC < 0] <- 0L
-                                   } else chrUC <- matrix(0L, ncol = ncol(intData), nrow = nrow(chrsegs))
+                                   } else chrUC <- matrix(0L, ncol = ncol(intData), nrow = length(chrsegs))
                                  
                                  dupTags <- ranges(chralignments)[values(chralignments)$chunkDup,]
                                  dupTagID <- values(chralignments)$tag[values(chralignments)$chunkDup]
@@ -83,17 +83,6 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                  
                                  if(length(dupTags) > 0)
                                    {
-                                     if(!is.null(cl))
-                                       {
-                                         environment(createIntervals) <- getCountEnv
-                                         clusterCall(cl, clusterAssign,
-                                                     assignList = list(list(name = "chrsegs", data = chrsegs),
-                                                       list(name = "dupTags", data = dupTags),
-                                                       list(name = "dupTagID", data = dupTagID),
-                                                       list(name = "dupData", data = dupData)))
-                                         clusterCall(cl, createIntervals, inCluster = TRUE)
-                                       } else fIns <- createIntervals()
-                                     
                                      countNonUniques <- function(segii)
                                        {
                                          if(fIns[segii,1L] > fIns[segii,2L]) return(rep(0L, ncol(dupData)))
@@ -104,10 +93,20 @@ function(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
                                          as.integer(colSums(dupData[seltags,,drop = FALSE]))
                                        }
                                      
-                                     if(!is.null(cl))
-                                       environment(countNonUniques) <- getCountEnv
+                                     if(!is.null(cl) & length(chrsegs) > 1)
+                                       {
+                                         environment(createIntervals) <- getCountEnv
+                                         environment(countNonUniques) <- getCountEnv
+                                         clusterCall(cl, clusterAssign,
+                                                     assignList = list(list(name = "chrsegs", data = chrsegs),
+                                                       list(name = "dupTags", data = dupTags),
+                                                       list(name = "dupTagID", data = dupTagID),
+                                                       list(name = "dupData", data = dupData)))
+                                         clusterCall(cl, createIntervals, inCluster = TRUE)
+                                         
+                                       } else fIns <- createIntervals()
                                      
-                                     if(!is.null(cl)) chrNC <- parLapply(cl, 1:length(chrsegs), countNonUniques) else  chrNC <- lapply(1:length(chrsegs), countNonUniques)
+                                     if(!is.null(cl) & length(chrsegs) > 1) chrNC <- parLapply(cl, 1:length(chrsegs), countNonUniques) else  chrNC <- lapply(1:length(chrsegs), countNonUniques)
                                      chrNC <- do.call("rbind", chrNC)
                                                                
                                      

@@ -48,14 +48,15 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c("AGO6", "AGO6", "AGO4", "AGO4")
 
-aD <- readGeneric(files = libfiles, dir = datadir, replicates = replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens = chrlens, polyLength = 10, header = TRUE, gap = 200)
+aD <- readGeneric(files = libfiles, dir = datadir, replicates = replicates, libnames = libnames, 
+                  chrs = c(">Chr1", ">Chr2"), chrlens = chrlens, polyLength = 10, header = TRUE, gap = 200)
 aD
 @ 
 
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
 
 <<>>=
-sD <- processAD(aD, cl = cl)
+sD <- processAD(aD, gap = 100, cl = cl)
 sD
 @ 
 

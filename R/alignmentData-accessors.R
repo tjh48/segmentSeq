@@ -15,6 +15,27 @@ setMethod("[", "alignmentData", function(x, i, j, ..., drop = FALSE) {
   x
 })
 
+setMethod("libsizes<-", signature = "alignmentData", function(x, value) {
+  if(!is.numeric(value)) stop("All members of libsizes for an alignmentData object must be numeric.")
+  if(length(value) != ncol(x)) stop("Length of libsizes must be identical to the number of columns of the alignmentData object.")
+  if(any(value <= 0)) stop("Library sizes less than or equal to zero make no sense to me!")
+  x@libsizes <- value
+  x
+})
+
+setMethod("libsizes", signature = "alignmentData", function(x) {
+  x@libsizes
+})
+
+setMethod("replicates<-", signature = "alignmentData", function(x, value) {
+  x@replicates <- as.factor(value)
+  x
+})
+
+setMethod("replicates", signature = "alignmentData", function(x) {
+  x@replicates
+})
+
 
 setValidity("alignmentData", function(object) {
   valid <- TRUE

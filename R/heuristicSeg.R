@@ -1,21 +1,26 @@
-.zeroInMeth <- function(aD)
+.zeroInMeth <- function(aD, smallSegs)
   {
-    zeroCs <- rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) == 0
+    zeroCs <- !getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
+#    zeroCs <- rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) == 0
     
     chrBreaks <- which(seqnames(aD@alignments)[-nrow(aD)] != seqnames(aD@alignments)[-1])
     chrBreaks <- cbind(c(1, chrBreaks + 1), c(chrBreaks, nrow(aD)))
     
     whichZero <- which(zeroCs)
-    
-    zeroBlocks <- do.call("rbind", lapply(1:nrow(chrBreaks), function(ii) {
-      chrZeros <- whichZero[whichZero >= chrBreaks[ii,1] & whichZero <= chrBreaks[ii,2]]      
-      adjZeros <- cbind(chrZeros[c(1, which(diff(chrZeros) > 1) + 1)], chrZeros[c(which(diff(chrZeros) > 1), length(chrZeros))])
-    }))
-    
-    zeroCoords <- GRanges(seqnames(aD@alignments)[zeroBlocks[,1]], IRanges(start = start(aD@alignments)[zeroBlocks[,1]], end = end(aD@alignments)[zeroBlocks[,2]]))
-    zeroAD <- getMethCounts(zeroCoords, aD = aD, preFiltered = FALSE, as.matrix = FALSE, cl = cl)
-    
-    zeroAD    
+
+    if(length(whichZero) > 0) {
+      zeroBlocks <- do.call("rbind", lapply(1:nrow(chrBreaks), function(ii) {
+        chrZeros <- whichZero[whichZero >= chrBreaks[ii,1] & whichZero <= chrBreaks[ii,2]]      
+        adjZeros <- cbind(chrZeros[c(1, which(diff(chrZeros) > 1) + 1)], chrZeros[c(which(diff(chrZeros) > 1), length(chrZeros))])
+      }))
+      
+      zeroCoords <- GRanges(seqnames(aD@alignments)[zeroBlocks[,1]], IRanges(start = start(aD@alignments)[zeroBlocks[,1]], end = end(aD@alignments)[zeroBlocks[,2]]))
+    } else {
+      zeroCoords <- GRanges()
+      seqinfo(zeroCoords) <- seqinfo(aD@alignments)
+    }
+      
+    zeroCoords
   }      
 
 
@@ -37,7 +42,7 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
         
         splitSeg <- lapply(1:length(sDsplit), function(ii) {
           message("Segmenting; Part ", ii, " of ", length(sDsplit))
-          .partheuristicSeg(sDsplit[[ii]], aD = aD, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop)      
+          .partheuristicSeg(sD[sDsplit[[ii]],], aD = aD, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop)      
         })
         
         lD <- .mergeListLoci(splitSeg)
@@ -55,7 +60,8 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
 
     sD <- sD[order(as.factor(seqnames(sD@coordinates)), as.integer(start(sD@coordinates)), as.integer(end(sD@coordinates))),]
-
+    sDSmall <- sD@coordinates[fastUniques(data.frame(chr = as.character(seqnames(sD@coordinates)), start = as.numeric(start(sD@coordinates)))),]
+    
     dupStarts <- which(fastUniques(cbind(as.character(seqnames(sD@coordinates)), as.integer(start(sD@coordinates)))))
 
     if(verbose) message("Evaluating potential loci...", appendLF = TRUE)
@@ -79,48 +85,46 @@ heuristicSeg <- function(sD, aD, RKPM = 1000, gap = 100, subRegion = NULL, large
         }
       }
 
-    methFunction <- function(methD, prop, locCutoff, nullP = FALSE)
-      {
-        Cs <- sapply(1:ncol(methD@Cs), function(ii) as.integer(methD@Cs[,ii]))
-        Ts <- sapply(1:ncol(methD@Cs), function(ii) as.integer(methD@Ts[,ii]))
-
-        combCs <- sapply(levels(methD@replicates), function(rep) rowSums(Cs[,methD@replicates == rep,drop = FALSE]))
-        combTs <- sapply(levels(methD@replicates), function(rep) rowSums(Ts[,methD@replicates == rep,drop = FALSE]))
-
-        # Beta-distribution here is derived from being the improper (B(0,0)) conjugate prior of a binomial
-        
-        if(!nullP) {
-          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log.p = FALSE, lower.tail = FALSE)))        
-          pbetas[combCs > 0 & combTs == 0] <- 1
-          pbetas[combCs == 0 & combTs > 0] <- -Inf
-        } else {
-          pbetas <- suppressWarnings(log(pbeta(prop, combCs, combTs, log.p = FALSE, lower.tail = TRUE)))
-          pbetas[combCs > 0 & combTs == 0] <- -Inf
-          pbetas[combCs == 0 & combTs > 0] <- 0
-        }
-        
-        locM <- pbetas > log(locCutoff)
-      }
-
     if(class(sD) == "methSegs") {
-      locM <- methFunction(sD, prop = prop, locCutoff = locCutoff)
+
+      locM <- .methFunction(sD, prop = prop, locCutoff = locCutoff)
+      
       sD@locLikelihoods <- DataFrame(log(locM))
 
-      empties <- .zeroInMeth(aD = aD)
+      internalNulls <- sD[rowSums(!locM, na.rm = TRUE) > 0 & width(sD@coordinates) > gap,]
 
+      message(".", appendLF = FALSE)
+      empties <- .zeroInMeth(aD = aD, smallSegs = sDSmall)
+      message(".", appendLF = FALSE)
+      if(length(empties) > 0) {
+        potnullD <- .constructMethNulls(empties, sD, sD@coordinates[rowSums(locM == 1, na.rm = TRUE) > 0,])
+        message(".", appendLF = FALSE)
+        potnullD <- potnullD[width(potnullD@coordinates) > gap,]
+
+        counts <- getMethylatedCounts(potnullD@coordinates, aD, cl = cl)
+        
+        potnullD@Cs <- counts$Cs
+        potnullD@Ts <- counts$Ts
+
+        colnames(potnullD@Cs) <- colnames(internalNulls@Cs)
+        colnames(potnullD@Ts) <- colnames(internalNulls@Cs)
+        
+      } else potnullD <- new("methSegs")      
+
+        message(".", appendLF = FALSE)
+      potnulls <- new("methSegs",
+                      Cs = rbind(potnullD@Cs, internalNulls@Cs),
+                      Ts = rbind(potnullD@Ts, internalNulls@Ts),
+                      replicates = internalNulls@replicates,
+                      coordinates = c(potnullD@coordinates, internalNulls@coordinates))                      
       
-      potnullD <- .constructNulls(empties@alignments, sD, sD@coordinates[rowSums(locM == 1, na.rm = TRUE) > 0,], withinOnly = FALSE)
+      nullM <- .methFunction(potnulls, prop = prop, locCutoff = locCutoff, nullP = TRUE)
+      potnulls@locLikelihoods <- DataFrame(log(nullM))
 
-      potnullD@Cs <- getCounts(potnullD@coordinates, new("alignmentData", data = aD@Cs, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-      
-      potnullD@Ts <- getCounts(potnullD@coordinates, new("alignmentData", data = aD@Ts, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-      potnullD <- potnullD[width(potnullD@coordinates) > gap,]
-
-      nullM <- methFunction(potnullD, prop = prop, locCutoff = locCutoff, nullP = TRUE)
-      potnullD@locLikelihoods <- DataFrame(log(nullM))
+#      save(sD, potnulls, file = "temp/processPosteriorVariables.RData")
       
       message("...done!")
-      seg <- .processPosteriors(lociPD = sD, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, cl = cl)
+      seg <- .processPosteriors(lociPD = sD, nullPD = potnulls, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, cl = cl)
       return(seg)
 
       } else {

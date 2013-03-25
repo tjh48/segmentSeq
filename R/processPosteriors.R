@@ -1,4 +1,36 @@
+.extractStrand <- function(sD, strand) {
+  sDPlus <- sD[,grep(strand, colnames(sD@Cs))]
+  sDPlus@replicates <- as.factor(gsub(paste("\\.", strand, sep = ""), "", as.character(sDPlus@replicates[grep(strand, sDPlus@replicates)])))
+  if(strand == "plus") strand(sDPlus@coordinates) = "+" else if(strand == "minus") strand(sDPlus@coordinates) = "-"
+  sDPlus@locLikelihoods <- sDPlus@locLikelihoods[,grep(strand, colnames(sDPlus@locLikelihoods))]
+  colnames(sDPlus@locLikelihoods) <- gsub(paste("\\.", strand, sep = ""), "", colnames(sDPlus@locLikelihoods))
+  colnames(sDPlus@Cs) <- gsub(paste("\\.", strand, sep = ""), "", colnames(sDPlus@Cs))
+  colnames(sDPlus@Ts) <- gsub(paste("\\.", strand, sep = ""), "", colnames(sDPlus@Ts))
+  sDPlus
+}
+
 .processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
+  {
+    if(length(grep("plus", levels(lociPD@replicates)) > 0) & length(grep("minus", levels(lociPD@replicates)) > 0)) {
+      message("Plus strand...")
+      plusSegs <- .processPosts(.extractStrand(lociPD, "plus"), .extractStrand(nullPD, "plus"), emptyPD, aD, lociCutoff, nullCutoff, getLikes = FALSE, cl = cl)
+      message("Minus strand...")
+      minusSegs <- .processPosts(.extractStrand(lociPD, "minus"), .extractStrand(nullPD, "minus"), emptyPD, aD, lociCutoff, nullCutoff, getLikes = FALSE, cl = cl)
+
+      segs <- new("methData",
+                  data = rbind(plusSegs@data, minusSegs@data),
+                  pairData = rbind(plusSegs@pairData, minusSegs@pairData),
+                  replicates = plusSegs@replicates,
+                  coordinates = c(plusSegs@coordinates, minusSegs@coordinates),
+                  seglens = rbind(plusSegs@seglens, minusSegs@seglens),
+                  locLikelihoods = rbind(plusSegs@locLikelihoods, minusSegs@locLikelihoods))
+
+      segs <- segs[order(as.factor(seqnames(segs@coordinates)), start(segs@coordinates), end(segs@coordinates)),]      
+    } else segs <- .processPosts(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
+    segs
+  }
+
+.processPosts <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
   {
     if(!is.null(cl))
       clusterEvalQ(cl, rm(list = ls()))
@@ -32,13 +64,23 @@
     rm(selNull, locAccept, locTrue)
     
     gc()
-    
-    ordLSD <- NULL
-    ordLSD[order(rowSums(do.call("cbind", lapply(1:ncol(segAccept), function(rep) as.integer(segAccept[,rep])))), width(selLoci@coordinates), decreasing = TRUE)] <- 1:nrow(selLoci)
-                 
-    filLSD <- .filterSegments(selLoci@coordinates, orderOn = ordLSD, decreasing = FALSE)
-    filSegs <- selLoci[filLSD, ]
-    filSegs <- filSegs[order(as.factor(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
+
+    filterOnNumberLength <- function(segAccept, selLoci)
+      {
+        selTrue <- sort(unique(unlist(lapply(1:ncol(segAccept), function(rep) which(segAccept[,rep])))))
+        segAccept <- segAccept[selTrue,]
+        selLoci <- selLoci[selTrue,]
+        
+        ordLSD <- NULL
+        ordLSD[order(rowSums(do.call("cbind", lapply(1:ncol(segAccept), function(rep) as.integer(segAccept[,rep])))), width(selLoci@coordinates), decreasing = TRUE)] <- 1:nrow(selLoci)
+        
+        filLSD <- .filterSegments(selLoci@coordinates, orderOn = ordLSD, decreasing = FALSE)
+        filSegs <- selLoci[filLSD,]
+        filSegs <- filSegs[order(as.factor(seqnames(filSegs@coordinates)), start(filSegs@coordinates), end(filSegs@coordinates)),]
+        filSegs
+      }
+
+    filSegs <- filterOnNumberLength(segAccept, selLoci)
 
     message("done!")
 
@@ -123,7 +165,7 @@
               }
           } else extSegs <- filSegs
       } else extSegs <- filSegs
-    
+
     extSegs <- .convertSegToLoci(extSegs)
 
     if (getLikes & nrow(extSegs) > 1) likeSegs <- lociLikelihoods(aD = aD, cD = extSegs, cl = cl) else likeSegs <- extSegs    

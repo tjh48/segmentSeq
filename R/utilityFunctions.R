@@ -101,7 +101,7 @@
                 coordinates = sD@coordinates,
                 seglens = width(sD@coordinates))
       if(nrow(sD@data) > 0)
-        lD@data <- sapply(1:ncol(sD), function(jj) as.integer(sD@data[,jj]))      
+        lD@data <- do.call("cbind", lapply(1:ncol(sD), function(jj) as.integer(sD@data[,jj])))
     } else if (class(sD) == "methSegs")
       {
         lD <- new("methData",
@@ -118,7 +118,7 @@
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
       lD@seglens <- sapply(1:ncol(sD), function(jj) as.numeric(sD@seglens[,jj]))
     if(nrow(sD@locLikelihoods) > 0)
-      lD@locLikelihoods <- sapply(1:ncol(sD@locLikelihoods), function(jj) as.double(sD@locLikelihoods[,jj]))
+      lD@locLikelihoods <- do.call("cbind", lapply(1:ncol(sD@locLikelihoods), function(jj) as.double(sD@locLikelihoods[,jj])))
     lD
   }
 
@@ -165,7 +165,7 @@
 
 .splitSD <- function(sD, largeness = 1e8)
   {
-    winsize <- round(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
+    winsize <- ceiling(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
     
     chunkSD <- values(findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE))$chunk
     chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
@@ -174,7 +174,7 @@
     windowChunks <- lapply(1:nrow(dupWin), function(ii) unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]])
     
     sDsplit <- lapply(windowChunks, function(wc) {
-      sD[which(chunkSD %in% wc),]
+      which(chunkSD %in% wc)
     })
 
     sDsplit

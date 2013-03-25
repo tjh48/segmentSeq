@@ -9,7 +9,7 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, gap = NULL, verbose = TRUE, cl)
+processAD(aD, gap = NULL, squeeze = 0, verbose = TRUE, cl)
 }
 \arguments{
   \item{aD}{
@@ -19,6 +19,10 @@ processAD(aD, gap = NULL, verbose = TRUE, cl)
     The maximum gap between aligned tags that should be allowed in
     constructing potential segments. See Details.
   }
+  \item{squeeze}{
+    If greater than zero, the minimum gap between aligned tags that
+    should be allowed in constructing potential segments. See Details.
+    }
   
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
@@ -32,7 +36,8 @@ processAD(aD, gap = NULL, verbose = TRUE, cl)
     constructs a \code{\linkS4class{segData}} object from it. The function
     creates a set of potential segments by looking for all locations on
     the genome where the start of a region of overlapping alignments
-    exists in the \code{\linkS4class{alignmentData}} object. A potential
+    (or, if `squeeze' is non-zero, those alignments separated by no more
+    than `squeeze'.) exists in the \code{\linkS4class{alignmentData}} object. A potential
     segment then exists from this start point to the end of all regions
     of overlapping alignments such that there is no region in the
     segment of at least length `gap'  where no tag aligns. The number

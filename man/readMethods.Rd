@@ -13,11 +13,11 @@ These functions take alignment files of various formats to produce an object
 }
 \usage{
 readGeneric(files, dir = ".", replicates, libnames, chrs, chrlens, cols,
-            header = TRUE, gap = 200, polyLength, estimationType = "quantile",
+            header = TRUE, gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile",
             verbose = TRUE, ...)
 
 readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-        gap = 200, polyLength, estimationType = "quantile", verbose = TRUE)
+        gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile", verbose = TRUE)
 
 }
 \arguments{
@@ -57,6 +57,8 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     The maximum gap between aligned tags that should be allowed in
     constructing potential segments. See \code{\link{findChunks}}.
   }
+  \item{minlen}{Minimum length for reads.}
+  \item{maxlen}{Maximum length for reads.}
   \item{polyLength}{
     If given, an integer value N defining the length of (approximate)
     homopolymers which will be removed from the data. If a tag contains

@@ -48,8 +48,10 @@ libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c("AGO6", "AGO6", "AGO4", "AGO4")
 
-aD <- readGeneric(files = libfiles, dir = datadir, replicates = replicates, libnames = libnames, 
-                  chrs = c(">Chr1", ">Chr2"), chrlens = chrlens, polyLength = 10, header = TRUE, gap = 200)
+aD <- readGeneric(files = libfiles, dir = datadir,
+                  replicates = replicates, libnames = libnames, 
+                  chrs = c(">Chr1", ">Chr2"), chrlens = chrlens,
+                  polyLength = 10, header = TRUE, gap = 200)
 aD
 @ 
 
@@ -81,7 +83,9 @@ select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs, subRegion = NULL, getLikes = TRUE, lociCutoff = 0.9, nullCutoff = 0.9, cl = cl)
+classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs,
+                         subRegion = NULL, getLikes = TRUE,
+                         lociCutoff = 0.9, nullCutoff = 0.9, cl = cl)
 classSegs
 @ 
 
@@ -92,8 +96,10 @@ We can use this \verb'countData' object, in combination with the \verb'alignment
 
 <<fig = FALSE, label=segPlot, height = 10, width = 12>>=
 par(mfrow = c(2,1), mar = c(2,6,2,2))
-plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 1e5), showNumber = FALSE, cap = 50)
-plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5), showNumber = FALSE, cap = 50)
+plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 1e5),
+           showNumber = FALSE, cap = 50)
+plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
+           showNumber = FALSE, cap = 50)
 @
 
 \begin{sidewaysfigure}[!ht]

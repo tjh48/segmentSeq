@@ -244,13 +244,13 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                            tag = c(values(unqTags)$tag, values(GTags[[ii]])$tag))
         ordTag <- order(as.integer(seqnames(unqTags)), as.integer(start(unqTags)), as.integer(end(unqTags)), as.character(values(unqTags)$tag), as.character(strand(unqTags)))
 
-        purgeTags <- which(as.character(seqnames(unqTags)[ordTag]) == c(as.character(seqnames(unqTags)[ordTag[-1]]), "!") &
+        purgeTags <- which(as.integer(seqnames(unqTags)[ordTag]) == c(as.integer(seqnames(unqTags)[ordTag[-1]]), -1) &
                            start(unqTags)[ordTag] == c(start(unqTags)[ordTag[-1]], Inf) &
                            end(unqTags)[ordTag] == c(end(unqTags)[ordTag[-1]], Inf) &
                            as.character(strand(unqTags)[ordTag]) == c(as.character(strand(unqTags)[ordTag[-1]]), "!") &
                            (values(unqTags)$tag[ordTag] == c(values(unqTags)$tag[ordTag[-1]], "!") | (is.na(values(unqTags)$tag[ordTag]) & is.na(c(values(unqTags)$tag[ordTag[-1]], NA))))) + 1
         if(length(purgeTags) > 0)
-          unqTags <- unqTags[-ordTag[purgeTags],]
+          unqTags <- unqTags[ordTag[-purgeTags],]
       }      
     }                    
 
@@ -260,13 +260,15 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                         lapply(GTags, function(GTag) {
                           
                           countTag <- c(GTag, unqTags)
-                          ordTag <- order(as.integer(start(countTag)), as.integer(end(countTag)), as.character(values(countTag)$tag), as.character(strand(countTag)))
-                          purgeTags <- which(start(countTag)[ordTag] == c(start(countTag)[ordTag[-1]], Inf) &
-                                                       end(countTag)[ordTag] == c(end(countTag)[ordTag[-1]], Inf) &
-                                                       as.character(strand(countTag)[ordTag]) == c(as.character(strand(countTag)[ordTag[-1]]), "!") &
-                                                       (values(countTag)$tag[ordTag] == c(values(countTag)$tag[ordTag[-1]], "!") | (is.na(values(countTag)$tag[ordTag]) & is.na(c(values(countTag)$tag[ordTag[-1]], NA))))) + 1
+                          countTag <- countTag[order(as.integer(seqnames(countTag)), as.integer(start(countTag)), as.integer(end(countTag)), as.character(values(countTag)$tag), as.character(strand(countTag))),]
+                          
+                          purgeTags <- which(as.integer(seqnames(countTag)) == c(as.integer(seqnames(countTag)[-1]), -1) &
+                                             start(countTag) == c(start(countTag)[-1], Inf) &
+                                             end(countTag) == c(end(countTag)[-1], Inf) &
+                                             as.character(strand(countTag)) == c(as.character(strand(countTag)[-1]), "!") &
+                                             (values(countTag)$tag == c(values(countTag)$tag[-1], "!") | (is.na(values(countTag)$tag) & is.na(c(values(countTag)$tag[-1], NA))))) + 1
                                   message(".", appendLF = FALSE)
-                                  if(length(purgeTags) > 0) return(values(countTag)$count[ordTag[-purgeTags]]) else return(values(countTag)$count[ordTag])
+                                  if(length(purgeTags) > 0) return(values(countTag)$count[-purgeTags]) else return(values(countTag)$count)
                         })
                         )
     } else counts <- DataFrame(values(GTags[[1]])$count)

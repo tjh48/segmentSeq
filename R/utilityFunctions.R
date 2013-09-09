@@ -1,6 +1,27 @@
+.printIRangesMatrix <- function(x)
+  {
+    cat("Matrix with ", nrow(x), " rows.\n")
+    if(nrow(x) > 10)
+      {      
+        print(rbind(as.data.frame(x)[1:5,], matrix("...", nrow = 1, ncol = ncol(x), dimnames = list("...", colnames(x))), as.data.frame(x)[nrow(x) + (-4):0,]))
+      } else print(x)  
+  }
+
+.printLocLikes <- function(locLike) {
+  if(any(exp(locLike) > 1, na.rm = TRUE))
+    {
+      cat('\nSlot "locLikelihoods":\n')
+      modFunction <- identity
+    } else {          
+      cat('\nSlot "locLikelihoods" (stored on log scale):\n')        
+      modFunction <- exp
+    }
+  .printIRangesMatrix(modFunction(locLike))
+}
+
 
 .filterSegments <- function(segs, orderOn, maxReport = Inf, ...)
-  {    
+  {
     chrfilter <- function(chrsegs, suborderOn, ...)
       {
         message(".", appendLF = FALSE)
@@ -101,24 +122,28 @@
                 coordinates = sD@coordinates,
                 seglens = width(sD@coordinates))
       if(nrow(sD@data) > 0)
-        lD@data <- do.call("cbind", lapply(1:ncol(sD), function(jj) as.integer(sD@data[,jj])))
-    } else if (class(sD) == "methSegs")
+        lD@data <- sD@data
+    } else if (class(sD) == "segMeth")
       {
         lD <- new("methData",
                   data = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
                   pairData = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
                   replicates = sD@replicates,
                   coordinates = sD@coordinates,
-                  seglens = width(sD@coordinates))
+                  seglens = width(sD@coordinates),
+                  libsizes = sD@nonconversion + 1,
+                  pairLibsizes = 1 - sD@nonconversion
+                  )
+        
         if(nrow(sD@Ts) > 0)
-          lD@pairData <- sapply(1:ncol(sD), function(jj) as.integer(sD@Ts[,jj]))      
+          lD@pairData <- sD@Ts
         if(nrow(sD@Cs) > 0)
-          lD@data <- sapply(1:ncol(sD), function(jj) as.integer(sD@Cs[,jj]))      
+          lD@data <- sD@Cs
       }
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
-      lD@seglens <- sapply(1:ncol(sD), function(jj) as.numeric(sD@seglens[,jj]))
+      lD@seglens <- sD@seglens
     if(nrow(sD@locLikelihoods) > 0)
-      lD@locLikelihoods <- do.call("cbind", lapply(1:ncol(sD@locLikelihoods), function(jj) as.double(sD@locLikelihoods[,jj])))
+      lD@locLikelihoods <- sD@locLikelihoods
     lD
   }
 
@@ -169,7 +194,8 @@
     
     chunkSD <- values(findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE))$chunk
     chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
-    dupWin <- which(!duplicated(ceiling(chunkWindows[,2] / winsize)))
+    winchunks <- ceiling(chunkWindows[,2] / winsize)
+    dupWin <- sort(c(which(!duplicated(winchunks)), which(diff(winchunks) > 1) + 2))
     dupWin <- cbind(dupWin, c(dupWin[-1] - 1, nrow(chunkWindows)))
     windowChunks <- lapply(1:nrow(dupWin), function(ii) unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]])
     
@@ -215,22 +241,76 @@
 .mergeSegData <- function(splitSeg) {
 
   message("Merging...", appendLF = FALSE)
-  locLikelihoods <- do.call("DataFrame", lapply(1:ncol(splitSeg[[1]]@locLikelihoods), function(ii) {
-    message(".", appendLF = FALSE)
-    do.call("c", lapply(splitSeg, function(x) x@locLikelihoods[,ii]))
-  }))
-  data <- do.call("DataFrame", lapply(1:ncol(splitSeg[[1]]@data), function(ii) {
-    message(".", appendLF = FALSE)
-    do.call("c", lapply(splitSeg, function(x) x@data[,ii]))
-  }))
+  #locLikelihoods <- do.call("cbind", lapply(1:ncol(splitSeg[[1]]@locLikelihoods), function(ii) {
+  #  message(".", appendLF = FALSE)
+  #  do.call("c", lapply(splitSeg, function(x) x@locLikelihoods[,ii]))
+  #}))
 
+  #data <- do.call("cbind", lapply(1:ncol(splitSeg[[1]]@data), function(ii) {
+  #  message(".", appendLF = FALSE)
+  #  do.call("c", lapply(splitSeg, function(x) x@data[,ii]))
+  #}))
   
-  mergeSeg <- new("segData",                                                 
-                  locLikelihoods = locLikelihoods,
-                  coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-                  data = data,
-                  replicates = splitSeg[[1]]@replicates,
-                  libsizes = splitSeg[[1]]@libsizes)
+  mergeSeg <- new(class(splitSeg[[1]]))
+  mergeSeg@locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods))
+  mergeSeg@coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates))
+  mergeSeg@replicates = splitSeg[[1]]@replicates
+  
   message("done.")
   mergeSeg
 }
+
+.methFunction <- function(methD, prop, locCutoff, nullP = FALSE, prior = c(0.5, 0.5))
+  {
+    nonconversion <- methD@nonconversion
+    
+    Cs <- methD@Cs
+    Ts <- methD@Ts
+    ks <- t(t(Ts) * nonconversion / (1 - nonconversion))
+
+    Cs <- Cs - ks
+    Ts <- Ts + ks
+    Cs[Cs < 0] <- 0
+    
+    combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(Cs[,methD@replicates == rep,drop = FALSE])))
+    combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(Ts[,methD@replicates == rep,drop = FALSE])))
+
+    combDat <- cbind(combCs, combTs)
+    rodDat <- order(combDat[,1], combDat[,2])
+
+    unqDat <- .fastUniques(combDat[rodDat,])
+
+    redDat <- combDat[rodDat[unqDat],]
+    redTF <- rep(NA, nrow(redDat))
+    plow <- redDat[,1] / rowSums(redDat) < prop
+
+    if(!is.na(locCutoff)) {
+                                        # Beta-distribution here is derived from being the conjugate of a binomial
+    if(!nullP) {      
+      redTF[plow] <- FALSE
+      if(prior[2] == 0)
+        redTF[redDat[,1] > 0 & redDat[,2] == 0] <- TRUE
+      if(prior[1] == 0)
+        redTF[redDat[,1] == 0 & redDat[,2] > 0] <- FALSE            
+      pbetas <- pbeta(prop, prior[1] + redDat[which(!plow),1], prior[2] + redDat[which(!plow),2], lower.tail = FALSE)
+      redTF[which(!plow)] <- pbetas > locCutoff      
+    } else {
+      redTF[!plow] <- FALSE
+      if(prior[2] == 0)
+        redTF[redDat[,1] > 0 & redDat[,2] == 0] <- FALSE
+      if(prior[1] == 0)
+        redTF[redDat[,1] == 0 & redDat[,2] > 0] <- TRUE                  
+      pbetas <- pbeta(prop, prior[1] + redDat[which(plow),1], prior[2] + redDat[which(plow),2], lower.tail = TRUE)
+      redTF[which(plow)] <- pbetas > locCutoff      
+    }
+  } else {
+    redTF[plow] <- FALSE
+    redTF[!plow] <- TRUE
+  }
+
+    TF <- rep(redTF, diff(c(which(unqDat), length(rodDat) + 1)))
+    TF[rodDat] <- TF
+    locM <- matrix(TF, ncol = length(levels(methD@replicates)))
+    colnames(locM) <- levels(methD@replicates)
+    locM
+  }

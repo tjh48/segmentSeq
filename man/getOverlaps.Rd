@@ -10,7 +10,8 @@ a segmentation map, but may also be useful in downstream analysis
 (e.g. annotation analyses).
 }
 \usage{
-getOverlaps(coordinates, segments, overlapType = "overlapping", whichOverlaps = TRUE, cl)
+getOverlaps(coordinates, segments, overlapType = "overlapping",
+whichOverlaps = TRUE, ignoreStrand = FALSE, cl)
 }
 \arguments{
   \item{coordinates}{
@@ -28,7 +29,12 @@ getOverlaps(coordinates, segments, overlapType = "overlapping", whichOverlaps = 
   \item{whichOverlaps}{If TRUE, returns the `segments' overlapping with
     the `coordinates'. If FALSE, returns a boolean vector specifying
     which of the `coordinates' overlap with the `segments'.
-    }
+  }
+  \item{ignoreStrand}{If TRUE, a segment may overlap a set of
+    coordinates regardless of the strand the two are on. If FALSE,
+    overlaps will only be identified if both are on the same strand (or
+    if either has no strand specified). Defaults to FALSE.
+  }
   \item{cl}{
     A SNOW cluster object, or NULL. See Details.
 }

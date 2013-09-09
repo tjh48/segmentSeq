@@ -11,22 +11,43 @@
 
 .processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
   {
-    if(length(grep("plus", levels(lociPD@replicates)) > 0) & length(grep("minus", levels(lociPD@replicates)) > 0)) {
-      message("Plus strand...")
-      plusSegs <- .processPosts(.extractStrand(lociPD, "plus"), .extractStrand(nullPD, "plus"), emptyPD, aD, lociCutoff, nullCutoff, getLikes = FALSE, cl = cl)
-      message("Minus strand...")
-      minusSegs <- .processPosts(.extractStrand(lociPD, "minus"), .extractStrand(nullPD, "minus"), emptyPD, aD, lociCutoff, nullCutoff, getLikes = FALSE, cl = cl)
+    if(missing(emptyPD)) emptyPD <- NULL
+    
+    strandSegs <- lapply(levels(strand(lociPD@coordinates)), function(ss)
+                         if(any(strand(lociPD@coordinates) == ss))
+                         {
+                           if(!is.null(emptyPD)) strandEmpty <- emptyPD[which(strand(emptyPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),] else strandEmpty <- NULL
+                           message("Strand ", ss)
+                           strandSegs <- .processPosts(
+                                                       lociPD = lociPD[which(strand(lociPD@coordinates) == ss),],
+                                                       nullPD = nullPD[which(strand(nullPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
+                                                       emptyPD = strandEmpty,
+                                                       aD, lociCutoff, nullCutoff, getLikes = FALSE,
+                                                       cl = cl)
+                           strandSegs
+                         })
 
-      segs <- new("methData",
-                  data = rbind(plusSegs@data, minusSegs@data),
-                  pairData = rbind(plusSegs@pairData, minusSegs@pairData),
-                  replicates = plusSegs@replicates,
-                  coordinates = c(plusSegs@coordinates, minusSegs@coordinates),
-                  seglens = rbind(plusSegs@seglens, minusSegs@seglens),
-                  locLikelihoods = rbind(plusSegs@locLikelihoods, minusSegs@locLikelihoods))
-
-      segs <- segs[order(as.factor(seqnames(segs@coordinates)), start(segs@coordinates), end(segs@coordinates)),]      
-    } else segs <- .processPosts(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, cl)
+    if(class(lociPD) == "segMeth") {
+        segs <- new("methData",
+                    data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
+                    pairData = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@pairData)),
+                    replicates = lociPD@replicates,
+                    coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) return(x@coordinates) else return(GRanges()))),
+                    seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
+                    locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
+                    libsizes = 1 + lociPD@nonconversion,
+                    pairLibsizes = 1 - lociPD@nonconversion)
+      } else {
+        segs <- new("lociData",
+                    data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
+                    replicates = lociPD@replicates,
+                    coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) return(x@coordinates) else return(GRanges()))),
+                    seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
+                    locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)))
+      }
+    
+    
+    segs <- segs[order(as.factor(seqnames(segs@coordinates)), start(segs@coordinates), end(segs@coordinates)),]      
     segs
   }
 
@@ -34,25 +55,25 @@
   {
     if(!is.null(cl))
       clusterEvalQ(cl, rm(list = ls()))
-    
-    if(nrow(lociPD) > 0) selLoci <- lociPD[rowSums(sapply(1:ncol(lociPD@locLikelihoods), function(jj) lociPD@locLikelihoods[,jj] >= log(lociCutoff)), na.rm = TRUE) > 0,] else selLoci <- lociPD
-    if(nrow(nullPD) > 0) selNull <- nullPD[rowSums(sapply(1:ncol(nullPD@locLikelihoods), function(jj) nullPD@locLikelihoods[,jj] >= log(nullCutoff)), na.rm = TRUE) > 0,] else selNull <- nullPD
+
+    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
+    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
     
 #    if(missing(emptyPD) & class(lociPD) == "segData")
 #      emptyPD <- nullPD[rowSums(sapply(1:ncol(nullPD), function(jj) as.integer(nullPD@data[,jj]))) == 0,]
 
     message("Checking overlaps...", appendLF = FALSE)
-    locAccept <- DataFrame(
-                        sapply(levels(selLoci@replicates), function(rep)
-                               {
-                                 repCol <- which(levels(selLoci@replicates) == rep)
-                                 accepts <- rep(FALSE, nrow(selLoci))
-                                 repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
-                                 accepts[repLoci] <- TRUE
-                                 if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL)
-                                 message(".", appendLF = FALSE)
-                                 return(Rle(accepts))
-                               }))                           
+    locAccept <- do.call("cbind", 
+                         lapply(levels(selLoci@replicates), function(rep)
+                                {
+                                  repCol <- which(levels(selLoci@replicates) == rep)
+                                  accepts <- rep(FALSE, nrow(selLoci))
+                                  repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
+                                  accepts[repLoci] <- TRUE
+                                  if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL)
+                                  message(".", appendLF = FALSE)
+                                  return(accepts)
+                                }))      
     message("done.", appendLF = TRUE)
     
     message("Selecting loci...", appendLF = FALSE)
@@ -68,8 +89,8 @@
     filterOnNumberLength <- function(segAccept, selLoci)
       {
         selTrue <- sort(unique(unlist(lapply(1:ncol(segAccept), function(rep) which(segAccept[,rep])))))
-        segAccept <- segAccept[selTrue,]
-        selLoci <- selLoci[selTrue,]
+        segAccept <- segAccept[selTrue,,drop = FALSE]
+        selLoci <- selLoci[selTrue,,drop = FALSE]
         
         ordLSD <- NULL
         ordLSD[order(rowSums(do.call("cbind", lapply(1:ncol(segAccept), function(rep) as.integer(segAccept[,rep])))), width(selLoci@coordinates), decreasing = TRUE)] <- 1:nrow(selLoci)
@@ -170,7 +191,7 @@
 
     if (getLikes & nrow(extSegs) > 1) likeSegs <- lociLikelihoods(aD = aD, cD = extSegs, cl = cl) else likeSegs <- extSegs    
     
-    colnames(likeSegs@locLikelihoods) <- levels(likeSegs@replicates)
+    if(ncol(likeSegs@locLikelihoods) > 0) colnames(likeSegs@locLikelihoods) <- levels(likeSegs@replicates)
     
     likeSegs
   }

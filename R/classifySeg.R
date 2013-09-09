@@ -1,15 +1,22 @@
 classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, largeness = 1e8, tempDir = NULL, cl)
   {
+    if(missing(aD)) stop("You must supply an aD object.")
+    
     if(!is.null(subRegion))
       {
         sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
-        if(!missing(aD)) aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
+        aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
       }
     
     if(missing(cD))
       cD <- heuristicSeg(sD, aD, largeness = largeness, getLikes = TRUE, verbose = TRUE, cl = cl)
     
-    sD <- .massiveClassifyLoci(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)
+    sD <- .massiveClassifyLoci(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)    
+    
+    if(!is.null(tempDir)) save(sD, file = paste(tempDir, "/sD_locLikes.RData", sep = ""))
+    
+    sD@locLikelihoods <- log(sD@locLikelihoods >= log(lociCutoff))
+    
     nullD <- .massiveClassifyNulls(sD = sD, cD = cD, aD = aD, subRegion = subRegion, samplesize = samplesize, lR = lR, nullCutoff = nullCutoff, tempDir = tempDir, largeness = largeness, recoverOld = FALSE, cl = cl)
 
     if(nrow(nullD) > 0) {
@@ -18,7 +25,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     } else nullPD <- emptyPD <- nullD
     
     lD <- .processPosteriors(lociPD = sD, nullPD = nullPD, emptyPD = emptyPD, getLikes = FALSE, cl = cl)
-
+    
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")      
     lD
   }
@@ -26,15 +33,13 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
 .massiveClassifyLoci <- function(sD, cD, subRegion = NULL, samplesize = 1e5, lR = FALSE, lociCutoff = 0.9, largeness = 1e8, tempDir = NULL, cl = cl)
   {
-                                        #this section is copied directly from classifySeg - should probably be made a separate function at some point...
-
     if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
           
     if(lR) {
       pET <- "none"
       lociCutoff <- nullCutoff <- 0.5
     } else {
-      locps <- sapply(levels(cD@replicates), function(rep) mean(exp(cD@locLikelihoods[rowSums(cD@data[,cD@replicates == rep, drop = FALSE]) > 0,rep])))
+      locps <- sapply(levels(cD@replicates), function(rep) mean(exp(cD@locLikelihoods[rowSums(cD@data[,cD@replicates == rep, drop = FALSE]) > 0, levels(cD@replicates) == rep]), na.rm = TRUE))
       pET <- "BIC"
     }
     
@@ -46,12 +51,13 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     subLoc <- which(subLoc)[.filterSegments(sD@coordinates[subLoc,], runif(sum(subLoc)))]
     prepD <- .convertSegToLoci(sD[subLoc,])
 
+    
     message("done.")
     
     groups(prepD) <- list(prepD@replicates)
     if(class(sD) == "segData") {
       prepD <- getPriors.NB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
-    } else if(class(sD) == "methSegs") prepD <- getPriors.BB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
+    } else if(class(sD) == "segMeth") prepD <- getPriors.BB(prepD, samplesize = samplesize, verbose = TRUE, cl = cl)
 
     if(!is.null(tempDir)) save(prepD, file = paste(tempDir, "/prepD.RData", sep = ""))
     
@@ -68,7 +74,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
     message("Segmentation split into ", length(sDsplit), " parts.")
     
-    sD@locLikelihoods <- DataFrame(do.call("rbind", lapply(1:length(sDsplit), function(ii) {  
+    sD@locLikelihoods <- (do.call("rbind", lapply(1:length(sDsplit), function(ii) {  
       message("Establishing likelihoods of loci; Part ", ii, " of ", length(sDsplit))
       x <- sD[sDsplit[[ii]],]
       if (is.null(subRegion)) {
@@ -79,12 +85,11 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                                                                    start(x@coordinates) >= as.numeric(sR[2]) &
                                                                    end(x@coordinates) <= as.numeric(sR[3])))))))
       }
-      subLoc <- .classifyLoci(potlociD = x, prepD = prepD, repWeights = repWeights, subLoc = subLoc, locSubset = locSubset, lR = lR, locps = locps, lociCutoff = lociCutoff, cl = cl)
-      if(!is.null(tempDir)) save(subLoc, file = paste(tempDir, "/subLoc_", ii, ".RData", sep = ""))
+      subLoc <- .classifyLoci(potlociD = x, prepD = prepD, repWeights = repWeights, subLoc = subLoc, locSubset = locSubset, lR = lR, locps = locps, cl = cl)
+
+      if(!is.null(tempDir)) save(subLoc, file = paste(tempDir, "/subLocLikes_", ii, ".RData", sep = ""))
       subLoc
     })))
-
-    sD@locLikelihoods <- DataFrame(sapply(1:ncol(sD@locLikelihoods), function(jj) log(sD@locLikelihoods[,jj])))
     
     sD
   }
@@ -92,118 +97,107 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
 .massiveClassifyNulls <- function(sD, cD, aD, subRegion = NULL, samplesize = 1e5, lR = FALSE, nullCutoff = 0.9, largeness = 1e8, tempDir, recoverOld = FALSE, cl = cl)
   {
-
-    #make nullPriors - again, this copies classifySeg and should be split off as a separate function...
-    
+    #make nullPriors - again, this copies classifySeg and should be split off as a separate function...    
     selLoc <- which(rowSums(sapply(1:ncol(sD@locLikelihoods), function(jj) sD@locLikelihoods[,jj] == 0), na.rm = TRUE) > 0)
-
     if(length(selLoc) == 0)
-      stop("No loci found; maybe the cutoff values used to generate the sD@locLikelihoods are too strict?")    
-    
+      stop("No loci found; maybe the cutoff values used to generate the sD@locLikelihoods are too strict?")
+
     withinLoc <- which(getOverlaps(sD@coordinates, sD@coordinates[selLoc,], whichOverlaps = FALSE, overlapType = "within", cl = NULL))
 
     if(length(withinLoc > 0))
     {
-      unqs <- .fastUniques(cbind(as.character(seqnames(sD@coordinates)), start(sD@coordinates)))
-      emptyNulls <- gaps(sD@coordinates[unqs])
-      rm(unqs)
+      emptyNulls <- gaps(sD@coordinates[.fastUniques(cbind(as.character(seqnames(sD@coordinates)), start(sD@coordinates), as.character(strand(sD@coordinates))))])
+      
+      curNullsWithin <- .constructNulls(emptyNulls, sD[withinLoc,], sD@coordinates[selLoc,], forPriors = TRUE, samplesize = samplesize, aD = aD)
+      
       gc()
 
-
-      curNullsWithin <- .constructNullPriors(emptyNulls, sD[withinLoc,], sD@coordinates[selLoc,], samplesize = samplesize)
-      if(class(curNullsWithin) == "methSegs")
-        {
-          curNullsWithin@Cs <- getCounts(curNullsWithin@coordinates, new("alignmentData", data = aD@Cs, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-          
-          curNullsWithin@Ts <- getCounts(curNullsWithin@coordinates, new("alignmentData", data = aD@Ts, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-        }
-
-      
       if(nrow(curNullsWithin) > 0) {
-        message("Finding priors on 'null' regions...")
+        if(!recoverOld) {        
+          message("Finding priors on 'null' regions...")
+          
+          curNullsWithin <- .convertSegToLoci(curNullsWithin)        
+          curNullsWithin@groups <- list(curNullsWithin@replicates)
+          if(class(curNullsWithin) == "lociData")
+            {
+              curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
+            } else if(class(curNullsWithin) == "methData")
+              curNullsWithin <- getPriors.BB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
+          
+          curNullsWithin@priors$weights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))
+          
+          nullSegPriors <- cD
+          nullSegPriors@locLikelihoods <- matrix(nrow = 0, ncol = 0)
+          groups(nullSegPriors) <- list(replicates(nullSegPriors))
+          if(class(nullSegPriors) == "lociData") {
+            nullSegPriors <- getPriors.NB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
+          } else if(class(nullSegPriors) == "methData")
+            nullSegPriors <- getPriors.BB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
+          
+          nullSampled = list(list(nullSegPriors@priors$sampled), list(curNullsWithin@priors$sampled))        
+          nullPriors <- lapply(levels(sD@replicates), function(rep) {
+            repCol <- which(levels(sD@replicates) == rep)
+            list(priors = list(list(nullSegPriors@priors$priors[[1]][[repCol]]), list(curNullsWithin@priors$priors[[1]][[repCol]])),
+                 weights = list(list((1 - exp(cD@locLikelihoods[nullSegPriors@priors$sampled[,1], repCol])) * nullSegPriors@priors$weights), list(exp(curNullsWithin@priors$weights[,repCol])))
+                 )                
+          })          
+          if(!is.null(tempDir)) save(nullPriors, nullSampled, file = paste(tempDir, "/nullPriors.RData", sep = ""))
+        } else if(!is.null(tempDir)) load(file = paste(tempDir, "/nullPriors.RData", sep = ""))
         
-        curNullsWithin <- .convertSegToLoci(curNullsWithin)        
-        curNullsWithin@groups <- list(curNullsWithin@replicates)
-        if(class(curNullsWithin) == "lociData")
-          {
-            curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
-          } else if(class(curNullsWithin) == "methData")
-            curNullsWithin <- getPriors.BB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
-        
-        curNullsWithin@priors$weights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))
-        
-        nullSegPriors <- cD
-        nullSegPriors@locLikelihoods <- matrix(nrow = 0, ncol = 0)
-        groups(nullSegPriors) <- list(replicates(nullSegPriors))
-        if(class(nullSegPriors) == "lociData") {
-          nullSegPriors <- getPriors.NB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
-        } else if(class(nullSegPriors) == "methData")
-          nullSegPriors <- getPriors.BB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
-
-        nullSampled = list(list(nullSegPriors@priors$sampled), list(curNullsWithin@priors$sampled))        
-        nullPriors <- lapply(levels(sD@replicates), function(rep) {
-          repCol <- which(levels(sD@replicates) == rep)
-          list(priors = list(list(nullSegPriors@priors$priors[[1]][[repCol]]), list(curNullsWithin@priors$priors[[1]][[repCol]])),
-               weights = list(list((1 - exp(cD@locLikelihoods[nullSegPriors@priors$sampled[,1], repCol])) * nullSegPriors@priors$weights), list(exp(curNullsWithin@priors$weights[,repCol])))
-               )                
-        })
-
-        if(!is.null(tempDir)) save(nullPriors, nullSampled, file = paste(tempDir, "/nullPriors.RData", sep = ""))
-        
-        emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
-        splitLoci <- .splitSD(sD, largeness)
-
+        splitLoci <- .splitSD(sD, largeness)        
         if(!is.null(tempDir)) save(emptyNulls, splitLoci, file = paste(tempDir, "/nullSplit.RData", sep = ""))
-
+        
         message("Segmentation split into ", length(splitLoci), " parts.")
         
         splitNulls <- lapply(1:length(splitLoci), function(ii) {
 
           message("Establishing likelihoods of nulls; Part ", ii, " of ", length(splitLoci))
-          x <- sD[splitLoci[[ii]],]
-          xLoc <- which(rowSums(sapply(1:ncol(x@locLikelihoods), function(jj) x@locLikelihoods[,jj] == 0), na.rm = TRUE) > 0)
+          subSD <- sD[splitLoci[[ii]],]
+          subWithinLoc <- getOverlaps(subSD@coordinates, subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,],
+                                      whichOverlaps = FALSE, overlapType = "within", cl = NULL)
+          if(any(subWithinLoc))
+            {              
+#              if(class(sD) == "segData") {
+#                potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,])
+#              } else if(class(sD) == "segMeth") {
+#                sDPSmall <- .fastUniques(data.frame(chr = as.character(seqnames(subSD@coordinates)), start = as.numeric(start(subSD@coordinates))))
+#                empties <- .zeroInMeth(aD = aD, smallSegs = subSD@coordinates[sDPSmall])
+#                potnullD <- .constructMethNulls(emptyNulls, subSD[subWithinLoc,], subSD[rowSums(subSD@locLikelihoods == 0) > 0,])
+                
+#                counts <- getCounts(potnullD@coordinates, aD, cl = cl)        
+#                potnullD@Cs <- counts$Cs
+#                potnullD@Ts <- counts$Ts                
+#              }
 
-          
-          withinX <- which(getOverlaps(sD@coordinates, x@coordinates, whichOverlaps = FALSE, overlapType = "within", cl = NULL))
-          if(length(withinX > 0))
-            {
-              smallLoci <- which(.fastUniques(cbind(as.character(seqnames(sD@coordinates[withinX])), start(sD@coordinates[withinX]))))                
-              potnullD <- .constructNulls(emptyNulls, sD[withinX,], x@coordinates[xLoc,], withinOnly = FALSE)
-
-              if(class(potnullD) == "methSegs")
-                {
-                  potnullD@Cs <- getCounts(potnullD@coordinates, new("alignmentData", data = aD@Cs, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-                  
-                  potnullD@Ts <- getCounts(potnullD@coordinates, new("alignmentData", data = aD@Ts, alignments = aD@alignments, libnames = aD@libnames, libsizes = rep(1, ncol(aD)), replicates = aD@replicates), cl = cl)
-                }
-
+              potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,], aD = aD)
               
-              potnullD@locLikelihoods <- DataFrame(log(sapply(levels(potnullD@replicates), .classifyNulls, lociPD = x, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))
+              potnullD@locLikelihoods <- log(do.call("cbind", ((lapply(levels(potnullD@replicates), .classifyNulls, lociPD = subSD, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))))
             } else potnullD <- NULL
           if(class(potnullD) == "segData") {
-            emptyD <- rowSums(sapply(1:ncol(potnullD), function(jj) as.integer(potnullD@data[,jj]))) == 0
-          } else if(class(potnullD) == "methSegs") {
-            emptyD <- rowSums(sapply(1:ncol(potnullD), function(jj) as.integer(potnullD@Cs[,jj]))) == 0
+            emptyD <- rowSums(potnullD@data) == 0
+          } else if(class(potnullD) == "segMeth") {
+            emptyD <- rowSums(potnullD@Cs) == 0
           }
+          
           values(potnullD@coordinates)$empty <- FALSE
           values(potnullD@coordinates)$empty[emptyD] <- TRUE
           potnullD <- potnullD[rowSums(sapply(1:ncol(potnullD@locLikelihoods), function(ii) potnullD@locLikelihoods[,ii] > -Inf), na.rm = TRUE) > 0 | emptyD,]
           if(class(potnullD) == "segData") {
-            potnullD@data <- DataFrame(matrix(ncol = length(potnullD@replicates), nrow = 0))
-          } else if(class(potnullD) == "methSegs") {
-            potnullD@Cs <- potnullD@Ts <- DataFrame(matrix(ncol = length(potnullD@replicates), nrow = 0))
+            potnullD@data <- (matrix(ncol = length(potnullD@replicates), nrow = 0))
+          } else if(class(potnullD) == "segMeth") {
+            potnullD@Cs <- potnullD@Ts <- (matrix(ncol = length(potnullD@replicates), nrow = 0))
           }
+          if(!is.null(tempDir)) save(potnullD, file = paste(tempDir, "/subNull_", ii, ".RData", sep = ""))
+          
           potnullD
-
-          if(!is.null(tempDir)) save(potnullD, file = paste(tempDir, "/subNull_", ii, ".RData", sep = ""))          
         })
 
         if(any(!sapply(splitNulls, is.null)))
-          potnullD <- .mergeSegData(splitNulls[!sapply(splitNulls, is.null)]) else potnullD <- new("lociData")
+          potnullD <- .mergeSegData(splitNulls[!sapply(splitNulls, is.null)]) else potnullD <- new(class(sD))
         
 
-      } else potnullD <- new("lociData")
-    } else potnullD <- new("lociData")
+      } else potnullD <- new(class(sD))
+    } else potnullD <- new(class(sD))
 
     potnullD
   }
@@ -368,12 +362,13 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
 
 .classifyNulls <- function(rep, lociPD, potNulls, lR, nullPriors, nullSampled, nullCutoff, cl) {
-
-  message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
   
+  message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
   repCol <- which(levels(potNulls@replicates) == rep)
   repD <- potNulls[, potNulls@replicates == rep]
+
   repD <- .convertSegToLoci(repD)
+
   if(class(repD) == "lociData") repD@priorType = "NB" else if(class(repD) == "methData") repD@priorType = "BB"    
     
   replicates(repD) <- as.factor(rep(1, ncol(repD)))
@@ -401,7 +396,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
   
   overLoci <- sort(overLoci[!is.na(overLoci)])
   
-  if (length(postOver > 0)) {
+  if (length(postOver) > 0) {
     overNulls <- repD[overLoci,]
     nullsWithin <- repD[postOver, ]
     lD <- rep(NA, nrow(overNulls))
@@ -409,7 +404,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     if(lR) {
       prs <- c(0.5, 0.5)
       nullCutoff <- 0.5
-    } else {    
+    } else {
       nullFilter <- .filterSegments(overNulls@coordinates, runif(nrow(overNulls)))              
       if(class(overNulls) == "lociData") {
         fD <- getLikelihoods.NB(cD = overNulls[nullFilter,], bootStraps = 1, 
@@ -466,11 +461,11 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 }
 
 
-.classifyLoci <- function(potlociD, prepD, repWeights, subLoc, locSubset, lR, locps, lociCutoff, cl)
+.classifyLoci <- function(potlociD, prepD, repWeights, subLoc, locSubset, lR, locps, cl)
   {
     getLikeLoci <- function(rep, potlociD, priors, repWeights, sampled, ...) {
       message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
-
+      
       if(class(potlociD) == "segData")
         {
           repD <- new("lociData",
@@ -481,17 +476,19 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                       coordinates = potlociD@coordinates,
                       groups = list(rep(1, sum(potlociD@replicates == rep))))
           repD@priorType = "NB"
-        } else if(class(potlociD) == "methSegs") {
+        } else if(class(potlociD) == "segMeth") {
           repD <- new("methData",
-                      data = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@Cs[,ii])),
-                      pairData = sapply(which(potlociD@replicates == rep), function(ii) as.integer(potlociD@Ts[,ii])),
+                      data = round(potlociD@Cs[,which(potlociD@replicates == rep), drop = FALSE]),
+                      pairData = round(potlociD@Ts[,which(potlociD@replicates == rep), drop = FALSE]),
                       replicates = as.factor(rep(1, sum(potlociD@replicates == rep))),
                       coordinates = potlociD@coordinates,
-                      groups = list(rep(1, sum(potlociD@replicates == rep))))
+                      groups = list(rep(1, sum(potlociD@replicates == rep))),
+                      libsizes = potlociD@nonconversion[potlociD@replicates == rep] + 1,
+                      pairLibsizes = 1 - potlociD@nonconversion[potlociD@replicates == rep])
           repD@priorType = "BB"
         }     
       
-      withinWeights <- exp(repWeights[, rep])
+      withinWeights <- exp(repWeights[, levels(potlociD@replicates) == rep])
       
       if (all(withinWeights == 1, na.rm = TRUE)) {
         warning(paste("I didn't find any non-loci to establish weights for the", rep, "replicate group."))
@@ -517,18 +514,17 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
               whunq <- .fastUniques(cbind(repD@seglens, repD@data)[orddat,])
               lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
               lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
-            } else if(class(potlociD) == "methSegs") {
+            } else if(class(potlociD) == "segMeth") {
               orddat <- do.call("order", c(lapply(1:ncol(repD@data), function(ii) repD@data[,ii]), lapply(1:ncol(repD@pairData), function(ii) repD@pairData[,ii])))
               whunq <- .fastUniques(cbind(repD@data, repD@pairData)[orddat,])
               lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
               lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
             }
         }
-
         
         if(lR) repLoci <- lD[,2] > lD[,1] else {
           
-          ps <- c(1-locps[rep], locps[rep])          
+          ps <- c(1-locps[levels(potlociD@replicates) == rep], locps[levels(potlociD@replicates) == rep])
           rps <- t(t(lD) + log(ps))
 
           logRowSum <- function(z)
@@ -536,10 +532,10 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
               maxes <- do.call(pmax, c(as.list(data.frame(z)), list(na.rm = TRUE)))
               pmax(maxes, maxes + log(rowSums(exp(z - maxes), na.rm = TRUE)), na.rm = TRUE)
             }
-          
+
           rps <- rps - logRowSum(rps)
-#          repLoci <- rps[,2]
-          repLoci <- rps[,2] > log(lociCutoff)
+          repLoci <- rps[,2]
+          repLoci[intersect(locSubset, which(rowSums(repD@data) == 0))] <- -Inf
         }
       }
       message("...done.")
@@ -555,145 +551,4 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     locLikelihoods <- sapply(levels(potlociD@replicates), getLikeLoci, potlociD = potlociD, priors = priors, repWeights = repWeights, sampled = sampled)    
     
     locLikelihoods
-  }
-
-.constructNulls <- function(emptyNulls, sDWithin, locDef, withinOnly)
-  {
-    emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
-
-    leftRight <- do.call("rbind", lapply(seqlevels(sDWithin@coordinates), function(chr) {
-      left <- start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]) -
-        start(emptyNulls[seqnames(emptyNulls) == chr])[match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))]
-      right <- end(emptyNulls[seqnames(emptyNulls) == chr])[match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))] - end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),])
-      cbind(left, right)
-    }))
-
-    emptyInside <- which(getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
-    
-    if(!withinOnly) {            
-      emptyAdjacent <- unlist(lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
-        leftEmpties <- match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))
-        rightEmpties <- match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))
-              which(seqnames(emptyNulls) == chr)[union(leftEmpties, rightEmpties)]
-      }))
-      empties <- union(emptyInside, emptyAdjacent)
-    } else empties <- emptyInside
-    empties <- empties[!is.na(empties)]
-    
-    emptyData <- do.call(DataFrame, lapply(1:ncol(sDWithin), function(ii) Rle(rep(0, length(empties)))))
-
-    leftGood <- (!is.na(leftRight[,'left']))
-    rightGood <- (!is.na(leftRight[,'right']))
-    
-    nullCoords = GRanges(
-      seqnames = c(seqnames(emptyNulls[empties,]), seqnames(sDWithin@coordinates)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
-      IRanges(
-              start = c(start(emptyNulls[empties,]),
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood & rightGood],
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood],
-                (start(sDWithin@coordinates))[rightGood]),
-              end = c(end(emptyNulls[empties,]),
-                (end(sDWithin@coordinates) + leftRight[,"right"])[leftGood & rightGood],
-                (end(sDWithin@coordinates))[leftGood],
-                (end(sDWithin@coordinates) + leftRight[,'right'])[rightGood]))
-              )
-
-
-    if(class(sDWithin) == "segData")
-      {
-        nullData <- do.call("DataFrame", lapply(1:ncol(sDWithin), function(ii) {
-          append(emptyData[,ii], sDWithin@data[c(which(leftGood & rightGood), which(leftGood), which(rightGood)),ii])}))
-        colnames(nullData) <- colnames(sDWithin@data)
-        potnullD <- new("segData",
-                        data = nullData,
-                        libsizes = sDWithin@libsizes,
-                        replicates = sDWithin@replicates,
-                        coordinates = nullCoords)
-      } #else if(class(sDWithin) == "methSegs") {
-#
-#        nullCs <- do.call("DataFrame", lapply(1:ncol(sDWithin), function(ii) {
-#                          append(emptyData[,ii], sDWithin@Cs[c(which(leftGood & rightGood), which(leftGood), which(rightGood)),ii])}))
-#        nullTs <- do.call("DataFrame", lapply(1:ncol(sDWithin), function(ii) {
-#          append(emptyData[,ii], sDWithin@Ts[c(which(leftGood & rightGood), which(leftGood), which(rightGood)),ii])}))        
-#        potnullD <- new("methSegs",
-#                        Cs = nullCs,
-#                        Ts = nullTs,
-#                        replicates = sDWithin@replicates,
-#                        coordinates = nullCoords)
-#      }
-    overLoci <- which(getOverlaps(coordinates = potnullD@coordinates, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
-    
-    if(!withinOnly)           
-      overLoci <- union(1:length(empties), overLoci)
-
-    potnullD <- potnullD[overLoci,]
-
-    potnullD <- potnullD[order(as.integer(seqnames(potnullD@coordinates)), start(potnullD@coordinates), end(potnullD@coordinates)),]
-    
-    potnullD
-  }
-
-
-.constructNullPriors <- function(emptyNulls, sDWithin, locDef, samplesize)
-  {
-    emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]
-
-    leftRight <- do.call("rbind", lapply(seqlevels(sDWithin@coordinates), function(chr) {
-      left <- start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]) -
-        start(emptyNulls[seqnames(emptyNulls) == chr])[match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))]
-      right <- end(emptyNulls[seqnames(emptyNulls) == chr])[match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))] - end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),])
-      cbind(left, right)
-    }))
-
-    emptyNulls <- emptyNulls[which(getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
-    
-    leftGood <- !is.na(leftRight[,'left'])
-    rightGood <- !is.na(leftRight[,'right'])
-
-    
-    
-    nullCoords <- GRanges(
-      seqnames = c(seqnames(emptyNulls), seqnames(sDWithin@coordinates)[leftGood & rightGood],
-        (seqnames(sDWithin@coordinates))[leftGood], (seqnames(sDWithin@coordinates))[rightGood]),
-      IRanges(
-              start = c(
-                start(emptyNulls),
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood & rightGood],
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood], (start(sDWithin@coordinates))[rightGood]),
-              
-              end = c(end(emptyNulls),
-                (end(sDWithin@coordinates) + leftRight[,"right"])[leftGood & rightGood],
-                (end(sDWithin@coordinates))[leftGood],
-                (end(sDWithin@coordinates) + leftRight[,'right'])[rightGood])
-              ))
-    
-    overLoci <- which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))        
-    filNulls <- sort(overLoci[.filterSegments(nullCoords[overLoci], runif(length(overLoci)), maxReport = samplesize)])
-
-    splitNulls <- c(length(emptyNulls), sum(leftGood & rightGood), sum(leftGood), sum(rightGood))
-    
-    emptyData <- do.call("DataFrame", lapply(1:ncol(sDWithin), function(x) Rle(rep(0, sum(filNulls <= splitNulls[1])))))    
-
-    lrChoose <- which(leftGood & rightGood)[filNulls[filNulls > cumsum(splitNulls)[1] & filNulls <= cumsum(splitNulls)[2]] - cumsum(splitNulls)[1]]
-    leftChoose <- which(leftGood)[filNulls[filNulls > cumsum(splitNulls)[2] & filNulls <= cumsum(splitNulls)[3]] - cumsum(splitNulls)[2]]
-    rightChoose <- which(rightGood)[filNulls[filNulls > cumsum(splitNulls)[3] & filNulls <= cumsum(splitNulls)[4]] - cumsum(splitNulls)[3]]
-    
-    if(class(sDWithin) == "segData") {
-      colnames(emptyData) <- colnames(sDWithin@data)
-      potnullD <- new("segData", data = rbind(emptyData, sDWithin@data[c(lrChoose, leftChoose, rightChoose),]),
-                      libsizes = sDWithin@libsizes,
-                      replicates = sDWithin@replicates,
-                      coordinates = nullCoords[filNulls])
-    } else if(class(sDWithin) == "methSegs") {
-      colnames(emptyData) <- colnames(sDWithin@Cs)
-      potnullD <- new("methSegs",
-                      Cs = rbind(emptyData, sDWithin@Cs[c(lrChoose, leftChoose, rightChoose),]),
-                      Ts = rbind(emptyData, sDWithin@Ts[c(lrChoose, leftChoose, rightChoose),]),
-                      replicates = sDWithin@replicates,
-                      coordinates = nullCoords[filNulls])
-    }
-    
-    potnullD <- potnullD[order(as.integer(seqnames(potnullD@coordinates)), start(potnullD@coordinates), end(potnullD@coordinates)),]
-    
-    potnullD
   }

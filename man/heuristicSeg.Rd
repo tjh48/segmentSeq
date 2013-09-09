@@ -5,30 +5,40 @@ A (fast) heuristic method for creation of a genome segment map.
 }
 \description{
 This method identifies by heuristic methods a set of loci from a
-\code{segData} object. It does this by identifying within replicate groups
-regions of the genome that satisfy the criteria for being a locus and
-have no region within them that satisfies the criteria for being a
-null. These criteria can be defined by the user or inferred from the
-data. 
+\code{segData} or \code{segMeth} object. It does this by identifying
+within replicate groups regions of the genome that satisfy the criteria
+for being a locus and have no region within them that satisfies the
+criteria for being a null. These criteria can be defined by the user or
+inferred from the data. 
 }
 \usage{
-heuristicSeg(sD, aD, RKPM = 1000, gap = 100, subRegion =
+heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion =
 NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{aD}{
-    An \code{\linkS4class{alignmentData}} object.
+    An \code{\linkS4class{alignmentData}} or
+    \code{\linkS4class{methData}} object.
   }
   \item{sD}{
-    A \code{\linkS4class{segData}} object derived from the `aD' object.
+    A \code{\linkS4class{segData}} or \code{\linkS4class{segMeth}}
+    object derived from the `aD' object.
   }
 %  \item{bimodality}{Should the criteria for loci be inferred from the
-%    (likely) bimodal structure of the data?}
-  \item{RKPM}{What RKPM (reads per kilobase per million reads) distinguishes
-    between a locus and a null region? Ignored if \code{bimodality = TRUE}.}
-  \item{gap}{What is the minimum length of a null region? Ignored if
-    \code{bimodality = TRUE}.}
+%    (likely) bimodal structure of the data?
+\item{gap}{What is the minimum length of a null region?}
+% Ignored if \code{bimodality = TRUE}.}
+  \item{RKPM}{For analysis of a \code{\linkS4class{segData}} object,
+    what RKPM (reads per kilobase per million reads) distinguishes 
+    between a locus and a null region?}
+% Ignored if \code{bimodality = TRUE}.}
+  \item{prop}{For analysis of a \code{\linkS4class{segMeth}} object,
+    what proportion of methylated cytosines distinguishes between a
+    locus and a null region?. Defaults to 0.2.}
+  \item{locCutoff}{For analysis of a \code{\linkS4class{segMeth}}
+    object, with what likelihood must the proportion of methylated
+    cytosines exceed the `prop' option? Defaults to 0.99.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
     the genome to be segmented. If NULL (default), the whole genome is
     segmented.}

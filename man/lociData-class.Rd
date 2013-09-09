@@ -10,13 +10,12 @@
 \title{Class "lociData"}
 
 \description{
-  The \code{lociData} class is based on the
-  \code{\link{lociData}} class defined in the
-  `baySeq' package, but includes a `coordinates' slot giving the
-  coordinates of genomic loci and a `locLikelihoods' slot which contains
-  the estimated likelihoods that each annotated region is a locus in
-  each replicate group and a coordinates structure giving the locations
-  of the loci.
+  The \code{lociData} class is based on the \code{\link{countData}}
+  class defined in the `baySeq' package, but includes a `coordinates'
+  slot giving the coordinates of genomic loci and a `locLikelihoods'
+  slot which contains the estimated likelihoods that each annotated
+  region is a locus in each replicate group and a coordinates structure
+  giving the locations of the loci.
 }
 
 \section{Slots}{
@@ -59,7 +58,7 @@
 }
 
 \section{Extends}{
-Class \code{"\linkS4class{lociData}"}, directly.
+Class \code{"\linkS4class{countData}"}, directly.
 }
 
 \section{Details}{

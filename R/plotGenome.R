@@ -1,9 +1,9 @@
 plotGenome <-
-function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", plotDuplicated = FALSE, density = 0, showNumber = TRUE, logScale = FALSE, cap = Inf, ...)
+function(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", plotDuplicated = FALSE, density = 0, showNumber = TRUE, logScale = FALSE, cap = Inf, ...)
 {
   if(!(chr %in% seqlevels(aD@alignments))) stop(paste("Chromosome", chr, "does not seem to exist within the alignment data of the 'aD' object."))
   
-  reducedAD <- aD[seqnames(aD@alignments) == chr & start(aD@alignments) <= limits[2] & end(aD@alignments) >= limits[1],]
+  reducedAD <- aD[which(seqnames(aD@alignments) == chr & start(aD@alignments) <= limits[2] & end(aD@alignments) >= limits[1]),]
 
   seqlevels(reducedAD@alignments) <- chr
   
@@ -98,7 +98,7 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
 
     rectPileup[,4] <- rectPileup[,4] / max(rectPileup[,4])
 
-    rect(rectPileup[,1], rectPileup[,2], rectPileup[,3], rectPileup[,2] + rectPileup[,4], col = "black", border = "black")
+    rect(rectPileup[,1] - 0.5, rectPileup[,2], rectPileup[,3] + 0.5, rectPileup[,2] + rectPileup[,4], col = "black", border = "black")
     
   } else if(plotType == "chunk") {
     rectcpu <- sapply(1:ncol(pAD), function(ii) as.integer(pAD@data[,ii]) / width(pAD@coordinates) / pAD@libsizes[ii])
@@ -112,15 +112,15 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
     sapply(1:length(samples), function(uu) {
       samp <- samples[uu]
       if(any(rectcpu[,samp] > 0))
-        rect(start(pAD@coordinates)[rectcpu[,samp] > 0], uu - 0.45, end(pAD@coordinates)[rectcpu[,samp] > 0], uu - 0.45 + (rectcpu[rectcpu[,samp] > 0, samp]) / maxscale, col = "black")
+        rect(start(pAD@coordinates)[rectcpu[,samp] > 0] - 0.5, uu - 0.45, end(pAD@coordinates)[rectcpu[,samp] > 0] + 0.5, uu - 0.45 + (rectcpu[rectcpu[,samp] > 0, samp]) / maxscale, col = "black")
     })
   }
 
   message(".done!")
 
-  if(!missing(locData))
+  if(!missing(loci))
     {
-      breakpoints <- locData@coordinates
+      breakpoints <- loci@coordinates
       brlims <- which(seqnames(breakpoints) == chr & start(breakpoints) <= limits[2] & end(breakpoints) >= limits[1])
       if(length(brlims) > 0)
         {
@@ -128,9 +128,9 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
           start(bps)[start(bps) < limits[1]] <- limits[1]
           end(bps)[end(bps) > limits[2]] <- limits[2]
 
-          if(!is.null(locData@locLikelihoods) & all(dim(locData@locLikelihoods) != 0)) {
+          if(!is.null(loci@locLikelihoods) & all(dim(loci@locLikelihoods) != 0)) {
             sapply(1:length(samples), function(ss) {
-              alpha = (exp(locData@locLikelihoods[brlims,locData@replicates[samples[ss]]]))
+              alpha = (exp(loci@locLikelihoods[brlims,loci@replicates[samples[ss]]]))
               alpha[is.na(alpha)] <- 0
               if(any(alpha > 0.1))
                 {
@@ -156,4 +156,115 @@ function(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "p
   
   invisible(NULL)
 }
+
+
+
+plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(1,0,0), angle = 45, cap, add = FALSE)
+  {
+    normalise = FALSE
+    if(missing(samples)) samples <- 1:ncol(aM)
+    
+    redADPlus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "+"),]
+    redADMinus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "-"),]
+    
+    plusCs <- redADPlus@Cs / redADPlus@alignments$multireads
+    plusTs <- redADPlus@Ts / redADPlus@alignments$multireads
+    
+    minusCs <- redADMinus@Cs / redADMinus@alignments$multireads
+    minusTs <- redADMinus@Ts / redADMinus@alignments$multireads
+        
+    if(!missing(cap))
+     {
+       plusTotal <- plusCs + plusTs
+       plusCs[plusTotal > cap] <- (plusCs / (plusTotal) * cap)[plusTotal > cap]
+       plusTs[plusTotal > cap] <- (plusTs / (plusTotal) * cap)[plusTotal > cap]
+       
+       minusTotal <- minusCs + minusTs
+       minusCs[minusTotal > cap] <- (minusCs / (minusTotal) * cap)[minusTotal > cap]
+       minusTs[minusTotal > cap] <- (minusTs / (minusTotal) * cap)[minusTotal > cap]
+     }
+   
+    maxVal <- 2.5 * max(plusCs + plusTs, minusCs + minusTs)
+
+    par(mar = c(5, 10, 4, 2))
+    if(!add) plot(NA, NA, xlim = limits, ylim = c(!showNumber - 0.5, length(samples) + 0.5), axes = FALSE, xlab = "Position", ylab = "")
+
+    if(!missing(loci))
+      {
+        brlims <- which(seqnames(loci@coordinates) == chr & end(loci@coordinates) >= limits[1] & start(loci@coordinates) <= limits[2])
+        
+        redloci <- loci[brlims,]
+                                        #       if(nrow(redloci@locLikelihoods) == 0)
+                                        #         redloci@locLikelihoods <- matrix(0, ncol = length(redloci@replicates), nrow = nrow(redloci))
+        
+        if(nrow(redloci) > 0) {
+          plotLoci <- TRUE
+          xtext <- (start(redloci@coordinates) + end(redloci@coordinates)) / 2          
+          dup <- duplicated(round(xtext / diff(limits), 1))          
+          ytext <- unlist(apply(cbind(which(!dup), c(which(!dup)[-1] - 1, length(dup))), 1, function(x) x[1]:x[2] - x[1] + 1)) %% 5 * 0.2
+          if(showNumber) text(xtext, ytext - 1, labels = brlims, col = "black", cex = 0.5)
+        } else plotLoci <- FALSE         
+      } else plotLoci <- FALSE
+
+    sapply(samples, function(sN) {
+      message("Plotting sample: ", sN)
+      abline(h = which(sN == samples))
+      
+      if(plotLoci) {
+        
+        whrep <- which(levels(redloci@replicates) == redloci@replicates[which(samples == sN)])
+
+        plotSelLoci <- function(selloc, loweradj, upperadj)
+          {        
+            if(nrow(selloc) > 0)
+              {
+                alpha = exp(selloc@locLikelihoods[,whrep]) * 0.75
+                alpha[is.na(alpha)] <- 0            
+                brcols <- rgb(rgb[1] * 0.7, rgb[2] * 0.7, rgb[3] * 0.7, alpha = alpha^3)            
+                rect(start(selloc@coordinates) - 0.5, which(samples == sN) - loweradj, end(selloc@coordinates) + 0.5, which(samples == sN) + upperadj, col = brcols, border = brcols, density = 2, angle = angle)
+              }
+          }
+        
+        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "+"),], 0, 0.45)
+        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "-"),], 0.45, 0)
+        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "*"),], 0.45, 0.45)
+
+      }
+     
+      if(!normalise)
+       {         
+         if(nrow(redADPlus) > 0) {
+           rect(xleft = start(redADPlus@alignments) - 0.5, xright = end(redADPlus@alignments) + 0.5,
+                ybottom = which(samples == sN) + (plusCs[,samples == sN]) / maxVal,
+                ytop = which(samples == sN) + (plusCs[,samples == sN] + plusTs[,samples == sN]) / maxVal,
+                col = "black", border = "black")
+           
+           rect(xleft = start(redADPlus@alignments) - 0.5, xright = end(redADPlus@alignments) + 0.5,
+                ybottom = which(samples == sN),
+                ytop = which(samples == sN) + (plusCs[,samples == sN]) / maxVal,
+                col = rgb(rgb[1], rgb[2], rgb[3]), border = rgb(rgb[1], rgb[2], rgb[3]))
+         }
+         
+         if(nrow(redADMinus) > 0) {
+           rect(xleft = start(redADMinus@alignments) - 0.5, xright = end(redADMinus@alignments) + 0.5,
+                ybottom = which(samples == sN) - (minusCs[,samples == sN]) / maxVal,
+                ytop = which(samples == sN) - (minusCs[,samples == sN] + minusTs[,samples == sN]) / maxVal,
+                col = "black", border = "black")
+           
+           rect(xleft = start(redADMinus@alignments) - 0.5, xright = end(redADMinus@alignments) + 0.5,
+                ybottom = which(samples == sN),
+                ytop = which(samples == sN) - (minusCs[,samples == sN]) / maxVal,
+                col = rgb(rgb[1], rgb[2], rgb[3]), border = rgb(rgb[1], rgb[2], rgb[3]))
+         }
+         
+       } #else if(normalise) {
+                                        #rect(xleft = start(redADPlus@alignments), xright = end(redADPlus@alignments), ybottom = which(samples == sN), ytop = which(samples == sN) + (redADPlus@Cs[,ii]) / ((redADPlus@Cs[,ii]) + (redADPlus@Ts[,ii])) / 2.5, col = "red", border = "red")
+          #rect(xleft = start(redADPlus@alignments), xright = end(redADPlus@alignments), ybottom = which(samples == sN), ytop = which(samples == sN) - (redADPlus@Cs[,ii]) / ((redADPlus@Cs[,ii]) + (redADPlus@Ts[,ii])) / 2.5, col = "red", border = "red")
+        #}                 
+    })
+    
+   axis(1)
+    axis(2, labels = aM@libnames[samples], at = 1:length(samples), las = 2)
+   
+  }
 

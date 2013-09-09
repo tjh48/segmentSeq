@@ -9,7 +9,7 @@
   \code{lociData} object containing segment information.
 }
 \usage{
-plotGenome(aD, locData, chr = 1, limits = c(0, 1e4), samples = NULL,
+plotGenome(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL,
 plotType = "pileup", plotDuplicated = FALSE, density = 0, showNumber =
 TRUE, logScale = FALSE, cap = Inf, ...)
 }
@@ -18,7 +18,7 @@ TRUE, logScale = FALSE, cap = Inf, ...)
   \item{aD}{
     An \code{\linkS4class{alignmentData}} object.
   }
-  \item{locData}{
+  \item{loci}{
     A \code{\linkS4class{lociData}} object (produced by the
     \code{\link{heuristicSeg}} or \code{\link{classifySeg}} function and therefore) containing
     appropriate annotation information. Can be omitted if this
@@ -44,7 +44,9 @@ TRUE, logScale = FALSE, cap = Inf, ...)
     a negative scale for each sample. Defaults to FALSE (recommended).}
   \item{density}{The density of the shading lines to be used in plotting
     each segment.}
-  \item{showNumber}{Should the row number of each segment be shown?}
+  \item{showNumber}{
+    Should the row number of each segment be shown?
+  }
   \item{logScale}{Should a log scale be used for the number of sequence
     tags found at each base?}
   \item{cap}{A numeric value defining a cap on the maximum number of

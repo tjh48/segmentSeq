@@ -1,6 +1,7 @@
 \name{processAD}
 \alias{processAD}
-\title{Processes an `alignmentData' object into a `segData' object for segmentation.
+\title{Processes an `alignmentData' or `alignmentMeth' object into a
+  `segData' or `segMeth' object for segmentation.
 }
 \description{
 In order to discover segments of the genome with a high density of
@@ -9,11 +10,12 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, gap = NULL, squeeze = 0, verbose = TRUE, cl)
+processAD(aD, gap = NULL, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, cl)
 }
 \arguments{
   \item{aD}{
-    An \code{\linkS4class{alignmentData}} object.
+    An \code{\linkS4class{alignmentData}} or
+    \code{\linkS4class{alignmentMeth}} object.
   }
   \item{gap}{
     The maximum gap between aligned tags that should be allowed in
@@ -22,8 +24,15 @@ processAD(aD, gap = NULL, squeeze = 0, verbose = TRUE, cl)
   \item{squeeze}{
     If greater than zero, the minimum gap between aligned tags that
     should be allowed in constructing potential segments. See Details.
-    }
-  
+  }
+  \item{filterProp}{
+    If 'aD' is a \code{\linkS4class{alignmentMeth}} object and this is
+    given, the minimum proportion of methylation at a base below which
+    the base will be filtered out before constructing potential
+    segments (but not during counting).}
+  \item{strandSplit}{
+    If TRUE, the data will be split by strand and segments will be
+    constructed separately for each strand. Defaults to FALSE.}
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }
@@ -32,8 +41,10 @@ processAD(aD, gap = NULL, squeeze = 0, verbose = TRUE, cl)
 }
   
   \details{
-    This function takes an \code{\linkS4class{alignmentData}} object and
-    constructs a \code{\linkS4class{segData}} object from it. The function
+    This function takes an \code{\linkS4class{alignmentData}} or
+    \code{\linkS4class{alignmentMeth}} object and
+    constructs a \code{\linkS4class{segData}} or
+    \code{\linkS4class{segMeth}} object from it. The function
     creates a set of potential segments by looking for all locations on
     the genome where the start of a region of overlapping alignments
     (or, if `squeeze' is non-zero, those alignments separated by no more
@@ -46,9 +57,9 @@ processAD(aD, gap = NULL, squeeze = 0, verbose = TRUE, cl)
     in order to save computational effort.
 
     The `gap' argument is now by default specified in the
-    \code{\link{readGeneric}} and \code{\link{readBAM}} functions
-    used to create the `aD' object, and so `gap' can be left as
-    NULL providing this has been done.
+    \code{\link{readGeneric}}, \code{\link{readBAM}} or
+    \code{\link{readMeths}} functions used to create the `aD' object,
+    and so `gap' can be left as NULL providing this has been done.
 
     A \code{'cluster'} object (package: snow) is recommended for
     parallelisation of this function when using large data sets.

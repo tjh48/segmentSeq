@@ -1,0 +1,163 @@
+%\VignetteIndexEntry{segmentSeq}
+%\VignettePackage{segmentSeq}
+
+\documentclass[a4paper]{article}
+
+\usepackage{rotating}
+
+\title{segmentSeq: methods for detecting methylation loci and differential methylation}
+\author{Thomas J. Hardcastle}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This vignette introduces analysis methods for data from high-throughput sequencing of bisulphite treated DNA to detect cytosine methylation. The \verb'segmentSeq' package was originally designed to detect siRNA loci \cite{Hardcastle:2011} and many of the methods developed for this can be used to detect loci of cytosine methylation from replicated (or unreplicated) sequencing data.
+
+\section{Preparation}
+
+Preparation of the segmentSeq package proceeds as in siRNA analysis. We begin by loading the \verb'segmentSeq' package.
+
+<<>>=
+  library(segmentSeq)
+@
+
+Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information.
+
+<<results = hide, eval = FALSE>>=
+cl <- makeCluster(8)
+@
+
+If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
+<<results = hide>>=
+  cl <- NULL
+@ 
+
+The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
+
+<<>>=
+datadir <- system.file("extdata", package = "segmentSeq")
+files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls",
+"short_Sample_17A_trimmed.fastq_CG_methCalls",
+"short_13_C24_col_trim.fastq_CG_methCalls",
+"short_Sample_28_trimmed.fastq_CG_methCalls")
+
+mD <- readMeths(files = files, dir = datadir,
+libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
+nonconversion = c(0.004777, 0.005903, 0.016514, 0.006134))
+@ 
+
+We can begin by plotting the distribution of methylation for these samples. The distribution can be plotted for each sample individually, or as an average across multiple samples. We can also subtract one distribution from another to visualise patterns of differential methylation on the genome.
+
+<<fig = FALSE, label=methDist, height = 10, width = 12>>=
+par(mfrow = c(2,1))
+distA <- plotMethDistribution(mD, samples = 1:2, main = "Distributions of methylation")
+distB <- plotMethDistribution(mD, samples = 3:4, add = TRUE, col = "red")
+plotMethDistribution(mD, samples = 1:2, subtract = distB$y, main = "Differences between distributions")
+@ 
+
+\begin{sidewaysfigure}[!ht]
+\begin{center}
+<<label=figMethDist, fig=TRUE,echo=FALSE>>=
+<<methDist>>
+@ 
+\caption{Distributions of methylation on the genome (first two million bases of chromosome 1.}
+\label{fig:Seg}
+\end{center}
+\end{sidewaysfigure}
+
+
+Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
+
+<<>>=
+sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, verbose = TRUE, strandSplit = TRUE, cl = cl)
+@ 
+
+We can now construct a segment map from these potential segments.
+
+\subsection*{Segmentation by heuristic Bayesian methods}
+
+A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
+
+<<>>=
+hS <- heuristicSeg(sD, mD, prop = 0.2, cl = cl, gap = 100, getLikes = FALSE)
+hS
+@ 
+
+Within a methylation locus, it is not uncommon to find completely unmethylated cytosines. If the coverage of these cytosines is too high, it is possible that these will cause the locus to be split into two or more fragments. The \verb'mergeMethSegs' function can be used to overcome this splitting by merging loci with identical patterns of expression that are not separated by too great a gap. Merging in this manner is optional, but recommended.
+
+<<>>=
+hS <- mergeMethSegs(hS, mD, gap = 5000, cl = cl)
+@ 
+
+We can then estimate posterior likelihoods on the defined loci by applying empirical Bayesian methods. These will not change the locus definition, but will assign likelihoods that the identified loci represent a true methylation locus in each replicate group.
+
+<<>>=
+hSL <- lociLikelihoods(hS, mD, cl = cl)
+@ 
+
+%\subsection*{Segmentation by empirical Bayesian Methods}
+
+%Classification of the potential segments can also be carried out using empirical Bayesian methods. These are extremely computationally intensive, but allow %biological variation within replicates to be more accurately modelled, thus providing an improved identification of methylation loci. 
+
+%<<>>=
+%#eBS <- classifySeg(sD, hS, mD, cl = cl)
+%@ 
+
+\subsection*{Visualising loci}
+
+By one of these methods, we finally acquire an annotated \verb'methData' object, with the annotations describing the co-ordinates of each segment.
+
+We can use this \verb'methData' object, in combination with the \verb'alignmentMeth' object, to plot the segmented genome.
+
+<<fig = FALSE, label=plotMeth, height = 10, width = 12>>=
+plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
+@
+
+\begin{sidewaysfigure}[!ht]
+\begin{center}
+<<label=figplotMeth, fig=TRUE,echo=FALSE>>=
+<<plotMeth>>
+@ 
+\caption{Methylation and identified loci on the first ten thousand bases of chromosome 1.}
+\label{fig:plotMeth}
+\end{center}
+\end{sidewaysfigure}
+
+
+
+\subsection*{Differential Methylation analysis}
+
+We can also examine the \verb'methData' object for differentially methylated regions using the beta-binomial methods \cite{Hardcastle:2013} implemented in \verb'baySeq'. We first define a group structure on the data.
+
+<<>>=
+groups(hSL) <- list(NDE = c(1,1,1,1), DE = c("A", "A", "B", "B"))
+@
+
+We can then determine a prior distribution on the parameters of a beta-binomial model for the data.
+
+<<>>=
+hSL <- getPriors.BB(hSL, cl = cl)
+@
+
+We can then find the posterior likelihoods of the models defined in the groups structure.
+
+<<>>=
+hSL <- getLikelihoods.BB(hSL, cl = cl)
+@ 
+
+We can then retrieve the data for the top differentially methylated regions.
+
+<<>>=
+topCounts(hSL, "DE")
+@ 
+
+\begin{thebibliography}{99}
+\bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).
+\bibitem{Hardcastle:2013} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{Empirical Bayesian analysis of paired high-throughput sequencing data with a beta-binomial distribution.} BMC Bioinformatics (2013).
+
+\end{thebibliography}
+
+\end{document}

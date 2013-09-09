@@ -5,7 +5,8 @@
 \description{A function for extracting count data from an
   \code{alignmentData} object given a set of segments defined on the genome.}
 \usage{
-getCounts(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
+getCounts(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE,
+  useChunk = FALSE, cl)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -17,12 +18,15 @@ getCounts(segments, aD, preFiltered = FALSE, as.matrix = FALSE, cl)
     An \code{\link{alignmentData}} object.
   }
   \item{preFiltered}{The function internally cleans the data; however,
-  this may not be needed and omitting these steps may save computational
-  time. See Details.}
-  \item{as.matrix}{If TRUE, returns the counts as a matrix. Otherwise,
-  returns the counts as a \code{\link[IRanges]{DataFrame}}.}
-  \item{cl}{A SNOW cluster object, or NULL. See Details.}
-    
+    this may not be needed and omitting these steps may save computational
+    time. See Details.}
+  \item{adjustMultireads}{If working with methylation data, this option
+    toggles an adjustment for reads that align to multiple locations on
+    the genome. Defaults to TRUE.}
+  \item{useChunk}{If all segments are within defined `chunks' of the
+  alignmentData object, speed increases if this is set to
+  TRUE. Otherwise, counts may be inaccurate. Defaults to FALSE.}
+  \item{cl}{A SNOW cluster object, or NULL. See Details.}    
 }
 \details{
   The function extracts count data from \code{alignmentData} object

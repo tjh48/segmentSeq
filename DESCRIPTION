@@ -1,15 +1,28 @@
 Package: segmentSeq
 Type: Package
-Title: Methods for identifying small RNA loci from high-throughput sequencing data
-Version: 1.13.1
+Title: Methods for identifying small RNA loci from high-throughput
+        sequencing data
+Version: 1.13.19
 Date: 2010-01-20
 Author: Thomas J. Hardcastle
 Maintainer: Thomas J. Hardcastle <tjh48@cam.ac.uk>
 Description: High-throughput sequencing technologies allow the production of large volumes of short sequences, which can be aligned to the genome to create a set of matches to the genome. By looking for regions of the genome which to which there are high densities of matches, we can infer a segmentation of the genome into regions of biological significance. The methods in this package allow the simultaneous segmentation of data from multiple samples, taking into account replicate data, in order to create a consensus segmentation. This has obvious applications in a number of classes of sequencing experiments, particularly in the discovery of small RNA loci and novel mRNA transcriptome discovery.
 License: GPL-3
 LazyLoad: yes
-Depends: R (>= 2.3.0), methods, baySeq (>= 1.11.1), ShortRead, GenomicRanges, IRanges
+Depends: R (>= 2.3.0), methods, baySeq (>= 1.15.4), ShortRead,
+        GenomicRanges, IRanges
 Suggests: snow
-Imports: baySeq, graphics, grDevices, IRanges, methods, utils, GenomicRanges
-Collate: AllClasses.R segData-accessors.R alignmentData-accessors.R lociData-accessors.R getCounts.R plotGenome.R processAD.R processTags.R getOverlaps.R heuristicSeg.R classifySeg.R lociLikelihoods.R processPosteriors.R findChunks.R utilityFunctions.R
-biocViews: Bioinformatics, HighThroughputSequencing, MultipleComparisons
+Imports: baySeq, graphics, grDevices, IRanges, methods, utils,
+        GenomicRanges
+Collate: AllClasses.R alignmentClass-accessors.R 
+	 segClass-accessors.R
+	 segData-accessors.R alignmentData-accessors.R
+        lociData-accessors.R alignmentMeth-accessors.R
+        methData-accessors.R segMeth-accessors.R getCounts.R
+        plotGenome.R processAD.R processTags.R getOverlaps.R
+        heuristicSeg.R classifySeg.R lociLikelihoods.R
+        processPosteriors.R findChunks.R utilityFunctions.R
+        constructNulls.R mergeSegs.R plotGenomicDistributions.R
+biocViews: Bioinformatics, HighThroughputSequencing,
+        MultipleComparisons
+Packaged: 2013-07-31 00:15:33 UTC; tjh48

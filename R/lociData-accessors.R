@@ -1,22 +1,7 @@
 setMethod("show", "lociData", function(object) {  
   show(object@coordinates)
   callNextMethod()  
-  if(nrow(object@locLikelihoods) > 0)
-    {
-      if(any(exp(object@locLikelihoods) > 1, na.rm = TRUE))
-        {
-          cat('\nSlot "locLikelihoods":\n')
-          modFunction <- identity
-        } else {          
-          cat('\nSlot "locLikelihoods" (stored on log scale):\n')        
-          modFunction <- exp
-        }
-      if(nrow(object@locLikelihoods) > 5)
-        {          
-          print(modFunction(object@locLikelihoods[1:5,]))
-          cat(paste(nrow(object) - 5), "more rows...\n")
-        } else print(modFunction(object@locLikelihoods))
-    }
+  .printLocLikes(object@locLikelihoods)
 })
 
 setMethod("[", "lociData", function(x, i, j, ..., drop = FALSE) {
@@ -24,6 +9,12 @@ setMethod("[", "lociData", function(x, i, j, ..., drop = FALSE) {
     j <- 1:ncol(x@data)
   if(missing(i))
     i <- 1:nrow(x@data)
+
+  if(length(i) == 0) return(x)
+  
+  i <- as.vector(i)
+  j <- as.vector(j)
+  
   x <- callNextMethod()
   if(nrow(x@locLikelihoods) > 0)
     x@locLikelihoods <- x@locLikelihoods[i,, drop = FALSE]

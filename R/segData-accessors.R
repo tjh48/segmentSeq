@@ -1,27 +1,23 @@
 setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
+  x <- callNextMethod(x, i, j, ..., drop = FALSE)
   if(!missing(i))
     {
+      i <- as.vector(i)
       if(nrow(x@data) > 0) x@data <- x@data[i,, drop = FALSE]
-      x@coordinates <- x@coordinates[i,,drop = FALSE]
-#      if(nrow(x@seglens) > 0)
-#        x@seglens <- x@seglens[i,,drop = FALSE]
-      if(nrow(x@locLikelihoods) > 0)
-        x@locLikelihoods <- x@locLikelihoods[i,,drop = FALSE]
     }
 
   if(!missing(j))
     {
-      x@replicates <- x@replicates[j]
+      j <- as.vector(j)
       x@data <- x@data[,j,drop = FALSE]
       x@libsizes <- x@libsizes[j]
-#      if(ncol(x@seglens) > 1) x@seglens <- x@seglens[,j,drop = FALSE]
     }  
   x
 })
 
-setMethod("dim", "segData", function(x) {
-  c(max(length(x@coordinates), nrow(x@data)), length(x@replicates))
-})
+#setMethod("dim", "segData", function(x) {
+#  c(max(length(x@coordinates), nrow(x@data)), length(x@replicates))
+#})
 
 
 setValidity("segData", function(object) {
@@ -37,38 +33,27 @@ setValidity("segData", function(object) {
       valid <- FALSE
       validmess <- c(validmess, "Number of rows of '@data' slot (if not zero) must be the same as '@coordinates' slot (if not zero).")
     }
-  if(length(object@replicates) != ncol(object))
-    {
-      valid <- FALSE
-      validmess <- c(validmess, "Length of '@replicates' slot must equal length of '@replicates' slot.")
-    }
-  if(ncol(object@data) > 0 && !all(sapply(1:ncol(object@data), function(ii) all(as.integer(object@data[,ii]) == object@data[,ii]))))
+  if(ncol(object@data) > 0 && !all(as.integer(object@data) == object@data))
     {
       valid <- FALSE
       validmess <- c(validmess, "All members of the '@data' matrix must be castable as integers.")
+    }
+  if(ncol(object@data) != length(object@replicates) & ncol(object@data) != 0 & length(object@replicates) != 0)
+    {
+      valid <- FALSE
+      validmess <- c(validmess, "Number of columns of '@data' slot (if not zero) must be the same as the length of the '@replicates' slot (if not zero).")
     }
   if(valid) return(valid) else validmess
 })
 
 
 setMethod("show", "segData", function(object) {
-  cat(paste('An object of class "', class(object), '"\n', sep = ""))
-  cat(paste(nrow(object), 'rows and', ncol(object), 'columns\n'))
+  callNextMethod(object)
   cat('\nSlot "data":\n')
-  if(nrow(object@data) > 5)
-    {
-      print(object@data[1:5,])
-      cat(paste(nrow(object) - 5), "more rows...\n")
-    } else print(object@data)
+  cat("Matrix with ", nrow(object@data), " rows.")
+  .printIRangesMatrix(object@data)
   cat('\nSlot "libsizes":\n')
   print(object@libsizes)
-  cat('\nSlot "replicates":\n')
-  print(object@replicates)
-  cat('\nSlot "coordinates":\n')
-  if(length(object@coordinates) > 5)
-    {
-      print(object@coordinates)
-    } else print(object@coordinates)
 })
 
 

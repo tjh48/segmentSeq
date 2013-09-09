@@ -1,6 +1,87 @@
+readMeths <- function(files, dir = ".", libnames, replicates, nonconversion)#, splitStrands = TRUE)#, duplicateFiles)
+  {
+    if(missing(nonconversion))
+      nonconversion = rep(0, length(files))
+    if(any(nonconversion < 0) | any(nonconversion > 1)) stop("Non-conversion rates must be between zero and one.")
+
+    replicates <- as.factor(replicates)
+    if(dir != "") files <- paste(dir, files, sep = "/")
+
+    message("Reading files...", appendLF = FALSE)
+    methReads <- lapply(files, function(file) {
+      message(".", appendLF = FALSE)
+      mreads <- read.delim(file, as.is = TRUE, header = FALSE)
+      GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], multireads = as.integer(mreads[,6]), Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
+    })
+    message("done!", appendLF = TRUE)
+    
+    chrTag <- methReads[[1]]
+    
+    message("Finding unique cytosines...", appendLF = FALSE)
+    
+    for(ii in 2:length(methReads)) {
+      message(".", appendLF = FALSE)
+      chrTag <- append(chrTag, methReads[[ii]])
+      chrTag <- chrTag[order(as.integer(seqnames(chrTag)), as.integer(start(chrTag)), as.integer(strand(chrTag)), as.integer(values(chrTag)$multireads)),]
+      chrTag <- chrTag[!duplicated(chrTag) | c(TRUE, as.integer(values(chrTag)$multireads[-length(chrTag)]) != as.integer(values(chrTag)$multireads[-1])),]
+    }
+    
+    message("done!", appendLF = TRUE)
+    
+    values(chrTag)$Cs <- values(chrTag)$Ts <- 0
+    
+    message("Processing samples...", appendLF = FALSE)
+    
+    mReads <- lapply(methReads, function(mreads) {
+      message(".", appendLF = FALSE)
+      colnames(chrTag) <- colnames(mreads)
+      mreads <- append(mreads, chrTag)
+      mreads <- mreads[order(as.integer(seqnames(mreads)), as.integer(start(mreads)), as.integer(strand(mreads)), as.integer(values(mreads)$multireads)),]
+      mreads <- mreads[!duplicated(mreads) | c(TRUE, as.integer(values(mreads)$multireads[-length(mreads)]) != as.integer(values(mreads)$multireads[-1])),]
+      list(Cs = values(mreads)$Cs, Ts = values(mreads)$Ts)
+    })
+    
+    message("done!", appendLF = TRUE)
+    
+    Cs <- do.call("cbind", lapply(mReads, function(x) x$Cs))
+    Ts <- do.call("cbind", lapply(mReads, function(x) x$Ts))
+    
+    colnames(Cs) <- libnames
+    colnames(Ts) <- libnames
+    values(chrTag) <- values(chrTag)$multireads
+    colnames(values(chrTag)) <- "multireads"
+    
+    mD = new("alignmentMeth", alignments = chrTag, Cs = Cs, Ts = Ts, replicates = replicates, libnames = libnames, nonconversion = nonconversion)
+    
+                                        #    if(!missing(duplicateFiles))
+                                        #      {
+                                        #        message("Reading duplicate files...", appendLF = FALSE)
+                                        #        dupReads <- lapply(duplicateFiles, function(file) {
+                                        #          message(".", appendLF = FALSE)
+                                        #          dupreads <- read.delim(file, as.is = TRUE, header = FALSE)
+                                        #          GRanges(seqnames = dupreads[,1], IRanges(dupreads[,2], width = 1), strand = dupreads[,3], multiread = Rle(dupreads[,6]), Cs = Rle(dupreads[,4]), Ts = Rle(#dupreads[,5]), id = Rle(dupreads[,7]))
+                                        #        })
+                                        #        message("done!", appendLF = TRUE)
+    ##        mD@duplication <- dupReads
+                                        #     } else mD@duplication <- NULL
+    
+                                        #            if(splitStrands) mD <- strandSplitter(mD)
+    
+    mD
+  }
+
+.fastUniques <- function(x, na = FALSE){
+    if (nrow(x) > 1) {
+          if(na) {
+                  return(c(TRUE, (rowSums(x[-1L,,drop = FALSE] != x[-nrow(x),,drop = FALSE], na.rm = TRUE) > 0) | rowSums((is.na(x[-1L,,drop= FALSE])== is.na(x[-nrow(x),,drop = FALSE]))) != ncol(x)))
+                } else return(c(TRUE, rowSums(x[-1L, , drop = FALSE] == x[-nrow(x),, drop = FALSE]) != ncol(x)))
+        } else return(TRUE)
+  }
+
+
 readBAM <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-         gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile", verbose = TRUE)
+         gap = 200, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -24,7 +105,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
 
-    files <- paste(dir, files, sep = "/")
+    if(dir != "") files <- paste(dir, files, sep = "/")
 
     if(class(chrs) != "character")
       stop("'chrs' must be of type 'character'.")
@@ -38,33 +119,68 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
 
       tags <- scanBam(files[ii])[[1]]
       if(!is.null(countID)) {
-        counts <- Rle(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
-      } else counts <- Rle(rep(1L, length(tags$seq)))
+        counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
+      } else counts <- (rep(1L, length(tags$seq)))
 
       revcomp <- sapply(tags$flag, function(flag) intToBits(flag)[5] == 1)
       if(any(revcomp)) tags$seq[revcomp] <- reverseComplement(tags$seq[revcomp])
-
-      keepReads <- which(!is.na(tags$pos) & tags$qwidth > minlen & tags$qwidth < maxlen)
+     
+      
+      keepReads <- which(!is.na(tags$pos))
       
       ir <- IRanges(start = as.integer(tags$pos[keepReads]), width = tags$qwidth[keepReads])
-      aln <- GRanges(seqnames = tags$rname[keepReads], ir, strand = tags$strand[keepReads], tag = Rle(as.character(tags$seq[keepReads])), count = counts[keepReads])
-      aln <- aln[as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs),]
+      aln <- GRanges(seqnames = tags$rname[keepReads], ir, strand = tags$strand[keepReads], tag = (as.character(tags$seq[keepReads])), count = counts[keepReads])
+      
+      if(is.null(countID)) {
+        aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
+        dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
+                           start(aln) == c(start(aln)[-1], Inf) &
+                           end(aln) == c(end(aln)[-1], Inf) &
+                           as.character(strand(aln)) == c(as.character(strand(aln))[-1], "!") &
+                           as.character(values(aln)$tag) == as.character(c(values(aln)$tag[-1], "!"))))
+        aln <- aln[dupTags,]
+        values(aln)$count <- diff(c(0, dupTags))
+      }
+      
+      filterTags <- rep(NA, 4)     
+      filterInfo <- function(seltags, filname) {
+        if(!is.null(filterReport)) {
+          write(unique(as.character(aln$tag[!seltags])), file = paste(gsub(".*/", "", files[ii]), filterReport, filname, sep = "_"))
+                return(paste(length(unique(aln$tag[!seltags])), sum(!seltags), sep = ":"))
+              } else return(NA)
+      }
+      
+      chrtags <- as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs)
+      filterTags[1] <- filterInfo(chrtags, "chrs")
+      aln <- aln[chrtags,]
+      if(length(aln) == 0) warning(paste("There were no tags left in sample", ii, "after selection by chromosome. Are you sure you've got the right chromosome names?"))
 
-      if(!is.null(polyLength)) {
+      widths <- width(aln)
+      goodwidths <- widths >= minlen & widths <= maxlen
+      filterTags[2] <- filterInfo(goodwidths, "widths")
+      aln <- aln[goodwidths,]      
+      
+      if(!is.null(multireads)) {
+        tabtags <- table(as.character(aln$tag))
+        goodmult <- as.character(aln$tag) %in% names(tabtags[tabtags < multireads])
+        filterTags[3] <- filterInfo(goodmult, "multireads")
+        aln <- aln[goodmult,]
+      }
+
+      if(!is.null(polyLength)) {        
         polyBaseRemove <- unique(unlist(lapply(polyBase, grep, as.character(values(aln)$tag))))
-        if(length(polyBaseRemove) > 0) aln <- aln[-polyBaseRemove,]
-      }
-        if(is.null(countID)) {
-          aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
-          dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
-                             start(aln) == c(start(aln)[-1], Inf) &
-                             end(aln) == c(end(aln)[-1], Inf) &
-                             as.character(strand(aln)) == c(as.character(strand(aln))[-1], "!") &
-                             as.character(values(aln)$tag) == as.character(c(values(aln)$tag[-1], "!"))))
-          aln <- aln[dupTags,]
-          values(aln)$count <- diff(c(0, dupTags))
+        goodpolyBase <- rep(TRUE, length(aln))
+        if(length(polyBaseRemove) > 0) goodpolyBase[polyBaseRemove] <- FALSE
+        filterTags[4] <- filterInfo(goodpolyBase, "poly")
+        aln <- aln[goodpolyBase,]
       }
 
+      if(!is.null(filterReport)) {
+        filDat <- matrix(c(file = files[ii], filterTags), nrow = 1)
+        colnames(filDat) <- c("file", "chrs", "length", "multireads", "polyLength")
+        write.table(filDat, file = paste(filterReport, ".txt", sep = ""), append = (ii > 1), row.names = FALSE, col.names = ii == 1, sep = "\t", quote = FALSE)
+      }
+      
       message(".", appendLF = FALSE)
       seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
       aln
@@ -79,7 +195,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
 
 readGeneric <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile", verbose = TRUE, ...)
+         cols, header = TRUE, gap = 200, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -140,7 +256,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       message("Reading files...", appendLF = FALSE)
 
     sampleNumbers <- 1:length(files)
-
+    
     Tags <- lapply(sampleNumbers, function(ii, cols, header, ...) {
       filetags <- read.table(files[ii], header = header, as.is = TRUE)
       if(header & is.null(cols))
@@ -188,23 +304,54 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
           }
 
 #      if(strandPresent & !is.na(strand)) filetags <- filetags[filetags[,strandcol] %in% strand,]
-                 
+
+      filterTags <- rep(NA, 4)     
+      filterInfo <- function(seltags, filname) {
+        if(!is.null(filterReport)) {
+          write(unique(filetags[!seltags, tagcol]), file = paste(gsub(".*/", "", files[ii]), filterReport, filname, sep = "_"))
+          if(tagPresent) return(paste(length(unique(filetags[!seltags,tagcol])), sum(!seltags), sep = ":")) else return(sum(!seltags))
+        } else return(NA)
+      }
+      
+      chrtags <- filetags[,chrcol] %in% chrs        
+      filterTags[1] <- filterInfo(chrtags, "chrs")
+      filetags <- filetags[chrtags,]  
+      
+      widths <- as.integer(filetags[, endcol]) - as.integer(filetags[,startcol]) + 1      
+      goodwidths <- widths >= minlen & widths <= maxlen
+      filterTags[2] <- filterInfo(goodwidths, "widths")
+      filetags <- filetags[goodwidths,]
+      
+      if(tagPresent & !is.null(multireads)) {
+        tabtags <- table(filetags[,tagcol])
+        goodmult <- filetags[,tagcol] %in% names(tabtags[tabtags < multireads])
+        filterTags[3] <- filterInfo(goodmult, "multireads")
+        filetags <- filetags[goodmult,]
+      }
+      
       if(tagPresent & !is.null(polyLength)) {        
         polyBaseRemove <- unique(unlist(lapply(polyBase, grep, filetags[,tagcol])))
-        if(length(polyBaseRemove) > 0) filetags <- filetags[-polyBaseRemove,]
+        goodpolyBase <- rep(TRUE, nrow(filetags))
+        if(length(polyBaseRemove) > 0) goodpolyBase[polyBaseRemove] <- FALSE
+        filterTags[4] <- filterInfo(goodpolyBase, "poly")
+        filetags <- filetags[goodpolyBase,]
       }
 
-      chrtags <- which(filetags[,chrcol] %in% chrs)
+      if(!is.null(filterReport)) {
+        filDat <- matrix(c(file = files[ii], filterTags), nrow = 1)
+        colnames(filDat) <- c("file", "chrs", "length", "multireads", "polyLength")
+        write.table(filDat, file = paste(filterReport, ".txt", sep = ""), append = (ii > 1), row.names = FALSE, col.names = ii == 1, sep = "\t", quote = FALSE)
+      }
       
-      ir <- IRanges(start = as.integer(filetags[chrtags,startcol]), end = as.integer(filetags[chrtags, endcol]))      
+      ir <- IRanges(start = as.integer(filetags[,startcol]), end = as.integer(filetags[, endcol]))      
       
       if(tagPresent & countPresent)
         {
-          aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir, tag = Rle(filetags[chrtags, tagcol]), count = Rle(as.integer(filetags[chrtags, countcol])))
-          if(strandPresent) strand(aln) <- Rle(as.character(filetags[chrtags,strandcol]))
+          aln <- GRanges(seqnames = filetags[, chrcol], ir, tag = (filetags[, tagcol]), count = (as.integer(filetags[, countcol])))
+          if(strandPresent) strand(aln) <- Rle(as.character(filetags[,strandcol]))
         } else if(tagPresent) {
-          aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir, tag = Rle(filetags[chrtags, tagcol]), count = 1)
-          if(strandPresent) strand(aln) <- Rle(as.character(filetags[chrtags,strandcol]))
+          aln <- GRanges(seqnames = filetags[, chrcol], ir, tag = (filetags[, tagcol]), count = 1)
+          if(strandPresent) strand(aln) <- Rle(as.character(filetags[,strandcol]))
           aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]          
           dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
                              start(aln) == c(start(aln)[-1], Inf) &
@@ -213,11 +360,9 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                              as.character(values(aln)$tag) == as.character(c(values(aln)$tag[-1], "!"))))
           aln <- aln[dupTags,]
           values(aln)$count <- diff(c(0, dupTags))
-        } else aln <- GRanges(seqnames = filetags[chrtags, chrcol], ir)
-
-      aln <- aln[width(aln) >= minlen & width(aln) <= maxlen]
+        } else aln <- GRanges(seqnames = filetags[, chrcol], ir)
       
-      rm(filetags, chrtags)
+      rm(filetags)
       gc()
       message(".", appendLF = FALSE)
       seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
@@ -238,6 +383,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     unqTags <- GTags[[1]]
     if(length(GTags) > 1) {
       for(ii in 2:length(GTags)) {
+        message(".", appendLF = FALSE)
         unqTags <- GRanges(seqnames = c(seqnames(unqTags), seqnames(GTags[[ii]])),
                            IRanges(start = c(start(unqTags), start(GTags[[ii]])), end = c(end(unqTags), end(GTags[[ii]]))),
                            strand = c(strand(unqTags), strand(GTags[[ii]])),
@@ -256,7 +402,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 
     if(length(GTags) > 1) {
       values(unqTags)$count <- 0
-      counts <- do.call("DataFrame",
+      counts <- do.call("cbind",
                         lapply(GTags, function(GTag) {
                           
                           countTag <- c(GTag, unqTags)
@@ -271,7 +417,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                   if(length(purgeTags) > 0) return(values(countTag)$count[-purgeTags]) else return(values(countTag)$count)
                         })
                         )
-    } else counts <- DataFrame(values(GTags[[1]])$count)
+    } else counts <- matrix(values(GTags[[1]])$count, ncol = 1)
     
     colnames(counts) <- libnames
 
@@ -281,7 +427,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     ordTags <- order(as.factor(values(unqTags)$tag))
     dups <- which(!duplicated(as.factor(values(unqTags)$tag)[ordTags]))
     diffDups <- diff(c(dups, length(unqTags) + 1))
-    values(unqTags)$matches[ordTags] <- rep(diffDups, diffDups)
+    values(unqTags)$multireads[ordTags] <- rep(diffDups, diffDups)
     
     if(verbose) message(".done!")
     

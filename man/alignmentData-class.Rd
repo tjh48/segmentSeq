@@ -8,16 +8,17 @@
 \alias{dim,alignmentData-method}
 \alias{initialize,alignmentData-method}
 \alias{show,alignmentData-method}
-\alias{cbind}
 \alias{cbind,alignmentData-method}
 
 \title{Class "alignmentData"}
-\description{The \code{alignmentData} class records information about
+\description{The \code{alignmentData} class inherits from the
+  \code{alignmentClass} class and records information about
   a set of alignments of high-throughput sequencing data to a
-  genome. Details include the alignments themselves, details on the
+  genome. Details include the alignments themselves, the
   chromosomes of the genome to which the data are aligned, and
-  information on the libraries from which the data come.}
-\section{Objects from the Class}{
+  counts of the aligned tags from each of the libraries from which the
+  data come.}
+\section{Objects from the class}{
 Objects can be created by calls of the form \code{new("alignmentData",
   ...)}, but more usually by using one of \code{\link{readBAM}} or
 \code{\link{readGeneric}} functions to generate the object from a set of
@@ -27,15 +28,15 @@ alignment files.
   \describe{
     \item{\code{alignments}:}{Object of class \code{"GRanges"}.
       Stores information about the alignments. See Details.}
-    \item{\code{data}:}{Object of class \code{"DataFrame"}. For each
+    \item{\code{replicates}:}{Object of class \code{"factor"}.
+      Replicate information for each of the libraries. See Details.}
+    \item{\code{data}:}{Object of class \code{"matrix"}. For each
       alignment described in the \code{alignments} slot, contains the
       number of times the alignment is seen in each sample.}
     \item{\code{libnames}:}{Object of class \code{"character"}. The
       names of the libraries for which alignment data exists.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes (see Details) for each of the libraries.}
-    \item{\code{replicates}:}{Object of class \code{"factor"}.
-      Replicate information for each of the libraries. See Details.}
   }
 }
 
@@ -70,10 +71,12 @@ alignment files.
 \author{Thomas J. Hardcastle}
 
 \seealso{
+  \code{\link{alignmentClass}}, the class from which
+  \code{'alignmentData'} inherits.
   \code{\link{readGeneric}}, which will produce a \code{'alignmentData'}
   object from appropriately formatted tab-delimited files.
   \code{\link{readBAM}}, which will produce a \code{'alignmentData'}
-  object from BAM files.
+  object from BAM files.  
   \code{\link{processAD}}, which will convert an \code{'alignmentData'}
   object into a 'segData' object for segmentation.
 }

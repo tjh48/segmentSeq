@@ -1,6 +1,7 @@
 \name{segData-class}
 \Rdversion{1.1}
 \docType{class}
+\alias{segData}
 \alias{segData-class}
 \alias{[,segData-method}
 \alias{[,segData,ANY,ANY-method}
@@ -9,27 +10,29 @@
 \alias{show,segData-method}
 
 \title{Class "segData"}
-\description{  The \code{segData} class contains data about potential
-  segments on the genome containing data about each potential subsegment.}
-\section{Objects from the Class}{
+\description{  The \code{segData} class inherits from the
+  \code{segClass} class and contains data about potential
+  segments on the genome, together with counts for each of those segments.}
+\section{Objects from the class}{
 Objects can be created by calls of the form \code{new("segData", ...,
   seglens)}. However, more usually they will be created by calling the
 \code{\link{processAD}} function.
 }
 \section{Slots}{
   \describe{
-    \item{\code{data}:}{Object of class \code{\link[IRanges]{DataFrame}}. Contains the
+    \item{\code{coordinates}:}{A \code{\link[GenomicRanges]{GRanges}}
+      object defining the coordinates of the segments.}
+    
+    \item{\code{replicates}:}{Object of class \code{"factor"}. The
+      replicate structure for the samples.}
+    \item{\code{locLikelihoods}:}{Object of class \code{"DataFrame"}
+      describing estimated likelihoods that each region defined in
+      `coordinates' is a locus in each replicate group.}
+    \item{\code{data}:}{Object of class \code{matrix}. Contains the
       number of counts observed for each sample in each potential
       segment.}
     \item{\code{libsizes}:}{Object of class \code{"numeric"}. The
       library sizes for each sample.}
-    \item{\code{replicates}:}{Object of class \code{"factor"}. The
-      replicate structure for the samples.}
-    \item{\code{coordinates}:}{A \code{\link[GenomicRanges]{GRanges}}
-      object defining the coordinates of the segments.}
-    \item{\code{locLikelihoods}:}{Object of class \code{"DataFrame"}
-      describing estimated likelihoods that each region defined in
-      `coordinates' is a locus in each replicate group.}
   }
 }
 

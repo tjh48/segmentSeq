@@ -13,11 +13,14 @@ These functions take alignment files of various formats to produce an object
 }
 \usage{
 readGeneric(files, dir = ".", replicates, libnames, chrs, chrlens, cols,
-            header = TRUE, gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile",
-            verbose = TRUE, ...)
+            header = TRUE, gap = 200, minlen = 15, maxlen = 29,
+            multireads = 1000, polyLength, estimationType = "quantile",
+            verbose = TRUE, filterReport = NULL, ...)
 
 readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-        gap = 200, minlen = 15, maxlen = 29, polyLength, estimationType = "quantile", verbose = TRUE)
+        gap = 200, minlen = 15, maxlen = 29, multireads = 1000,
+        polyLength, estimationType = "quantile", verbose = TRUE,
+        filterReport) 
 
 }
 \arguments{
@@ -59,6 +62,9 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
   }
   \item{minlen}{Minimum length for reads.}
   \item{maxlen}{Maximum length for reads.}
+  \item{multireads}{The functions will discard any read that aligns to
+    the genome in more locations than given by this value. Set to Inf to
+    keep everything. Defaults to 1000.}
   \item{polyLength}{
     If given, an integer value N defining the length of (approximate)
     homopolymers which will be removed from the data. If a tag contains
@@ -73,6 +79,10 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }
+  \item{filterReport}{
+    If not NULL, this should be a string defining a file to which will
+    be written those data filtered on the basis of chromsome choices,
+    widths of sequences, multireads or polyBase.}
   \item{...}{Additional parameters to be passed to
     \code{\link{read.table}}. In particular, the `sep' and `skip'
     arguments may be useful.}

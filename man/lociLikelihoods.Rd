@@ -8,7 +8,7 @@
   for each replicate group.
 }
 \usage{
-lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 1,
+lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 3,
                 inferNulls = TRUE, nasZero = FALSE, usePosteriors =
 TRUE, cl)
 }

@@ -13,12 +13,12 @@ These functions take alignment files of various formats to produce an object
 }
 \usage{
 readGeneric(files, dir = ".", replicates, libnames, chrs, chrlens, cols,
-            header = TRUE, gap = 200, minlen = 15, maxlen = 29,
+            header = TRUE, minlen = 15, maxlen = 29,
             multireads = 1000, polyLength, estimationType = "quantile",
             verbose = TRUE, filterReport = NULL, ...)
 
 readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-        gap = 200, minlen = 15, maxlen = 29, multireads = 1000,
+        minlen = 15, maxlen = 29, multireads = 1000,
         polyLength, estimationType = "quantile", verbose = TRUE,
         filterReport) 
 
@@ -56,10 +56,6 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     that the data are redundant (see Details).}
   \item{header}{Do the input files have a header line? Defaults
     to TRUE. See Details.}
-  \item{gap}{
-    The maximum gap between aligned tags that should be allowed in
-    constructing potential segments. See \code{\link{findChunks}}.
-  }
   \item{minlen}{Minimum length for reads.}
   \item{maxlen}{Maximum length for reads.}
   \item{multireads}{The functions will discard any read that aligns to
@@ -164,7 +160,7 @@ replicates <- c(1,1,2,2)
 
 alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 100)
+chrlens)
 
 }
 \keyword{files}

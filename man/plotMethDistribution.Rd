@@ -9,7 +9,8 @@ Plots the distribution of methylation (as defined in an
 \code{\link{alignmentMeth}} object upon the genome.
 }
 \usage{
-plotMethDistribution(meth, samples, subtract, centromeres, main = "", add = FALSE, ...)
+plotMethDistribution(meth, samples, bw = 1e-3, subtract, centromeres,
+add = FALSE, ...)
 }
 \arguments{
   \item{meth}{
@@ -23,7 +24,8 @@ plotMethDistribution(meth, samples, subtract, centromeres, main = "", add = FALS
   \item{subtract}{
     A numeric vector giving values to be subtracted from the density of
     methylation. See Details.
-}
+  }
+  \item{bw}{A scaling factor for the estimation of density of methylation.}
   \item{centromeres}{
     If given, the location of the centromeres will be plotted.
   }

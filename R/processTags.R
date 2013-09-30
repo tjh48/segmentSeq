@@ -11,7 +11,10 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion)#, s
     methReads <- lapply(files, function(file) {
       message(".", appendLF = FALSE)
       mreads <- read.delim(file, as.is = TRUE, header = FALSE)
-      GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], multireads = as.integer(mreads[,6]), Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
+      mr <- GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], #multireads = as.integer(mreads[,6]),
+                    Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
+      if(ncol(mreads) == 6) mr$multireads <- Rle(mreads[,6]) else mr$multireads <- Rle(1)
+      mr
     })
     message("done!", appendLF = TRUE)
     
@@ -80,8 +83,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion)#, s
 
 
 readBAM <-
-function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-         gap = 200, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
+function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -188,14 +190,14 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
 
     message(".done!")
     
-    .processTags(Tags, verbose = verbose, gap = gap, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
+    .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
     
   }
 
 
 readGeneric <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, gap = 200, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
+         cols, header = TRUE, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -371,11 +373,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 
     message(".done!")
     
-    .processTags(Tags, verbose = verbose, estimationType = estimationType, gap = gap, seqinf = seqinf, libnames = libnames, replicates = replicates)
+    .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
   }
 
 
-.processTags <- function(GTags, gap, estimationType, verbose = TRUE, seqinf, libnames, replicates)
+.processTags <- function(GTags, estimationType, verbose = TRUE, seqinf, libnames, replicates)
   {
     if(verbose)
       message("Analysing tags...", appendLF = FALSE)
@@ -449,9 +451,6 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     }))
     
     aD@libsizes[repSizes[,1]] <- repSizes[,2]
-    
-    if(!missing(gap))
-      aD@alignments <- findChunks(aD@alignments, gap)
     
     chrmatch <- which(seqlevels(aD@alignments) %in% seqlevels(seqinf))[match(seqlevels(aD@alignments), seqlevels(seqinf))]
     chrmatch <- chrmatch[!is.na(chrmatch)]

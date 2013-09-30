@@ -99,7 +99,7 @@ chrlens, gap = 100)
 
 # Process the alignmentData object to produce a `segData' object.
 
-sD <- processAD(alignData, cl = NULL)
+sD <- processAD(alignData, gap = 100, cl = NULL)
 
 # Use the classifySeg function on the segData object to produce a lociData object.
 

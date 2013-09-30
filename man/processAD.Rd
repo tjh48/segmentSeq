@@ -10,7 +10,7 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, gap = NULL, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, cl)
+processAD(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, cl)
 }
 \arguments{
   \item{aD}{
@@ -55,11 +55,6 @@ processAD(aD, gap = NULL, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, ve
     of potential segments can therefore be increased by increasing this 
     limit, or (usually more usefully) decreased by decreasing this limit
     in order to save computational effort.
-
-    The `gap' argument is now by default specified in the
-    \code{\link{readGeneric}}, \code{\link{readBAM}} or
-    \code{\link{readMeths}} functions used to create the `aD' object,
-    and so `gap' can be left as NULL providing this has been done.
 
     A \code{'cluster'} object (package: snow) is recommended for
     parallelisation of this function when using large data sets.

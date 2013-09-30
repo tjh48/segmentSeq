@@ -3,7 +3,7 @@
 
 \documentclass[a4paper]{article}
 
-\usepackage{rotating}
+%\usepackage{rotating}
 
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
@@ -99,7 +99,8 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
            showNumber = FALSE, cap = 50)
 @
 
-\begin{sidewaysfigure}[!ht]
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
 \begin{center}
 
 <<label=figSeg, fig=TRUE,echo=FALSE>>=
@@ -108,7 +109,8 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 \caption{The segmented genome (first $10^5$ bases of chromosome 1.}
 \label{fig:Seg}
 \end{center}
-\end{sidewaysfigure}
+\end{figure}
+%\end{sidewaysfigure}
 
 This \verb'countData' object can now be examined for differential expression with the \verb'baySeq' package.
 

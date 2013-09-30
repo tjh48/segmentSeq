@@ -3,7 +3,7 @@
 
 \documentclass[a4paper]{article}
 
-\usepackage{rotating}
+%\usepackage{rotating}
 
 \title{segmentSeq: methods for detecting methylation loci and differential methylation}
 \author{Thomas J. Hardcastle}
@@ -55,10 +55,11 @@ We can begin by plotting the distribution of methylation for these samples. The 
 par(mfrow = c(2,1))
 distA <- plotMethDistribution(mD, samples = 1:2, main = "Distributions of methylation")
 distB <- plotMethDistribution(mD, samples = 3:4, add = TRUE, col = "red")
-plotMethDistribution(mD, samples = 1:2, subtract = distB$y, main = "Differences between distributions")
+plotMethDistribution(mD, samples = 1:2, subtract = distB[,2], main = "Differences between distributions")
 @ 
 
-\begin{sidewaysfigure}[!ht]
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
 \begin{center}
 <<label=figMethDist, fig=TRUE,echo=FALSE>>=
 <<methDist>>
@@ -66,7 +67,8 @@ plotMethDistribution(mD, samples = 1:2, subtract = distB$y, main = "Differences 
 \caption{Distributions of methylation on the genome (first two million bases of chromosome 1.}
 \label{fig:Seg}
 \end{center}
-\end{sidewaysfigure}
+\end{figure}
+%\end{sidewaysfigure}
 
 
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
@@ -116,7 +118,8 @@ We can use this \verb'methData' object, in combination with the \verb'alignmentM
 plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
 @
 
-\begin{sidewaysfigure}[!ht]
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
 \begin{center}
 <<label=figplotMeth, fig=TRUE,echo=FALSE>>=
 <<plotMeth>>
@@ -124,7 +127,8 @@ plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
 \caption{Methylation and identified loci on the first ten thousand bases of chromosome 1.}
 \label{fig:plotMeth}
 \end{center}
-\end{sidewaysfigure}
+\end{figure}
+%\end{sidewaysfigure}
 
 
 

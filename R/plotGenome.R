@@ -167,11 +167,11 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
     redADPlus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "+"),]
     redADMinus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "-"),]
     
-    plusCs <- redADPlus@Cs / redADPlus@alignments$multireads
-    plusTs <- redADPlus@Ts / redADPlus@alignments$multireads
+    plusCs <- redADPlus@Cs / as.integer(redADPlus@alignments$multireads)
+    plusTs <- redADPlus@Ts / as.integer(redADPlus@alignments$multireads)
     
-    minusCs <- redADMinus@Cs / redADMinus@alignments$multireads
-    minusTs <- redADMinus@Ts / redADMinus@alignments$multireads
+    minusCs <- redADMinus@Cs / as.integer(redADMinus@alignments$multireads)
+    minusTs <- redADMinus@Ts / as.integer(redADMinus@alignments$multireads)
         
     if(!missing(cap))
      {

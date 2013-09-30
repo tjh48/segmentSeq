@@ -1,7 +1,5 @@
-.findMethChunks <- function(mD, gap)
+.findMethChunks <- function(alignments, gap)
 {
-  zeroCs <- rowSums(sapply(1:ncol(mD), function(ii) as.integer(mD@Cs[,ii]))) == 0  
-  alignments <- mD@alignments[!zeroCs,]
   chunks <- Rle(rep(NA, length(alignments)))
   chunkID <- maxChunk <- 0L
   
@@ -21,11 +19,9 @@
     }
   }
 
-  allchunk <- Rle(NA, nrow(mD))
-  allchunk[!zeroCs] <- chunks
-  values(mD@alignments)$chunk <- allchunk
-  
-  mD
+  values(alignments)$chunk <- chunks
+
+  alignments
 }
 
 
@@ -54,59 +50,68 @@
       message("Chromosome: ", cc)
       message("Finding start-stop co-ordinates...", appendLF = FALSE)
     }
+    if(length(chrSS) > 0) {
+      startstop <- reduce(chrSS@ranges, min.gapwidth = 0)
+      ssChunk <- values(chrSS)$chunk[match(start(startstop), start(chrSS))]
+      chunkDiff <- runLength(ssChunk)
+      
+      startRep <- (rep(cumsum(chunkDiff), chunkDiff) - 1:length(startstop) + 1)
+      endRep <- cbind(1:length(startstop), rep(cumsum(chunkDiff) + 1, chunkDiff) - 1)
+      
+      csegs <- GRanges(seqnames = cc, IRanges(start = rep(start(startstop), startRep),
+                         end = end(startstop)[unlist(lapply(1:nrow(endRep), function(ii) endRep[ii,1]:endRep[ii,2]))]), seqinfo = seqinfo(cTags))
+      
+      if(!missing(strand)) strand(csegs) <- strand
     
-    startstop <- reduce(chrSS@ranges, min.gapwidth = 0)
-    ssChunk <- values(chrSS)$chunk[match(start(startstop), start(chrSS))]
-    chunkDiff <- runLength(ssChunk)
-    
-    startRep <- (rep(cumsum(chunkDiff), chunkDiff) - 1:length(startstop) + 1)
-    endRep <- cbind(1:length(startstop), rep(cumsum(chunkDiff) + 1, chunkDiff) - 1)
-    
-    csegs <- GRanges(seqnames = cc, IRanges(start = rep(start(startstop), startRep),
-                             end = end(startstop)[unlist(lapply(1:nrow(endRep), function(ii) endRep[ii,1]:endRep[ii,2]))]), seqinfo = seqinfo(cTags))
-
-    if(!missing(strand)) strand(csegs) <- strand
-    
-    csegs$csegChunk <- Rle(as.integer(rep(ssChunk, startRep)))
+      csegs$csegChunk <- Rle(as.integer(rep(ssChunk, startRep)))
+    } else csegs <- GRanges()
     if(verbose) message("done!")
     csegs
   }
 
-.squeezeAlign <- function(aD, squeeze = 10, strand)
+squeezeAlign <- function(sqAD, squeeze = 10, strand)
   {
-    if(!missing(strand)) aD <- aD[strand(aD@alignments) == strand,]
-    
-    if(class(aD) == "alignmentData") {
-      chunkRed <- findChunks(aD@alignments, gap = squeeze, checkDuplication = FALSE)
-    } else if(class(aD) == "alignmentMeth") {
-      aD <- aD[rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) > 0,]
-      chunkRed <- .findMethChunks(aD, gap = squeeze)
-    }
-    
-    chunks <- values(chunkRed@alignments)$chunk
-    chunks <- unique(chunks[!is.na(chunks)])
-    
-    chunkSeqs <- chunkRed@alignments[match(chunks, as.integer(values(chunkRed@alignments)$chunk)),]
-    end(chunkSeqs) <- end(chunkRed@alignments)[c(match(chunks, as.integer(values(chunkRed@alignments)$chunk))[-1] - 1, nrow(chunkRed))]
-    chunkSeqs
+    if(!missing(strand)) sqAD <- sqAD[strand(sqAD) == strand,]
+    if(length(sqAD) > 1) {
+      chunkRed <- findChunks(sqAD, gap = squeeze, checkDuplication = FALSE)      
+      chunks <- values(chunkRed)$chunk
+      chunks <- unique(chunks[!is.na(chunks)])
 
-    chunkSeqs <- do.call("c", lapply(seqlevels(aD@alignments), function(chr) {
-      chrchunk <- chunkSeqs[seqnames(chunkSeqs) == chr,]
-      chrmd <- aD@alignments[seqnames(aD@alignments) == chr,]
-      matchmd <- match(start(chrchunk), start(chrmd))
-      values(chrchunk)$chunk <- values(chrmd)$chunk[matchmd]
-      chrchunk
-    }))
-
-    if(missing(strand)) strand(chunkSeqs) = "*"
-
+      chunkSeqs <- chunkRed[match(chunks, as.integer(values(chunkRed)$chunk)),]
+      end(chunkSeqs) <- end(chunkRed)[c(match(chunks, as.integer(values(chunkRed)$chunk))[-1] - 1, length(chunkRed))]
+      
+      chunkSeqs <- do.call("c", lapply(seqlevels(sqAD), function(chr) {
+        chrchunk <- chunkSeqs[seqnames(chunkSeqs) == chr,]
+        chrmd <- sqAD[seqnames(sqAD) == chr,]
+        matchmd <- match(start(chrchunk), start(chrmd))
+        values(chrchunk)$chunk <- values(chrmd)$chunk[matchmd]
+        chrchunk
+      }))      
+      if(missing(strand)) strand(chunkSeqs) = "*"
+    } else chunkSeqs <- sqAD
+    chunkSeqs$multireads <- NULL
+    
     chunkSeqs
   }
 
+filterChunks <- function(aD, gap, filterProp)
+  {
+    if(class(aD) == "alignmentData") {
+      filaD <- findChunks(aD@alignments, gap, checkDuplication = FALSE)      
+    } else if(class(aD) == "alignmentMeth") {
+      if(!missing(filterProp)) {
+        filaD <- aD@alignments[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA), na.rm = TRUE) > 0),]        
+      } else filaD <- aD[rowSums(aD@Cs) > 0,]
+      filaD <-
+        x <- .findMethChunks(filaD, gap)
+    }
+    filaD <- filaD[!duplicated(filaD),]
+    filaD
+  }
 
 
 processAD <-
-function(aD, gap = NULL, squeeze = 0, filterProp = 0.1,
+function(aD, gap, squeeze = 0, filterProp = 0.1,
          strandSplit = FALSE, verbose = TRUE, cl)
   {
 #    if("tag" %in% colnames(values(aD@alignments))) {      
@@ -114,27 +119,14 @@ function(aD, gap = NULL, squeeze = 0, filterProp = 0.1,
                                         #      values(aD@alignments)$tag <- as.integer(as.factor(values(aD@alignments)$tag))
 #    } else values(aD@alignments)$tag <- 1:nrow(aD)
 
-    if(!is.null(gap)) {
-      if(class(aD) == "alignmentData") {
-        aD@alignments <- findChunks(aD@alignments, gap)
-      } else if(class(aD) == "alignmentMeth") {
-        aD <- .findMethChunks(aD, gap)    
-      }
-    }
-
-    if(!missing(filterProp) & class(aD) == "alignmentMeth") {
-        filaD <- aD[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA), na.rm = TRUE) > 0),]
-        filaD <- .findMethChunks(filaD, gap)
-    } else  {
-      filaD <- aD
-    }
+    filaD <- filterChunks(aD, gap, filterProp)
     
     if(squeeze > 0) {
       if(strandSplit) {
-        cTags <- c(.squeezeAlign(filaD, squeeze = squeeze, strand = "+"),                  
-                  .squeezeAlign(filaD, squeeze = squeeze, strand = "-"))
-      } else cTags <- .squeezeAlign(filaD, squeeze = squeeze)
-    } else cTags <- filaD@alignments
+        cTags <- c(squeezeAlign(filaD, squeeze = squeeze, strand = "+"),                  
+                  squeezeAlign(filaD, squeeze = squeeze, strand = "-"))
+      } else cTags <- squeezeAlign(filaD, squeeze = squeeze)
+    } else cTags <- filaD
     
     coordinates <- GRanges()
     seqinfo(coordinates) <- seqinfo(aD@alignments)

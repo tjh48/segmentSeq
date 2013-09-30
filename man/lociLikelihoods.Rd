@@ -68,11 +68,11 @@ replicates <- c(1,1,2,2)
 
 alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
 replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 100)
+chrlens)
 
 # Process the alignmentData object to produce a `segData' object.
 
-sD <- processAD(alignData, cl = NULL)
+sD <- processAD(alignData, gap = 100, cl = NULL)
 
 # Use the segData object to produce a segmentation of the genome, but
 # without evaluating posterior likelihoods.

@@ -21,7 +21,7 @@ setMethod("[", "alignmentMeth", function(x, i, j, ..., drop = FALSE) {
   if(!missing(j))
     {
       j <- as.vector(j)
-      x@nonconversion <- x@libsizes[j]
+      x@nonconversion <- x@nonconversion[j]
       x@Cs <- x@Cs[,j,drop = FALSE]
       x@Ts <- x@Ts[,j,drop = FALSE]
     }

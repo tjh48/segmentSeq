@@ -69,7 +69,7 @@
     csegs
   }
 
-squeezeAlign <- function(sqAD, squeeze = 10, strand)
+.squeezeAlign <- function(sqAD, squeeze = 10, strand)
   {
     if(!missing(strand)) sqAD <- sqAD[strand(sqAD) == strand,]
     if(length(sqAD) > 1) {
@@ -94,7 +94,7 @@ squeezeAlign <- function(sqAD, squeeze = 10, strand)
     chunkSeqs
   }
 
-filterChunks <- function(aD, gap, filterProp)
+.filterChunks <- function(aD, gap, filterProp)
   {
     if(class(aD) == "alignmentData") {
       filaD <- findChunks(aD@alignments, gap, checkDuplication = FALSE)      
@@ -119,13 +119,13 @@ function(aD, gap, squeeze = 0, filterProp = 0.1,
                                         #      values(aD@alignments)$tag <- as.integer(as.factor(values(aD@alignments)$tag))
 #    } else values(aD@alignments)$tag <- 1:nrow(aD)
 
-    filaD <- filterChunks(aD, gap, filterProp)
+    filaD <- .filterChunks(aD, gap, filterProp)
     
     if(squeeze > 0) {
       if(strandSplit) {
-        cTags <- c(squeezeAlign(filaD, squeeze = squeeze, strand = "+"),                  
-                  squeezeAlign(filaD, squeeze = squeeze, strand = "-"))
-      } else cTags <- squeezeAlign(filaD, squeeze = squeeze)
+        cTags <- c(.squeezeAlign(filaD, squeeze = squeeze, strand = "+"),                  
+                  .squeezeAlign(filaD, squeeze = squeeze, strand = "-"))
+      } else cTags <- .squeezeAlign(filaD, squeeze = squeeze)
     } else cTags <- filaD
     
     coordinates <- GRanges()

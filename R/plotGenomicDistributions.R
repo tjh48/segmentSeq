@@ -4,7 +4,8 @@ averageMethylationRegions <- function(mD, samples, coordinates, cuts, bw = 0.01,
     cuts <- ceiling(cuts)
     if(missing(samples)) samples <- mD@replicates
     if(is.factor(samples)) samples <- sapply(levels(samples), function(rep) which(samples== rep))
-    if(!is.list(samples)) samples <- list(samples)    
+    if(!is.list(samples)) samples <- list(samples)
+    if(missing(col)) col <- rainbow(length(samples))
     modcod <- coordinates
     start(modcod) <- pmax(start(modcod) - surrounding, 0)
     end(modcod) <- end(modcod) + surrounding

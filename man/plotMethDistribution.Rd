@@ -29,9 +29,6 @@ add = FALSE, ...)
   \item{centromeres}{
     If given, the location of the centromeres will be plotted.
   }
-  \item{main}{
-    Plot title.
-  }
   \item{add}{
     Should the distribution curve be added to an existing plot? Defaults
     to FALSE.

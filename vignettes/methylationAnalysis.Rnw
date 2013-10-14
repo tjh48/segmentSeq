@@ -1,4 +1,4 @@
-%\VignetteIndexEntry{segmentSeq}
+%\VignetteIndexEntry{methylationAnalysis}
 %\VignettePackage{segmentSeq}
 
 \documentclass[a4paper]{article}
@@ -114,14 +114,14 @@ By one of these methods, we finally acquire an annotated \verb'methData' object,
 
 We can use this \verb'methData' object, in combination with the \verb'alignmentMeth' object, to plot the segmented genome.
 
-<<fig = FALSE, label=plotMeth, height = 10, width = 12>>=
+<<fig = FALSE, label=plotMeth, height = 10, width = 12, eval=FALSE>>=
 plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
 @
 
 %\begin{sidewaysfigure}[!ht]
 \begin{figure}[!ht]
 \begin{center}
-<<label=figplotMeth, fig=TRUE,echo=FALSE>>=
+<<label=figplotMeth, fig=TRUE,echo=FALSE, pdf=FALSE, png=TRUE>>=
 <<plotMeth>>
 @ 
 \caption{Methylation and identified loci on the first ten thousand bases of chromosome 1.}
@@ -157,6 +157,10 @@ We can then retrieve the data for the top differentially methylated regions.
 <<>>=
 topCounts(hSL, "DE")
 @ 
+
+<<echo=FALSE>>=
+stopCluster(cl)
+@
 
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).

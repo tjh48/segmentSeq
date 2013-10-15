@@ -158,7 +158,7 @@ We can then retrieve the data for the top differentially methylated regions.
 topCounts(hSL, "DE")
 @ 
 
-<<echo=FALSE>>=
+<<echo=FALSE, eval=FALSE>>=
 stopCluster(cl)
 @
 

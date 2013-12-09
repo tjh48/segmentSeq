@@ -1,4 +1,4 @@
-%\VignetteIndexEntry{methylationAnalysis}
+%\VignetteIndexEntry{segmentSeq}
 %\VignettePackage{segmentSeq}
 
 \documentclass[a4paper]{article}
@@ -53,9 +53,8 @@ We can begin by plotting the distribution of methylation for these samples. The 
 
 <<fig = FALSE, label=methDist, height = 10, width = 12>>=
 par(mfrow = c(2,1))
-distA <- plotMethDistribution(mD, samples = 1:2, main = "Distributions of methylation")
-distB <- plotMethDistribution(mD, samples = 3:4, add = TRUE, col = "red")
-plotMethDistribution(mD, samples = 1:2, subtract = distB[,2], main = "Differences between distributions")
+dists <- plotMethDistribution(mD, main = "Distributions of methylation", chr = "Chr1")
+plotMethDistribution(mD, subtract = rowMeans(sapply(dists, function(x) x[,2])), main = "Differences between distributions", chr = "Chr1")
 @ 
 
 %\begin{sidewaysfigure}[!ht]
@@ -114,14 +113,14 @@ By one of these methods, we finally acquire an annotated \verb'methData' object,
 
 We can use this \verb'methData' object, in combination with the \verb'alignmentMeth' object, to plot the segmented genome.
 
-<<fig = FALSE, label=plotMeth, height = 10, width = 12, eval=FALSE>>=
+<<fig = FALSE, label=plotMeth, height = 10, width = 12>>=
 plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
 @
 
 %\begin{sidewaysfigure}[!ht]
 \begin{figure}[!ht]
 \begin{center}
-<<label=figplotMeth, fig=TRUE,echo=FALSE, pdf=FALSE, png=TRUE>>=
+<<label=figplotMeth, fig=TRUE,echo=FALSE>>=
 <<plotMeth>>
 @ 
 \caption{Methylation and identified loci on the first ten thousand bases of chromosome 1.}
@@ -157,10 +156,6 @@ We can then retrieve the data for the top differentially methylated regions.
 <<>>=
 topCounts(hSL, "DE")
 @ 
-
-<<echo=FALSE, eval=FALSE>>=
-stopCluster(cl)
-@
 
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).

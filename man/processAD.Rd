@@ -10,7 +10,8 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, cl)
+processAD(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE,
+verbose = TRUE, getCounts = TRUE, cl)
 }
 \arguments{
   \item{aD}{
@@ -35,6 +36,12 @@ processAD(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose =
     constructed separately for each strand. Defaults to FALSE.}
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
+  }
+  \item{getCounts}{
+    If TRUE, counts will be estimated for the constructed `segData'
+    object. If FALSE, they will not, and must be estimated on the fly
+    for further operations on the `segData' object, which is
+    computationally wasteful but will reduce the memory usage.
   }
   
   \item{cl}{A SNOW cluster object, or NULL. See Details.}

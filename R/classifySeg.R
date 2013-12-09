@@ -239,7 +239,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                            matrix(
                                   dnbinom(rep(cts, each = nrow(priors)),
                                           size = 1 / priors[,2],
-                                          mu = rep(libsizes * seglen, each = nrow(priors)) * priors[,1], log = TRUE),
+                                          mu = rep(as.numeric(libsizes) * as.numeric(seglen), each = nrow(priors)) * priors[,1], log = TRUE),
                                   ncol = length(cts))
                            )
 

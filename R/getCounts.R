@@ -5,7 +5,7 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
       for(ss in levels(strand(segments)))
         if(any(strand(segments) == ss))
           counts[which(strand(segments) == ss),] <- .getCounts(segments[strand(segments) == ss,],
-                               aD = aD[which(strand(aD@alignments) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
+                               aD = aD[which(strand(aD@alignments) %in% list(c("+", "*"), c("-", "*"), c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
                                preFiltered = preFiltered, as.matrix = TRUE, useChunk = useChunk, cl = list(NULL, cl)[[as.integer(length(segments) > 1) + 1]])
     } else if(class(aD) == "alignmentMeth") {
       Cs <- Ts <- matrix(NA, ncol = ncol(aD), nrow = length(segments))

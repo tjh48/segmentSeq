@@ -13,7 +13,7 @@ inferred from the data.
 }
 \usage{
 heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion =
-NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
+NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -46,6 +46,8 @@ NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, cl = NULL)
   \item{getLikes}{Should posterior likelihoods for the new segmented
     genome (loci and nulls) be assessed?}
   \item{verbose}{Should the function be verbose? Defaults to TRUE.}
+  \item{tempDir}{A directory for storing temporary files produced during
+    the segmentation.}
   \item{cl}{A SNOW cluster object, or NULL. Defaults to NULL. See Details.}
 }
 

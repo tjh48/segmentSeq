@@ -19,17 +19,16 @@ setMethod("show", "segMeth", function(object) {
 
 setMethod("[", "segMeth", function(x, i, j, ..., drop = FALSE) {
   x <- callNextMethod(x, i, j, ..., drop = FALSE)
-  if(missing(j))
-    j <- 1:ncol(x)
-  if(missing(i))
-    i <- 1:nrow(x)
-
-  i <- as.vector(i)
-  j <- as.vector(j)
-  
-  if(nrow(x@Cs) > 0) x@Cs <- x@Cs[i,j, drop = FALSE]
-  if(nrow(x@Ts) > 0) x@Ts <- x@Ts[i,j, drop = FALSE]
-  if(length(x@nonconversion)) x@nonconversion <- x@nonconversion[j]
-  
+  if(!missing(j)) {
+    j <- as.vector(j)  
+    if(nrow(x@Cs) > 0) x@Cs <- x@Cs[,j, drop = FALSE]
+    if(nrow(x@Ts) > 0) x@Ts <- x@Ts[,j, drop = FALSE]
+    if(length(x@nonconversion)) x@nonconversion <- x@nonconversion[j]
+  }
+  if(!missing(i)) {
+    i <- as.vector(i)
+    if(nrow(x@Cs) > 0) x@Cs <- x@Cs[i,, drop = FALSE]
+    if(nrow(x@Ts) > 0) x@Ts <- x@Ts[i,, drop = FALSE]
+    } 
   x
 })

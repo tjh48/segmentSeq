@@ -9,8 +9,8 @@ Plots the distribution of methylation (as defined in an
 \code{\link{alignmentMeth}} object upon the genome.
 }
 \usage{
-plotMethDistribution(meth, samples, bw = 1e-3, subtract, centromeres,
-add = FALSE, ...)
+plotMethDistribution(meth, samples, bw = 1e-3, subtract, chrs, centromeres,
+add = FALSE, col, legend = TRUE, ...)
 }
 \arguments{
   \item{meth}{
@@ -19,23 +19,43 @@ add = FALSE, ...)
 }
   \item{samples}{
     A numeric vector defining the columns of data in the `meth' object
-    from which to estimate proportions of methylation.
-}
+    from which to estimate proportions of methylation, or a list object
+    containing numeric vectors if multiple distributions are to be
+    derived from the `meth' object, or a factor in which each level of
+    the factor defines a set of columns for the `meth' object. If
+    missing, derived from the `@replicates' slot of the `meth' object.
+  }
+  \item{bw}{
+    Gives the bandwidth of the density plots; analagous to the `bw'
+    parameter in \code{\link{density}}.
+    }
   \item{subtract}{
     A numeric vector giving values to be subtracted from the density of
     methylation. See Details.
   }
-  \item{bw}{A scaling factor for the estimation of density of methylation.}
+  \item{chrs}{
+    The names of the chromosomes for which a distribution should be
+    plotted. If mising, derived from the `@alignments' slot of the
+    `meth' object.
+  }
   \item{centromeres}{
-    If given, the location of the centromeres will be plotted.
+    If given, a numeric vector defining the position of the centromeres
+    on the chromosomes. These will be then be plotted.
   }
   \item{add}{
     Should the distribution curve be added to an existing plot? Defaults
     to FALSE.
-}
+  }
+  \item{col}{
+    A vector of colours to be used to plot the distributions. If
+    missing, generated from \code{\link{rainbow}}.
+  }
+  \item{legend}{
+    Should a legend be added to the plot? Defaults to TRUE.
+  }
   \item{\dots}{
     Any additional parameters to be passed to \code{\link{plot}}.
-}
+  }
 }
 \details{
   The function returns the density of methylation calculated.

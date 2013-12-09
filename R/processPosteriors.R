@@ -28,15 +28,15 @@
                          })
 
     if(class(lociPD) == "segMeth") {
-        segs <- new("methData",
-                    data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
-                    pairData = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@pairData)),
-                    replicates = lociPD@replicates,
-                    coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) return(x@coordinates) else return(GRanges()))),
-                    seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
-                    locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
-                    libsizes = 1 + lociPD@nonconversion,
-                    pairLibsizes = 1 - lociPD@nonconversion)
+      segs <- new("methData",
+                  data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
+                  pairData = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@pairData)),
+                  replicates = lociPD@replicates,
+                  coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x) && length(x@coordinates) > 0) return(x@coordinates) else return(GRanges()))),
+                  seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
+                  locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
+                  libsizes = 1 + lociPD@nonconversion,
+                  pairLibsizes = 1 - lociPD@nonconversion)
       } else {
         segs <- new("lociData",
                     data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),

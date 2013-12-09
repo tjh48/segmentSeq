@@ -110,9 +110,7 @@
   }
 
 
-processAD <-
-function(aD, gap, squeeze = 0, filterProp = 0.1,
-         strandSplit = FALSE, verbose = TRUE, cl)
+processAD <- function(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = TRUE, cl)         
   {
 #    if("tag" %in% colnames(values(aD@alignments))) {      
 
@@ -169,22 +167,22 @@ function(aD, gap, squeeze = 0, filterProp = 0.1,
 #                         which(strand(cs) == "-")[getOverlaps(cs[strand(cs) == "-",], cTags[strand(cTags) == "-",], whichOverlaps = FALSE)]),]
 #            }
             
-            if(verbose){
-              message(length(cs), " candidate loci found.")
-              message("Getting count data for each candidate locus...", appendLF = FALSE)
-            }
-            
-            windowChunks <- .windowing(cs)
-            windata <- lapply(windowChunks, partCounts)
+            if(verbose) message(length(cs), " candidate loci found.")
 
-            if(class(aD) == "alignmentData") {
-              data <- rbind(data, do.call("rbind", windata))                                          
-            } else if(class(aD) == "alignmentMeth") {
-              Cs <- rbind(Cs, do.call("rbind", lapply(windata, function(x) x$Cs)))
-              Ts <- rbind(Ts, do.call("rbind", lapply(windata, function(x) x$Ts)))
-              rm(windata)
-              gc()
-            }
+            if(getCounts) {
+              if(verbose) message("Getting count data for each candidate locus...", appendLF = FALSE)
+              windowChunks <- .windowing(cs)
+              windata <- lapply(windowChunks, partCounts)
+              
+              if(class(aD) == "alignmentData") {
+                data <- rbind(data, do.call("rbind", windata))                                          
+              } else if(class(aD) == "alignmentMeth") {
+                Cs <- rbind(Cs, do.call("rbind", lapply(windata, function(x) x$Cs)))
+                Ts <- rbind(Ts, do.call("rbind", lapply(windata, function(x) x$Ts)))
+                rm(windata)
+                gc()
+              }
+            } else data <- Cs <- Ts <- matrix(nrow = 0, ncol = ncol(aD))
             
             if(verbose)
               message("...done!")

@@ -106,6 +106,12 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 <<label=figSeg, fig=TRUE,echo=FALSE>>=
 <<segPlot>>
 @ 
+
+
+<<stopCluster, echo=FALSE>>=
+stopCluster(cl)
+@
+
 \caption{The segmented genome (first $10^5$ bases of chromosome 1.}
 \label{fig:Seg}
 \end{center}

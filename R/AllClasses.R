@@ -9,4 +9,5 @@ setClass("segMeth", representation(Cs = "matrix", Ts = "matrix", nonconversion =
 
 
 setClass("lociData", representation(locLikelihoods = "matrix", coordinates = "GRanges"), contains = "countData")
+#setClass("methData", representation(locLikelihoods = "matrix"), contains = "segMeth")
 setClass("methData", representation(locLikelihoods = "matrix", coordinates = "GRanges"), contains = "pairedData")

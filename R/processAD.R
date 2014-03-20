@@ -125,16 +125,15 @@ processAD <- function(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALS
                   .squeezeAlign(filaD, squeeze = squeeze, strand = "-"))
       } else cTags <- .squeezeAlign(filaD, squeeze = squeeze)
     } else cTags <- filaD
-    
+
     coordinates <- GRanges()
     seqinfo(coordinates) <- seqinfo(aD@alignments)
-
+    
     data <- Cs <- Ts <- NULL
     
     partCounts <- function(chunks) {
       segments <- cs[which(as.integer(cs$csegChunk) %in% chunks),]             
-      chad <- which(as.integer(values(cTags)$chunk) %in% chunks)
-      
+      chad <- which(as.integer(values(cTags)$chunk) %in% chunks)      
       waD <- aD[which(seqnames(aD@alignments) == cc & end(aD@alignments) >= min(start(cTags[chad])) & start(aD@alignments) <= max(end(cTags[chad]))),]
       
                                         #              waD@alignments <- cTags[chad,,drop = FALSE]

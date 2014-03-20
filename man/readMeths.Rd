@@ -13,7 +13,7 @@ files into  an object of `\code{\link{alignmentMeth}}' class which can
 then be further processed to identify methylation loci.
 }
 \usage{
-readMeths(files, dir = ".", libnames, replicates, nonconversion)
+readMeths(files, dir = ".", libnames, replicates, nonconversion, chrs)
 }
 \arguments{
   \item{files}{
@@ -35,7 +35,12 @@ readMeths(files, dir = ".", libnames, replicates, nonconversion)
     A numeric vector (all members should lie between 0 and 1) defining the
     non-conversion rate of each library. See
     \code{\link{alignmentMeth-class}} for details.
-}
+  }
+  \item{chrs}{
+    An (optional) character vector giving the names of the chromosomes
+    to be read from the files. If ommitted, all chromosomes will be read
+    in.
+  }
 }
 
 \value{

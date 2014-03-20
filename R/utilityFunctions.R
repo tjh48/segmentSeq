@@ -142,8 +142,8 @@
       }
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
       lD@seglens <- sD@seglens
-    if(nrow(sD@locLikelihoods) > 0)
-      lD@locLikelihoods <- sD@locLikelihoods
+    lD@locLikelihoods <- sD@locLikelihoods
+      
     lD
   }
 
@@ -192,12 +192,16 @@
   {
     winsize <- ceiling(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
     
-    chunkSD <- values(findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE))$chunk
+    chunkSD <- findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE, justChunks = TRUE)
     chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
     winchunks <- ceiling(chunkWindows[,2] / winsize)
     dupWin <- sort(c(which(!duplicated(winchunks)), which(diff(winchunks) > 1) + 2))
     dupWin <- cbind(dupWin, c(dupWin[-1] - 1, nrow(chunkWindows)))
-    windowChunks <- lapply(1:nrow(dupWin), function(ii) unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]])
+    dupWin <- dupWin[dupWin[,2] >= dupWin[,1],,drop = FALSE]
+                     
+    windowChunks <- lapply(1:nrow(dupWin), function(ii) {
+      unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]]
+    })
     
     sDsplit <- lapply(windowChunks, function(wc) {
       which(chunkSD %in% wc)
@@ -262,6 +266,7 @@
 
 .methFunction <- function(methD, prop, locCutoff, nullP = FALSE, prior = c(0.5, 0.5))
   {
+    if(nrow(methD) == 0) return(matrix(nrow = 0, ncol = length(levels(methD@replicates))))
     nonconversion <- methD@nonconversion
     
     Cs <- methD@Cs

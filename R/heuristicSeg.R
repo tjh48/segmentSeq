@@ -1,43 +1,122 @@
-heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL)
+heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp = FALSE)
   {
-    if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)    
+    if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
+    
     if(!is.null(subRegion))
       {
         sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
         aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
       }
+
+    # this part to be updated for split or removed - probably removed.
+    if(FALSE & class(sD) == "GRanges" & class(aD) == "alignmentMeth") {
+      if(any(c("+", "-") %in% as.character(strand(sD)))) strandSplit = TRUE else strandSplit = FALSE
+      lD <- do.call(c, unname(lapply(seqlevels(sD), function(cc) {
+        sDc <- sD[seqnames(sD) == cc,]
+        chunknum <- table(sDc$chunk)
+        chunkexp <- (chunknum * (chunknum + 1)) / 2
+        properCut <- function(x, breaks) if(breaks == 1) return(rep(1, length(x))) else return(cut(x, breaks, labels = FALSE))
+        chunksplit <- split(unique(sDc$chunk), properCut(cumsum(chunkexp), ceiling(sum(chunkexp) * ncol(aD) / largeness)))
+        if(verbose) message("Segmentation split into ", length(chunksplit), " parts.")        
+
+        lDc <- do.call(c, unname(lapply(1:length(chunksplit), function(ii) {
+          chunks <- chunksplit[[ii]]
+          if(verbose) message("Segmenting; Part ", ii, " of ", length(chunksplit))
+          cTags <- sDc[sDc$chunk %in% chunks,]
+          if(strandSplit) {
+            cs <- c(.chrProcessing(cTags, cc, strand = "+", verbose = FALSE),
+                    .chrProcessing(cTags, cc, strand = "-", verbose = FALSE))              
+          } else {
+            cs <- .chrProcessing(cTags, cc, verbose = FALSE)
+          }
+          cs <- cs[order(as.integer(cs$csegChunk), start(cs), end(cs)),]
+          waD <- aD[which(seqnames(aD@alignments) == cc & end(aD@alignments) >= min(start(cs)) & start(aD@alignments) <= max(end(cs))),]
+          
+                                        #              waD@alignments <- cTags[chad,,drop = FALSE]
+                                        #              waD@data <- data[chad,,drop = FALSE]
+                                        #if(chunks %% 100 == 0)
+          if(verbose) message(".", appendLF = FALSE)          
+          counts <- getCounts(segments = cs, aD = waD, preFiltered = FALSE, useChunk = TRUE, cl = NULL)          
+          tD <- new("segMeth")
+          tD@nonconversion <- aD@nonconversion
+          tD@replicates = aD@replicates
+          tD@coordinates = cTags
+          tD@Cs = counts$Cs
+          tD@Ts = counts$Ts
+          lD <- .partheuristicSeg(tD, aD = aD, bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = 1e8, tempDir = tempDir)
+
+          if(!is.null(tempDir)) save(lD,
+                                     file = paste(tempDir, "/seg", ii, "_",
+                                       paste(apply(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE))[,1:3], 1, as.character), 2, function(x) paste(gsub(" ", "", x), collapse = "_")), collapse = "__"),
+                                       "_locLikes.RData", sep = "")
+                                     )
+          values(lD@coordinates) <- lD@locLikelihoods
+          lD@coordinates
+        })))
+      })))
+      return(lD)
+    }
     
+                              
     if(prod(dim(sD)) > largeness)
       {
         sDsplit <- .splitSD(sD, largeness)
-        
-        message("Segmentation split into ", length(sDsplit), " parts.")
-        
+
+        if(verbose) message("Segmentation split into ", length(sDsplit), " parts.")
+#ii <- 22; strand <- "+"        
         splitSeg <- lapply(1:length(sDsplit), function(ii) {
-          message("Segmenting; Part ", ii, " of ", length(sDsplit))          
-          .partheuristicSeg(sD[sDsplit[[ii]],], aD = aD, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+          if(verbose) message("Segmenting; Part ", ii, " of ", length(sDsplit))
+        
+          strandSeg <- lapply(unique(strand(sD@coordinates)), function(strand) {
+            if(verbose) message("Strand: ", strand)
+            existingSDP <- FALSE
+                                        # better name recognition for temporary files from sD[sDsplit[[ii]]] ranges needed              
+            if(recoverFromTemp & !is.null(tempDir))
+              {
+                existingTemp <- dir(tempDir, pattern = paste("seg", ii, "_\\", strand, "_", sep = ""), full.names = TRUE)
+                if(length(existingTemp) == 1) {
+                  if(verbose) message("Recovering from temporary file...")
+                  load(existingTemp)
+                  existingSDP = TRUE
+                }
+              }
+# sDP = sD[intersect(which(strand(sD@coordinates) == strand); sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
+            if(!existingSDP) {
+              sDP <- .partheuristicSeg(sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),], aDP = aD[strand(aD@alignments) == strand,], bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+              
+              if(!is.null(tempDir)) save(sDP,
+                                         file = paste(tempDir, "/seg", ii, "_", strand, "_",
+                                           paste(apply(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE))[,1:3], 1, as.character), 2, function(x) paste(gsub(" ", "", x), collapse = "_")), collapse = "__"),
+                                           "_locLikes.RData", sep = "")
+                                         )
+            }
+            return(sDP)
+          })
+          if(length(strandSeg) == 1) sDP <- strandSeg else sDP <- .mergeListLoci(strandSeg)
+          return(sDP)
         })
         splitSeg <- splitSeg[sapply(splitSeg, nrow) > 0]
         if(length(splitSeg) > 0) lD <- .mergeListLoci(splitSeg) else lD <- new("methData")
-      } else lD <- .partheuristicSeg(sD, aD = aD, bimodality = FALSE, verbose = TRUE, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
-        
-    if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")
-
+      } else lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+    
+    if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")    
+    
     lD
   }
 
 
-.partheuristicSeg <- function(sDP, aD, bimodality = FALSE, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, verbose = TRUE, locCutoff, largeness = 1e8, tempDir = tempDir, cl)
+.partheuristicSeg <- function(sDP, aDP, bimodality = FALSE, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, verbose = TRUE, locCutoff, largeness = 1e8, tempDir = tempDir, cl)
   {
     fastUniques <- function(x)
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
 
     sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
-    sDPSmall <- fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates))))
+    if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = FALSE)
+    sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
     
     dupStarts <- which(fastUniques(cbind(as.character(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)))))
 
-    if(verbose) message("Evaluating potential loci...", appendLF = FALSE)
+    #if(verbose) if(verbose) message("Evaluating potential loci...", appendLF = FALSE)
 
     replicates <- sDP@replicates
 
@@ -47,13 +126,13 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       {
         locDens <- rowSums(sapply(which(sDP@replicates == rep), function(jj)
                        as.integer(sDP@data[,jj]) / seglens[,1] / sDP@libsizes[jj])) / sum(sDP@replicates == rep)
-        message(".", appendLF = FALSE)
+        if(verbose) message(".", appendLF = FALSE)
         
         if(!bimodality) return(locDens * 1e9 > RKPM) else {
           logDens <- log10(locDens)          
           nzlocs <- which(logDens != -Inf)
           bimodalSep(logDens[nzlocs], bQ = c(0, 1))
-          message("done!")
+          if(verbose) message("done!")
           return(logDens > locCutoff)
         }
       }
@@ -67,10 +146,11 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       locLikes <- NULL
       
       for(ii in 1:length(splitCalc)) {
-        message(".", appendLF = FALSE)
+        if(verbose) message(ii, appendLF = FALSE)
+        if(verbose) message(".", appendLF = FALSE)
         sDPx <- sDP[splitCalc[[ii]],]
         if(nrow(sDPx@Cs) == 0) {
-          counts <- getCounts(sDPx@coordinates, aD = aD, cl = cl)
+          counts <- getCounts(sDPx@coordinates, aD = aDP, cl = cl)
           sDPx@Cs = counts$Cs
           sDPx@Ts = counts$Ts
         }
@@ -81,42 +161,51 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       
 #      internalNulls <- sDP[rowSums(!sDP@locLikelihoods, na.rm = TRUE) > 0 & width(sDP@coordinates) > gap,]
 
-      message(".", appendLF = FALSE)
-      empties <- .zeroInMeth(aD = aD, smallSegs = sDP@coordinates[sDPSmall])
-      message(".", appendLF = FALSE)
+      empties <- .zeroInMeth(aD = aDP, smallSegs = sDP@coordinates[sDPSmall])
+      if(verbose) message("done!", appendLF = TRUE)
       if(length(empties) > 0) {
         potnullD <- .constructMethNulls(empties, sDP, sDP@coordinates[rowSums(sDP@locLikelihoods, na.rm = TRUE) > 0,])
-        message(".", appendLF = FALSE)
+
+        if(verbose) message("Number of candidate nulls: ", nrow(potnullD), appendLF = FALSE)
+        
+        if(verbose) message(".", appendLF = FALSE)
         potnullD <- potnullD[width(potnullD@coordinates) > gap,]
 
-        counts <- getCounts(potnullD@coordinates, aD, cl = cl)
+        breaks <- ceiling(prod(dim(potnullD)) / largeness)
+        if(breaks > 1) splitCalc <- split(1:nrow(potnullD), cut(1:nrow(potnullD), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(potnullD))        
+      
         
-        potnullD@Cs <- counts$Cs
-        potnullD@Ts <- counts$Ts
+      
+        pnDLL <- do.call("rbind", lapply(1:length(splitCalc), function(ii) {
+          if(verbose) message(".", appendLF = FALSE)
+          potnullDx <- potnullD[splitCalc[[ii]],]
+          if(nrow(potnullDx@Cs) == 0) {
+            counts <- getCounts(potnullDx@coordinates, aD = aDP, cl = cl)
+            potnullDx@Cs = counts$Cs
+            potnullDx@Ts = counts$Ts
+          }          
 
-        colnames(potnullD@Cs) <- colnames(sDP@Cs)
-        colnames(potnullD@Ts) <- colnames(sDP@Cs)
-        potnullD@nonconversion <- aD@nonconversion
-        potnullD@locLikelihoods <- .methFunction(potnullD, prop = prop, locCutoff = locCutoff, nullP = TRUE)
+          colnames(potnullDx@Cs) <- colnames(sDP@Cs)
+          colnames(potnullDx@Ts) <- colnames(sDP@Cs)
+          potnullDx@nonconversion <- aDP@nonconversion
+          ll <- .methFunction(potnullDx, prop = prop, locCutoff = locCutoff, nullP = TRUE)
+        })
+                             )
         
       } else potnullD <- new("segMeth")      
       
-      message(".", appendLF = FALSE)
+      if(verbose) message(".", appendLF = FALSE)
       potnulls <- new("segMeth",
                       replicates = sDP@replicates,
-                      coordinates = c(sDP@coordinates, potnullD@coordinates), nonconversion = sDP@nonconversion, locLikelihoods = rbind(nullLikes, potnullD@locLikelihoods))                 
+                      coordinates = c(sDP@coordinates, potnullD@coordinates), nonconversion = sDP@nonconversion, locLikelihoods = rbind(nullLikes, pnDLL))                 
 
 #      save(sDP, potnulls, file = "temp/processPosteriorVariables.RData")
       potnulls@locLikelihoods <- log(potnulls@locLikelihoods)
       sDP@locLikelihoods <- log(sDP@locLikelihoods)
       
-      message("...done!")
-      seg <- .processPosteriors(lociPD = sDP, nullPD = potnulls, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, cl = cl)
+      if(verbose) message("...done!")
+      seg <- .processPosteriors(lociPD = sDP, nullPD = potnulls, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, verbose = TRUE, cl = cl)
       gc()
-
-      if(!is.null(tempDir)) save(seg, file = paste(tempDir, "/seg",
-                                        paste(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE), as.is = TRUE)[,1:3], 1, as.character), collapse = "_")
-                                        , "_locLikes.RData", sep = ""))
       
       return(seg)
 
@@ -215,13 +304,16 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
             if(!bimodality) nulM <- (nulDens * 1e9 < RKPM) & width(nullAnnotation) > gap else {
               nulM <- (log10(nulDens) < locCutoff) & width(nullAnnotation) > gap
             }
+            whNull <- which(rowSums(nulM) > 0)
+          } else {
+            whNull <- integer()
+            nulM <- matrix(nrow = 0, ncol = length(levels(replicates)))
           }
-        
-        whNull <- which(rowSums(nulM) > 0)
-        nulM <- nulM[whNull,,drop = FALSE]
-        nullData <- nullData[whNull,,drop = FALSE]
-        nullAnnotation <- nullAnnotation[whNull,]
-        gc()
+
+      nulM <- nulM[whNull,,drop = FALSE]
+      nullData <- nullData[whNull,,drop = FALSE]
+      nullAnnotation <- nullAnnotation[whNull,]
+      gc()
         
         if (is.null(subRegion)) {
           nulSub <- 1:length(nullAnnotation)
@@ -250,7 +342,7 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
         
         gc()
         
-        seg <- .processPosteriors(lociPD = potlociD, nullPD = potnullD, emptyPD = emptyPD, aD = aD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, cl = cl)
+        seg <- .processPosteriors(lociPD = potlociD, nullPD = potnullD, emptyPD = emptyPD, aD = aDP, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, verbose = verbose, cl = cl)
       }
     seg
   }

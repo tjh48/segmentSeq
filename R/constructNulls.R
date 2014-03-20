@@ -24,38 +24,34 @@
   }      
 
 
-.constructMethNulls <- function(emptyNulls, sDWithin, locDef)
+.constructMethNulls <- function(emptyNulls, sDP, locDef)
   {
-    leftRight <- do.call("rbind", lapply(seqlevels(sDWithin@coordinates), function(chr) {
-      leftids <- findInterval(start(sDWithin@coordinates[seqnames(sDWithin@coordinates) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,]))
+    leftRight <- do.call("rbind", lapply(seqlevels(sDP@coordinates), function(chr) {
+      leftids <- Rle(findInterval(start(sDP@coordinates[seqnames(sDP@coordinates) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,])))
       leftids[leftids <= 0] <- NA      
-      left <- start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]) - start(emptyNulls[seqnames(emptyNulls) == chr])[leftids]
+      left <- start(sDP@coordinates[which(seqnames(sDP@coordinates) == chr),]) - rep(start(emptyNulls[seqnames(emptyNulls) == chr])[runValue(leftids)], runLength(leftids))
 
-      rightids <- findInterval(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1
+      rightids <- Rle(findInterval(end(sDP@coordinates[which(seqnames(sDP@coordinates) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1)
       rightids[rightids > sum(seqnames(emptyNulls) == chr)] <- NA
-      right = end(emptyNulls[seqnames(emptyNulls) == chr])[rightids] - end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),])
+      right = rep(end(emptyNulls[seqnames(emptyNulls) == chr])[runValue(rightids)], runLength(rightids)) - end(sDP@coordinates[which(seqnames(sDP@coordinates) == chr),])
       
       cbind(left, right)
     }))
-
-    emptyInside <- which(getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
-    
-    emptyData <- do.call("cbind", lapply(1:ncol(sDWithin), function(ii) rep(0L, length(emptyNulls))))
 
     leftGood <- (!is.na(leftRight[,'left']))
     rightGood <- (!is.na(leftRight[,'right']))
     
     nullCoords = GRanges(
-      seqnames = c(seqnames(emptyNulls), seqnames(sDWithin@coordinates)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
+      seqnames = c(seqnames(emptyNulls), seqnames(sDP@coordinates)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
       IRanges(
               start = c(start(emptyNulls),
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood & rightGood],
-                (start(sDWithin@coordinates) - leftRight[,"left"])[leftGood],
-                (start(sDWithin@coordinates))[rightGood]),
+                (start(sDP@coordinates) - leftRight[,"left"])[leftGood & rightGood],
+                (start(sDP@coordinates) - leftRight[,"left"])[leftGood],
+                (start(sDP@coordinates))[rightGood]),
               end = c(end(emptyNulls),
-                (end(sDWithin@coordinates) + leftRight[,"right"])[leftGood & rightGood],
-                (end(sDWithin@coordinates))[leftGood],
-                (end(sDWithin@coordinates) + leftRight[,'right'])[rightGood]))
+                (end(sDP@coordinates) + leftRight[,"right"])[leftGood & rightGood],
+                (end(sDP@coordinates))[leftGood],
+                (end(sDP@coordinates) + leftRight[,'right'])[rightGood]))
               )
     
     rordNull <- order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))
@@ -66,7 +62,7 @@
     nullCoords <- nullCoords[overLoci,]
 
     potnullD <- new("segMeth",
-                    replicates = sDWithin@replicates,
+                    replicates = sDP@replicates,
                     coordinates = nullCoords)    
     potnullD
   }

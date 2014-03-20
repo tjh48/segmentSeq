@@ -13,7 +13,8 @@ inferred from the data.
 }
 \usage{
 heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion =
-NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL)
+NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL,
+cl = NULL, recoverFromTemp = FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -48,13 +49,23 @@ NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NUL
   \item{verbose}{Should the function be verbose? Defaults to TRUE.}
   \item{tempDir}{A directory for storing temporary files produced during
     the segmentation.}
-  \item{cl}{A SNOW cluster object, or NULL. Defaults to NULL. See Details.}
+  \item{cl}{A SNOW cluster object, or NULL. Defaults to NULL. See
+    Details.}
+  \item{recoverFromTemp}{If TRUE, will attempt to recover the position
+    saved in 'tempDir'. Defaults to FALSE. See Details.}
 }
 
 \details{
   A \code{'cluster'} object (package: snow) may be used for
   parallelisation of parts of this function when examining large data sets.
-  Passing NULL to this variable will cause the function to run in non-parallel mode.
+  Passing NULL to this variable will cause the function to run in
+  non-parallel mode.
+
+  If \code{recoverFromTemp = TRUE}, the function will attempt to recover
+  a crashed position from the temporary files in \code{tempDir}. At
+  present, the function assumes you know what you are doing, and will
+  perform no checking that these files are suitable for the specified
+  recovery. Use with caution.
 }
 \value{
   A \code{\link{lociData}} object, containing count

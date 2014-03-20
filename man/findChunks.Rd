@@ -5,7 +5,7 @@
 This function identifies chunks of data within a set of aligned reads by looking for gaps within the alignments; regions where no reads align. If we assume that a locus should not contain a gap of sufficient length, then we can separate the analysis of the data into chunks defined by these gaps, reducing the complexity of the problem of segmentation.
 }
 \usage{
-findChunks(alignments, gap, checkDuplication = TRUE)
+findChunks(alignments, gap, checkDuplication = TRUE, justChunks = FALSE)
 }
 \arguments{
   \item{alignments}{A \code{\linkS4class{GRanges}} object
@@ -14,6 +14,8 @@ findChunks(alignments, gap, checkDuplication = TRUE)
     no locus can exist.}
   \item{checkDuplication}{Should we check whether or not reads are
     duplicated within a chunk? Defaults to TRUE.}
+  \item{justChunks}{If TRUE, returns a vector of the chunks rather than
+    the GRanges object with chunks attached. Defaults to FALSE.}
 }
 
 \details{This function is called by the \code{\link{readGeneric}} and

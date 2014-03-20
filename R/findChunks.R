@@ -1,4 +1,4 @@
-findChunks <- function(alignments, gap, checkDuplication = TRUE)
+findChunks <- function(alignments, gap, checkDuplication = TRUE, justChunks = FALSE)
 {
   chunks <- Rle(rep(NA, length(alignments)))
   chunkID <- maxChunk <- 0L
@@ -18,6 +18,8 @@ findChunks <- function(alignments, gap, checkDuplication = TRUE)
       maxChunk <- max(chunks, na.rm = TRUE)
     }
   }
+
+  if(justChunks) return(chunks)
   
   values(alignments)$chunk <- chunks
 

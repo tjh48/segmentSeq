@@ -1,8 +1,9 @@
 \name{averageProfiles}
 \alias{averageProfiles}
+\alias{plotAverageProfile}
 
 \title{
-Plots the average distribution of aligned reads (taken from an
+Computes and plots the average distribution of aligned reads (taken from an
 alignmentData object) or methylation (taken from an
 alignmentMeth object) over a set of coordinates (and optionally the
 surrounding regions).
@@ -14,8 +15,9 @@ coordinates. The plotted distributions can be split up into different
 sample groups by the user. 
 }
 \usage{
-averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw = 5000, surrounding =
-0, add = FALSE, col, ylim, ...)
+averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw =
+5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, ...)
+plotAverageProfile(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -43,7 +45,7 @@ averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw = 5000, surrou
     average coverage/methylation density.
   }
   \item{bw}{
-    If 'cuts' is missing, this factor divdes the product of the length of the
+    If 'cuts' is missing, this factor divides the product of the length of the
     'coordinates' object and the median width of the coordinates to
     defines the number of cuts (minimum twenty cuts).
 }
@@ -62,9 +64,30 @@ averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw = 5000, surrou
     See `ylim' option for plot. If missing, will be calculated from
     data.
   }
+  \item{meanOnly}{
+    If TRUE, the mean methylation profile for each member of the
+    'samples' parameter is plotted on a single graph. If FALSE, every
+    5th percentile is plotted for each member of the sample parameters,
+    each on a separate graph.
+  }
+  \item{position}{
+    A vector describing the position of each point to be plotted. Take
+    from the `$position' element in the list object returned by
+    `averageProfiles'.
+  }
+  \item{profiles}{
+    A matrix describing the profiles to be plotted. Take
+    from the `$profiles element in the list object returned by
+    `averageProfiles'.
+  }
+  \item{legend}{
+    If TRUE, a legend describing the samples is included on the plot.
+  }
+  
   \item{\dots}{
-    Additional arguments to be passed to the 'plot' or 'lines' functions.
-}
+    Additional arguments to be passed to the 'plotAverageProfile'
+    function, and hence to the 'plot' or 'lines' methods.    
+  }
 }
 \value{
   Invisibly, a list containing the coordinates of the lines plotted.

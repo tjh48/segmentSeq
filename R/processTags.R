@@ -1,4 +1,4 @@
-readMeths <- function(files, dir = ".", libnames, replicates, nonconversion)#, splitStrands = TRUE)#, duplicateFiles)
+readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chrs)#, splitStrands = TRUE)#, duplicateFiles)
   {
     if(missing(nonconversion))
       nonconversion = rep(0, length(files))
@@ -7,15 +7,18 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion)#, s
     replicates <- as.factor(replicates)
     if(dir != "") files <- paste(dir, files, sep = "/")
 
+    if(missing(chrs)) chrs <- NULL
+    
     message("Reading files...", appendLF = FALSE)
-    methReads <- lapply(files, function(file) {
+    methReads <- lapply(files, function(file, chrs) {
       message(".", appendLF = FALSE)
       mreads <- read.delim(file, as.is = TRUE, header = FALSE)
+      if(!is.null(chrs)) mreads <- mreads[mreads[,1] %in% chrs,]
       mr <- GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], #multireads = as.integer(mreads[,6]),
                     Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
       if(ncol(mreads) == 6) mr$multireads <- Rle(mreads[,6]) else mr$multireads <- Rle(1)
       mr
-    })
+    }, chrs = chrs)
     message("done!", appendLF = TRUE)
     
     chrTag <- methReads[[1]]

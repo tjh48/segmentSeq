@@ -114,6 +114,14 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 
 This \verb'countData' object can now be examined for differential expression with the \verb'baySeq' package.
 
+
+Finally, to be a good citizen, we stop the cluster 
+we started earlier:
+
+<<stopCluster>>=
+stopCluster(cl)
+@
+
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2010} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{baySeq: Empirical Bayesian Methods For Identifying Differential Expression In Sequence Count Data.} BMC Bioinformatics (2010).
 \bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).

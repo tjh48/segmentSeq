@@ -57,7 +57,7 @@
   return(sampstats)
 }
 
-plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, ...)
+plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
   {
     if(meanOnly) {
       if(missing(col)) col <- rainbow(length(profiles))
@@ -78,10 +78,19 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
       if(missing(col)) col <- do.call("rbind", lapply(1:10, function(s) rainbow(length(profiles), s = s / 10)))
       for(mm in 1:length(profiles)) {
         plot(x = NA, y = NA, ylim = ylim, xlim = range(position), ylab = "proportion of methylation", xlab = "position", ...)
+
+        if(!missing(titles))
+          title(main = titles[mm])
+        
         for(ii in 1:9)
           rect(position - diff(position[1:2]) / 2, profiles[[mm]][,2 + ii], position + diff(position[1:2]) / 2, profiles[[mm]][,22 - ii], col = col[ii,mm], border = col[ii,mm])
         lines(x = position, y = profiles[[mm]][,1], ylim = c(0,1), col = col[10,mm])        
-        if(surrounding > 0) abline(v = c(surrounding, max(position) + diff(position[1:2]) - 0.5 - surrounding), col = "dark grey", lty = 3, lwd = 2)
+        if(surrounding > 0) {
+          seglen <- length(profCHH.DMR[[1]]$position) / 3
+          abline(v = c(weighted.mean(position[0:1 + seglen], w = c(0.1, 0.9)),
+                   weighted.mean(position[seglen * 2 + 1:2], w = c(0.9, 0.1))),
+                   col = "dark grey", lty = 3, lwd = 2)
+        }
       }
     }
   }
@@ -339,4 +348,4 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
       text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05, x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 2.5)
     } else lines(x = position, y = methylation, col = col, ...)
     invisible(data.frame(position = breaks, methylation = methdiv))
-  }   
+  }

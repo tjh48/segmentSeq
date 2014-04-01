@@ -8,6 +8,8 @@
   }
 
 .printLocLikes <- function(locLike) {
+  if(class(locLike) == "DataFrame") locLike <- .DF2matrix(locLike)
+  
   if(any(exp(locLike) > 1, na.rm = TRUE))
     {
       cat('\nSlot "locLikelihoods":\n')
@@ -16,7 +18,7 @@
       cat('\nSlot "locLikelihoods" (stored on log scale):\n')        
       modFunction <- exp
     }
-  .printIRangesMatrix(modFunction(locLike))
+  .printIRangesMatrix(signif(modFunction(locLike), 5))
 }
 
 
@@ -142,7 +144,7 @@
       }
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
       lD@seglens <- sD@seglens
-    lD@locLikelihoods <- sD@locLikelihoods
+    lD@locLikelihoods <- .DF2matrix(sD@locLikelihoods)
       
     lD
   }
@@ -317,5 +319,34 @@
     TF[rodDat] <- TF
     locM <- matrix(TF, ncol = length(levels(methD@replicates)))
     colnames(locM) <- levels(methD@replicates)
+    locM <- .matrix2Rle(locM)
     locM
   }
+
+.matrix2Rle <- function(x) {
+  dx <- do.call("DataFrame", apply(x, 2, Rle))
+    if(!is.null(colnames(x))) colnames(dx) <- colnames(x) else colnames(dx) <- paste("X", 1:ncol(x), sep = "")
+  dx
+}
+
+.DF2matrix <- function(x) {
+  if(any(dim(x)) == 0) return(array(dim = dim(x)))
+  dx <- do.call("cbind", lapply(as.list(x), as.vector))
+  colnames(dx) <- colnames(x)
+  dx
+}
+
+.rowSumDF <- function(x, na.rm = TRUE) {
+  z <- as.list(x)
+  if(na.rm) {
+    nas <- Reduce("intersect", lapply(z, function(zz) which(is.na(zz))))
+    z <- lapply(z, function(zz) {
+      zz[which(is.na(zz))] == 0
+      zz
+    })
+  }
+  sumz <- Reduce("+", z)
+  if(na.rm && length(nas) > 0) sumz[nas] <- NA
+  sumz
+}
+

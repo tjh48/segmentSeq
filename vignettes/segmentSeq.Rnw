@@ -112,13 +112,18 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 \end{figure}
 %\end{sidewaysfigure}
 
-This \verb'countData' object can now be examined for differential expression with the \verb'baySeq' package.
+Given the calculated likelihoods, we can filter the segmented genome by controlling on likelihood, false discovery rate, or familywise error rate
 
+<<>>=
+loci <- selectLoci(classSegs, FDR = 0.05)
+loci
+@ 
 
-Finally, to be a good citizen, we stop the cluster 
-we started earlier:
+This \verb'lociData' object can now be examined for differential expression with the \verb'baySeq' package.
 
-<<stopCluster>>=
+Finally, to be a good citizen, we stop the cluster we started earlier:
+
+<<<stopCluster>>=
 stopCluster(cl)
 @
 

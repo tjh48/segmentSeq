@@ -14,8 +14,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     sD <- .massiveClassifyLoci(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)    
     
     if(!is.null(tempDir)) save(sD, file = paste(tempDir, "/sD_locLikes.RData", sep = ""))
-    
-    sD@locLikelihoods <- log(sD@locLikelihoods >= log(lociCutoff))
+
+    sD@locLikelihoods <- do.call("DataFrame", lapply(as.list(sD@locLikelihoods), function(x) x >= log(lociCutoff)))
     
     nullD <- .massiveClassifyNulls(sD = sD, cD = cD, aD = aD, subRegion = subRegion, samplesize = samplesize, lR = lR, nullCutoff = nullCutoff, tempDir = tempDir, largeness = largeness, recoverOld = FALSE, cl = cl)
 
@@ -74,7 +74,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
     message("Segmentation split into ", length(sDsplit), " parts.")
     
-    sD@locLikelihoods <- (do.call("rbind", lapply(1:length(sDsplit), function(ii) {  
+    sD@locLikelihoods <- do.call("rbind", lapply(1:length(sDsplit), function(ii) {  
       message("Establishing likelihoods of loci; Part ", ii, " of ", length(sDsplit))
       x <- sD[sDsplit[[ii]],]
       if (is.null(subRegion)) {
@@ -89,7 +89,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
       if(!is.null(tempDir)) save(subLoc, file = paste(tempDir, "/subLocLikes_", ii, ".RData", sep = ""))
       subLoc
-    })))
+    }))
     
     sD
   }
@@ -98,7 +98,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 .massiveClassifyNulls <- function(sD, cD, aD, subRegion = NULL, samplesize = 1e5, lR = FALSE, nullCutoff = 0.9, largeness = 1e8, tempDir, recoverOld = FALSE, cl = cl)
   {
     #make nullPriors - again, this copies classifySeg and should be split off as a separate function...    
-    selLoc <- which(rowSums(sapply(1:ncol(sD@locLikelihoods), function(jj) sD@locLikelihoods[,jj] == 0), na.rm = TRUE) > 0)
+    selLoc <- which(.rowSumDF(do.call("DataFrame", lapply(1:ncol(sD@locLikelihoods), function(jj) sD@locLikelihoods[,jj] == 0)), na.rm = TRUE) > 0)
     if(length(selLoc) == 0)
       stop("No loci found; maybe the cutoff values used to generate the sD@locLikelihoods are too strict?")
 
@@ -153,7 +153,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
           message("Establishing likelihoods of nulls; Part ", ii, " of ", length(splitLoci))
           subSD <- sD[splitLoci[[ii]],]
-          subWithinLoc <- getOverlaps(subSD@coordinates, subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,],
+          subWithinLoc <- getOverlaps(subSD@coordinates, subSD@coordinates[.rowSumDF(lapply(as.list(subSD@locLikelihoods), function(x) x == 0)) > 0,],
                                       whichOverlaps = FALSE, overlapType = "within", cl = NULL)
           if(any(subWithinLoc))
             {              
@@ -169,19 +169,21 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 #                potnullD@Ts <- counts$Ts                
 #              }
 
-              potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,], aD = aD)
+              potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[.rowSumDF(lapply(as.list(subSD@locLikelihoods), function(x) x == 0)) > 0,], aD = aD)
               
-              potnullD@locLikelihoods <- log(do.call("cbind", ((lapply(levels(potnullD@replicates), .classifyNulls, lociPD = subSD, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))))
+              potnullD@locLikelihoods <- (do.call("DataFrame", ((lapply(levels(potnullD@replicates), .classifyNulls, lociPD = subSD, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))))
             } else potnullD <- NULL
           if(class(potnullD) == "segData") {
             emptyD <- rowSums(potnullD@data) == 0
           } else if(class(potnullD) == "segMeth") {
             emptyD <- rowSums(potnullD@Cs) == 0
           }
-          
+        
           values(potnullD@coordinates)$empty <- FALSE
           values(potnullD@coordinates)$empty[emptyD] <- TRUE
-          potnullD <- potnullD[rowSums(sapply(1:ncol(potnullD@locLikelihoods), function(ii) potnullD@locLikelihoods[,ii] > -Inf), na.rm = TRUE) > 0 | emptyD,]
+
+          potnullD <- potnullD[which(.rowSumDF(do.call("DataFrame", lapply(1:ncol(potnullD@locLikelihoods), function(ii) potnullD@locLikelihoods[,ii] > -Inf)), na.rm = TRUE) > 0 | emptyD),]
+
           if(class(potnullD) == "segData") {
             potnullD@data <- (matrix(ncol = length(potnullD@replicates), nrow = 0))
           } else if(class(potnullD) == "segMeth") {
@@ -191,7 +193,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
           
           potnullD
         })
-
+        
         if(any(!sapply(splitNulls, is.null)))
           potnullD <- .mergeSegData(splitNulls[!sapply(splitNulls, is.null)]) else potnullD <- new(class(sD))
         
@@ -457,7 +459,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 
     repNull[overLoci] <- lD
   }
-  repNull  
+  Rle(log(repNull))
 }
 
 
@@ -539,7 +541,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         }
       }
       message("...done.")
-      repLoci
+      Rle(repLoci)
     }
 
     weightFactors <- prepD@priors$weights
@@ -548,7 +550,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     sampled[,1] <- subLoc[sampled[,1]]
     
     message("Establishing likelihoods of loci...", appendLF = TRUE)  
-    locLikelihoods <- sapply(levels(potlociD@replicates), getLikeLoci, potlociD = potlociD, priors = priors, repWeights = repWeights, sampled = sampled)    
+    locLikelihoods <- do.call("DataFrame", lapply(levels(potlociD@replicates), getLikeLoci, potlociD = potlociD, priors = priors, repWeights = repWeights, sampled = sampled))
+    colnames(locLikelihoods) <- levels(potlociD@replicates)
     
     locLikelihoods
   }

@@ -100,7 +100,7 @@
       filaD <- findChunks(aD@alignments, gap, checkDuplication = FALSE)      
     } else if(class(aD) == "alignmentMeth") {
       if(!missing(filterProp)) {
-        filaD <- aD@alignments[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA), na.rm = TRUE) > 0),]        
+        filaD <- aD@alignments[which(.rowSumDF(.methFunction(aD, prop = filterProp, locCutoff = NA)) > 0),]        
       } else filaD <- aD[rowSums(aD@Cs) > 0,]
       filaD <-
         x <- .findMethChunks(filaD, gap)
@@ -110,7 +110,7 @@
   }
 
 
-processAD <- function(aD, gap, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = TRUE, cl)         
+processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = TRUE, cl)         
   {
 #    if("tag" %in% colnames(values(aD@alignments))) {      
 

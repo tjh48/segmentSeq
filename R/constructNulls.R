@@ -24,42 +24,45 @@
   }      
 
 
-.constructMethNulls <- function(emptyNulls, sDP, locDef)
+.constructMethNulls <- function(emptyNulls, sDP, locDef, minlen)
   {
-    leftRight <- do.call("rbind", lapply(seqlevels(sDP@coordinates), function(chr) {
-      leftids <- Rle(findInterval(start(sDP@coordinates[seqnames(sDP@coordinates) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,])))
+    overLoc <- sDP@coordinates[getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
+    
+    
+    leftRight <- do.call("rbind", lapply(seqlevels(overLoc), function(chr) {
+      leftids <- Rle(findInterval(start(overLoc[seqnames(overLoc) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,])))
       leftids[leftids <= 0] <- NA      
-      left <- start(sDP@coordinates[which(seqnames(sDP@coordinates) == chr),]) - rep(start(emptyNulls[seqnames(emptyNulls) == chr])[runValue(leftids)], runLength(leftids))
+      left <- Rle(start(overLoc[which(seqnames(overLoc) == chr),]) - rep(start(emptyNulls[seqnames(emptyNulls) == chr])[runValue(leftids)], runLength(leftids)))
 
-      rightids <- Rle(findInterval(end(sDP@coordinates[which(seqnames(sDP@coordinates) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1)
+      rightids <- Rle(findInterval(end(overLoc[which(seqnames(overLoc) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1)
       rightids[rightids > sum(seqnames(emptyNulls) == chr)] <- NA
-      right = rep(end(emptyNulls[seqnames(emptyNulls) == chr])[runValue(rightids)], runLength(rightids)) - end(sDP@coordinates[which(seqnames(sDP@coordinates) == chr),])
+      right = Rle(rep(end(emptyNulls[seqnames(emptyNulls) == chr])[runValue(rightids)], runLength(rightids)) - end(overLoc[which(seqnames(overLoc) == chr),]))
       
-      cbind(left, right)
+      DataFrame(left, right)
     }))
 
     leftGood <- (!is.na(leftRight[,'left']))
     rightGood <- (!is.na(leftRight[,'right']))
     
     nullCoords = GRanges(
-      seqnames = c(seqnames(emptyNulls), seqnames(sDP@coordinates)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
+      seqnames = c(seqnames(emptyNulls), seqnames(overLoc)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
       IRanges(
-              start = c(start(emptyNulls),
-                (start(sDP@coordinates) - leftRight[,"left"])[leftGood & rightGood],
-                (start(sDP@coordinates) - leftRight[,"left"])[leftGood],
-                (start(sDP@coordinates))[rightGood]),
-              end = c(end(emptyNulls),
-                (end(sDP@coordinates) + leftRight[,"right"])[leftGood & rightGood],
-                (end(sDP@coordinates))[leftGood],
-                (end(sDP@coordinates) + leftRight[,'right'])[rightGood]))
+        start = as.integer(c(Rle(start(emptyNulls)),
+          (start(overLoc) - leftRight[,"left"])[which(leftGood & rightGood)],
+          (start(overLoc) - leftRight[,"left"])[which(leftGood)],
+          start(overLoc)[which(rightGood)])),
+        end = as.integer(c(Rle(end(emptyNulls)),
+          (end(overLoc) + leftRight[,"right"])[which(leftGood & rightGood)],
+          (end(overLoc))[which(leftGood)],
+          (end(overLoc) + leftRight[,'right'])[which(rightGood)]))
               )
+      )
+    rm(leftRight)
+    if(!missing(minlen)) nullCoords <- nullCoords[width(nullCoords) >= minlen,]
     
-    rordNull <- order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))
-    unqNull <- .fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))[rordNull,])
-    nullCoords <- nullCoords[rordNull,][unqNull,]
-    
-    overLoci <- which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
-    nullCoords <- nullCoords[overLoci,]
+    nullCoords <- nullCoords[order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))]
+    nullCoords <- nullCoords[.fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords)))]
+    nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
 
     potnullD <- new("segMeth",
                     replicates = sDP@replicates,

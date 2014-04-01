@@ -17,7 +17,8 @@ sample groups by the user.
 \usage{
 averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw =
 5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, ...)
-plotAverageProfile(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, ...)
+plotAverageProfile(position, profiles, col, surrounding, ylim, add =
+FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -83,7 +84,10 @@ plotAverageProfile(position, profiles, col, surrounding, ylim, add = FALSE, mean
   \item{legend}{
     If TRUE, a legend describing the samples is included on the plot.
   }
-  
+  \item{titles}{
+    If given, and `meanOnly = FALSE', a vector of titles for the
+    quantile plots.
+    }  
   \item{\dots}{
     Additional arguments to be passed to the 'plotAverageProfile'
     function, and hence to the 'plot' or 'lines' methods.    

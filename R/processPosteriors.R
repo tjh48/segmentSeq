@@ -56,8 +56,8 @@
     if(!is.null(cl))
       clusterEvalQ(cl, rm(list = ls()))
 
-    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
-    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
+    if(nrow(lociPD) > 0) selLoci <- lociPD[which(.rowSumDF(lapply(as.list(lociPD@locLikelihoods), function(x) x >= log(lociCutoff)), na.rm = TRUE) > 0),] else selLoci <- lociPD
+    if(nrow(nullPD) > 0) selNull <- nullPD[which(.rowSumDF(lapply(as.list(nullPD@locLikelihoods), function(x) x >= log(nullCutoff)), na.rm = TRUE) > 0),] else selNull <- nullPD
     
 #    if(missing(emptyPD) & class(lociPD) == "segData")
 #      emptyPD <- nullPD[rowSums(sapply(1:ncol(nullPD), function(jj) as.integer(nullPD@data[,jj]))) == 0,]

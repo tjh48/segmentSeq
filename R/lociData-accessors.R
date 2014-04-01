@@ -1,7 +1,11 @@
 setMethod("show", "lociData", function(object) {  
   show(object@coordinates)
   callNextMethod()  
-  .printLocLikes(object@locLikelihoods)
+  .printLocLikes(object@locLikelihoods)  
+  if(nrow(object@locLikelihoods) > 0) {
+    cat("\nExpected number of loci in each replicate group\n")
+    print(colSums(exp(object@locLikelihoods)))
+  }
 })
 
 setMethod("[", "lociData", function(x, i, j, ..., drop = FALSE) {

@@ -10,7 +10,15 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
                               
     if(prod(dim(sD)) > largeness)
       {
-        sDsplit <- .splitSD(sD, largeness)
+        if(recoverFromTemp & !is.null(tempDir) & file.exists(paste(tempDir, "/sDsplit.RData", sep = ""))) {
+          if(verbose) message("Recovering splitting from temporary file...")
+          load(paste(tempDir, "/sDsplit.RData", sep = ""))
+        } else {
+          sDsplit <- .splitSD(sD, largeness)
+          if(!is.null(tempDir))
+            save(sDsplit, file = paste(tempDir, "/sDsplit.RData", sep = ""))
+        }
+#      ii <- 35; strand = "+"
 
         if(verbose) message("Segmentation split into ", length(sDsplit), " parts.")
 
@@ -32,11 +40,14 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
               }
 # sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
             if(!existingSDP) {
-              sDP <- .partheuristicSeg(sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),], aDP = aD[strand(aD@alignments) == strand,], bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+              sDP <- .partheuristicSeg(
+                       sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
+                       aDP = aD[strand(aD@alignments) == strand,],
+                       bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
               
               if(!is.null(tempDir)) save(sDP,
-                                         file = paste(tempDir, "/seg", ii, "_", strand, "_",
-                                           paste(apply(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE))[,1:3], 1, as.character), 2, function(x) paste(gsub(" ", "", x), collapse = "_")), collapse = "__"),
+                                         file = paste(tempDir, "/seg", ii, "_", strand, "_", "largeness_", largeness,
+                                           #paste(apply(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE))[,1:3], 1, as.character), 2, function(x) paste(gsub(" ", "", x), collapse = "_")), collapse = "__"),
                                            "_locLikes.RData", sep = "")
                                          )
             }
@@ -95,10 +106,13 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
 
       nullLikes <- DataFrame()
       locLikes <- DataFrame()
+
+      if(verbose & length(splitCalc) > 1) message("")
+      if(verbose & length(splitCalc) > 1) message("Splitting caclculation into ", length(splitCalc), " steps...", appendLF = FALSE)
       
       for(ii in 1:length(splitCalc)) {
-        if(verbose) message(ii, appendLF = FALSE)
-        if(verbose) message(".", appendLF = FALSE)
+        if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
+        if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
         sDPx <- sDP[splitCalc[[ii]],]
         if(nrow(sDPx@Cs) == 0) {
           counts <- getCounts(sDPx@coordinates, aD = aDP, cl = cl)

@@ -1,4 +1,13 @@
 
+summariseLoci <- function(cD, perReplicate = TRUE)
+  {
+    if(perReplicate) {
+      colSums(exp(cD@locLikelihoods))
+    } else {
+      sum(1 - exp(rowSums(log(1-exp(cD@locLikelihoods)))))
+    }
+  }
+
 .controlFDR <- function(likes, FDR) {
   selnum <- max(which(cumsum((1 - sort(likes, decreasing = TRUE)) / 1:length(likes)) < FDR))
   if(selnum > 0) sellikes <- sort(order(likes, decreasing = TRUE)[1:selnum]) else sellikes <- integer()

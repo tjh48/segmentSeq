@@ -71,6 +71,11 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
     fastUniques <- function(x)
       if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
 
+    if(nrow(sDP) == 0) {
+      sDP <- .convertSegToLoci(sDP)
+      sDP@locLikelihoods <- matrix(nrow = 0, ncol = length(levels(sDP@replicates)))
+      return(sDP)
+    }
     sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
     if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = FALSE)
     sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
@@ -93,7 +98,7 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
           logDens <- log10(locDens)          
           nzlocs <- which(logDens != -Inf)
           bimodalSep(logDens[nzlocs], bQ = c(0, 1))
-          if(verbose) message("done!")
+          if(verbose) message("...done!")
           return(Rle(logDens > locCutoff))
         }
       }
@@ -108,7 +113,7 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       locLikes <- DataFrame()
 
       if(verbose & length(splitCalc) > 1) message("")
-      if(verbose & length(splitCalc) > 1) message("Splitting caclculation into ", length(splitCalc), " steps...", appendLF = FALSE)
+      if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
       
       for(ii in 1:length(splitCalc)) {
         if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)

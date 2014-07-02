@@ -26,13 +26,14 @@
                                            verbose = verbose, cl = cl)
                            strandSegs
                          })
-
+    strandSegs <- strandSegs[which(!sapply(strandSegs, is.null))]
+    
     if(class(lociPD) == "segMeth") {
       segs <- new("methData",
                   data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
                   pairData = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@pairData)),
                   replicates = lociPD@replicates,
-                  coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x) && length(x@coordinates) > 0) return(x@coordinates) else return(GRanges()))),
+                  coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x) && length(x@coordinates) > 0) return(x@coordinates) else return(GRanges(seqinfo = seqinfo(x@coordinates))))),
                   seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
                   locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
                   libsizes = 1 + lociPD@nonconversion,
@@ -85,6 +86,7 @@
     rm(selNull, locAccept, locTrue)
     
     gc()
+
 
     filterOnNumberLength <- function(segAccept, selLoci)
       {
@@ -190,8 +192,6 @@
     extSegs <- .convertSegToLoci(extSegs)
 
     if (getLikes & nrow(extSegs) > 1) likeSegs <- lociLikelihoods(aD = aD, cD = extSegs, cl = cl) else likeSegs <- extSegs    
-    
     if(ncol(likeSegs@locLikelihoods) > 0) colnames(likeSegs@locLikelihoods) <- levels(likeSegs@replicates)
-    
     likeSegs
   }

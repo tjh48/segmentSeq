@@ -28,9 +28,18 @@ setMethod("libsizes", signature = "alignmentData", function(x) {
 })
 
 setValidity("alignmentData", function(object) {
-  acValid <- callNextMethod(object)
-  if(class(acValid) == "character") valid <- FALSE else valid = TRUE
-  if(class(acValid) == "character") valid <- acValid else valid = ""
+#  message("mark0")
+#  acValid <- callNextMethod(object)
+#  if(class(acValid) == "character") valid <- FALSE else valid = TRUE
+#  if(class(acValid) == "character") valid <- acValid else valid = ""
+
+  valid <- TRUE
+  validmess <- c()
+  if(length(object@replicates) != length(object@libnames))
+    {
+      valid <- FALSE
+      validmess <- c(validmess, "The length of the '@replicates' slot must equal the length of the '@libnames' slot.")
+    }  
   if(nrow(object@data) != length(object@alignments))
     {
       valid <- FALSE

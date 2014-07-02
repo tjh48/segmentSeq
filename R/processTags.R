@@ -3,7 +3,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
     if(missing(nonconversion))
       nonconversion = rep(0, length(files))
     if(any(nonconversion < 0) | any(nonconversion > 1)) stop("Non-conversion rates must be between zero and one.")
-
+    
     replicates <- as.factor(replicates)
     if(dir != "") files <- paste(dir, files, sep = "/")
 
@@ -13,6 +13,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
     methReads <- lapply(files, function(file, chrs) {
       message(".", appendLF = FALSE)
       mreads <- read.delim(file, as.is = TRUE, header = FALSE)
+      mreads <- mreads[mreads[,2] >= 0,]
       if(!is.null(chrs)) mreads <- mreads[mreads[,1] %in% chrs,]
       mr <- GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], #multireads = as.integer(mreads[,6]),
                     Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
@@ -20,24 +21,30 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
       mr
     }, chrs = chrs)
     message("done!", appendLF = TRUE)
+
+    chrs <- sort(unique(do.call("c", lapply(methReads, seqlevels))))
+    methReads <- lapply(methReads, function(gr) {
+      chrnames <- factor(as.character(seqnames(gr)), levels = chrs)
+      seqlevels(gr) <- chrs
+      seqnames(gr) <- chrnames
+      gr
+    })
     
     chrTag <- methReads[[1]]
-    
-    message("Finding unique cytosines...", appendLF = FALSE)
-    
-    for(ii in 2:length(methReads)) {
-      message(".", appendLF = FALSE)
-      chrTag <- append(chrTag, methReads[[ii]])
-      chrTag <- chrTag[order(as.integer(seqnames(chrTag)), as.integer(start(chrTag)), as.integer(strand(chrTag)), as.integer(values(chrTag)$multireads)),]
-      chrTag <- chrTag[!duplicated(chrTag) | c(TRUE, as.integer(values(chrTag)$multireads[-length(chrTag)]) != as.integer(values(chrTag)$multireads[-1])),]
+
+    if(length(methReads) > 1) {
+      message("Finding unique cytosines...", appendLF = FALSE)      
+      for(ii in 2:length(methReads)) {
+        message(".", appendLF = FALSE)
+        chrTag <- append(chrTag, methReads[[ii]])
+        chrTag <- chrTag[order(as.integer(seqnames(chrTag)), as.integer(start(chrTag)), as.integer(strand(chrTag)), as.integer(values(chrTag)$multireads)),]
+        chrTag <- chrTag[!duplicated(chrTag) | c(TRUE, as.integer(values(chrTag)$multireads[-length(chrTag)]) != as.integer(values(chrTag)$multireads[-1])),]
+      }    
+      message("done!", appendLF = TRUE)
     }
-    
-    message("done!", appendLF = TRUE)
-    
-    values(chrTag)$Cs <- values(chrTag)$Ts <- 0
-    
-    message("Processing samples...", appendLF = FALSE)
-    
+
+    values(chrTag)$Cs <- values(chrTag)$Ts <- 0      
+    message("Processing samples...", appendLF = FALSE)      
     mReads <- lapply(methReads, function(mreads) {
       message(".", appendLF = FALSE)
       colnames(chrTag) <- colnames(mreads)
@@ -46,7 +53,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
       mreads <- mreads[!duplicated(mreads) | c(TRUE, as.integer(values(mreads)$multireads[-length(mreads)]) != as.integer(values(mreads)$multireads[-1])),]
       list(Cs = values(mreads)$Cs, Ts = values(mreads)$Ts)
     })
-    
+      
     message("done!", appendLF = TRUE)
     
     Cs <- do.call("cbind", lapply(mReads, function(x) x$Cs))

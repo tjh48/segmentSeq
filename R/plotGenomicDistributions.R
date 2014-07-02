@@ -1,7 +1,7 @@
 .averageMethylationRegions <- function (redMD, subcoord, redOvers, position, samples, lenMod, cuts, surrounding)
 {
   uus <- unique(unlist(samples))
-  redsamp <- lapply(samples, match, uus)
+#  redsamp <- lapply(samples, match, uus)
 
   nonconversion <- redMD@nonconversion
   modC <- redMD@Cs[unlist(redOvers), uus, drop = FALSE]/as.integer(redMD@alignments$multireads[unlist(redOvers)])
@@ -46,7 +46,7 @@
       sumT <- colSums(modT[sp,,drop = FALSE])
       sumC / (sumC + sumT)
     }))
-    sgProps <- lapply(redsamp, function(samps) geneProps[,samps,drop = FALSE])
+    sgProps <- lapply(samples, function(samps) geneProps[,samps,drop = FALSE])
     sumstat <- lapply(sgProps, function(x) c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE), quantile(x, 1:19 / 20, na.rm = TRUE)))
     sumstat
   }, splitdat, splitcod, SIMPLIFY = FALSE)
@@ -64,13 +64,15 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
       lapply(1:length(profiles), function(ii) {
         coverage <- profiles[[ii]]
         if(is.matrix(coverage)) coverage <- coverage[,1]
-        if(ii == 1 & add == FALSE) {
-          plot(x = position, y = coverage, type= "l", col = col[ii], ylim = ylim, ...)
+        if(ii == 1 & !add) {
+          plot(x = position, y = coverage, type= "l", col = col[ii], ylim = ylim, xlab = "position", ylab = "proportion of methylation", ...)
         } else lines(x = position, y = coverage, col = col[ii], ...)
       })
       if(!add) {
         if(surrounding > 0) abline(v = c(surrounding, max(position) + diff(position[1:2]) - 0.5 - surrounding), col = "dark grey", lty = 3, lwd = 2)
-        if(legend) legend(x = "topright", lty = 1, col = col, legend = names(profiles))
+        if("cex" %in% names(list(...))) legcex <- list(...)$cex else legcex <- 1
+        if("lwd" %in% names(list(...))) leglwd <- list(...)$lwd else leglwd <- 1
+        if(legend) legend(x = "topleft", lty = 1, lwd = leglwd, col = col, legend = names(profiles), cex = legcex, bty = "n")
       }
     } else {      
       if(names(dev.cur()) == "null device" || all(par()$mfrow == c(1,1))) par(mfrow = c(1,length(profiles)))
@@ -80,13 +82,13 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
         plot(x = NA, y = NA, ylim = ylim, xlim = range(position), ylab = "proportion of methylation", xlab = "position", ...)
 
         if(!missing(titles))
-          title(main = titles[mm])
+          title(main = titles[mm], ...)
         
         for(ii in 1:9)
           rect(position - diff(position[1:2]) / 2, profiles[[mm]][,2 + ii], position + diff(position[1:2]) / 2, profiles[[mm]][,22 - ii], col = col[ii,mm], border = col[ii,mm])
         lines(x = position, y = profiles[[mm]][,1], ylim = c(0,1), col = col[10,mm])        
         if(surrounding > 0) {
-          seglen <- length(profCHH.DMR[[1]]$position) / 3
+          seglen <- length(position) / 3
           abline(v = c(weighted.mean(position[0:1 + seglen], w = c(0.1, 0.9)),
                    weighted.mean(position[seglen * 2 + 1:2], w = c(0.9, 0.1))),
                    col = "dark grey", lty = 3, lwd = 2)
@@ -106,18 +108,18 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
     methOvers <- findOverlaps(modcod, mD@alignments, select = "all")
     overMD <- sort(unique(unlist(methOvers@subjectHits)))
     redOvers <- split(match(methOvers@subjectHits, overMD), factor(methOvers@queryHits, levels = 1:length(modcod)))
-    redMD <- mD[overMD,]
+
+    uus <- unique(unlist(samples))
+    redsamp <- lapply(samples, match, uus)
+    redMD <- mD[overMD,uus]
     
     if(class(mD) == "alignmentMeth") {      
-      return(.averageMethylationRegions(redMD = redMD, subcoord = subcoord, redOvers = redOvers, position = position, samples = samples, lenMod = lenMod, cuts = cuts, surrounding = surrounding))
-    } else {
-      uus <- unique(unlist(samples))
-      redsamp <- lapply(samples, match, uus)
-      
+      return(.averageMethylationRegions(redMD = redMD, subcoord = subcoord, redOvers = redOvers, position = position, samples = redsamp, lenMod = lenMod, cuts = cuts, surrounding = surrounding))
+    } else {            
       chrwidths <- sapply(seqlevels(mD@alignments), function(chr) max(c(0, end(modcod[seqnames(modcod) == chr]))))
       
       if(class(mD) == "alignmentData") {
-        RKPM <- t(t(getCounts(modcod, redMD, cl = NULL) / width(modcod)) / mD@libsizes) * 1e9
+        RKPM <- t(t(getCounts(modcod, redMD, cl = NULL) / width(modcod)) / redMD@libsizes) * 1e9
         sampRKPM <- sapply(redsamp, function(samp) {
           rowMeans(RKPM[,samp,drop = FALSE])
         })
@@ -132,7 +134,7 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
                                         #      rightRKPM <- t(t(getCounts(rightMod, redMD, cl = NULL) / width(rightMod)) / mD@libsizes) * 1e9
         
         
-        codbase <- lapply(seqlevels(mD@alignments), function(chr) {
+        codbase <- lapply(seqlevels(redMD@alignments), function(chr) {
           message(".", appendLF = FALSE)
           bases <- as.integer(ranges(modcod[seqnames(modcod) == chr]))
           id <- rep(which(seqnames(modcod) == chr), width(modcod[seqnames(modcod) == chr]))
@@ -345,7 +347,7 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
       if(length(chrlens) > 1)
         segments(x0 = cumsum(chrlens)[-length(chrlens)], y0 = 0, y1 = 1, col = "red", lty = 2, lwd = 3)    
       if(!missing(centromeres) && !is.null(centromeres)) segments(x0 = c(centromeres[,1] + c(0, cumsum(chrlens)[-length(chrlens)]), centromeres[,2] + c(0, cumsum(chrlens)[-length(chrlens)])), y0 = 0, y1 = 1, lty = 2, lwd = 2, col = "blue")
-      text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05, x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 2.5)
+      text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05, x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 1.5)
     } else lines(x = position, y = methylation, col = col, ...)
     invisible(data.frame(position = breaks, methylation = methdiv))
   }

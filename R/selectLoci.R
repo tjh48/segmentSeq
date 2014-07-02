@@ -21,9 +21,13 @@ summariseLoci <- function(cD, perReplicate = TRUE)
   sellikes
 }
 
-selectLoci <- function(cD, likelihood, FDR, FWER, perReplicate = TRUE) {
+selectLoci <- function(cD, likelihood, FDR, FWER, perReplicate = TRUE) {  
+                       #, returnBool = FALSE) {
+
+  returnBool <- FALSE
   if(!missing(likelihood)) {
-    selLoc <- which(rowSums(cD@locLikelihoods > log(likelihood)) > 0)
+    selLoc <- cD@locLikelihoods > log(likelihood)
+    if(returnBool) return(selLoc) else selLoc <- which(rowSums(selLoc) > 0)
   } else {
     if(!missing(FDR)) {
       controlFunction <- .controlFDR
@@ -33,9 +37,24 @@ selectLoci <- function(cD, likelihood, FDR, FWER, perReplicate = TRUE) {
       controlCrit <- FWER
     } else stop ("No criterion for locus selection given.")    
     if(perReplicate) {
-      selLoc <- sort(do.call("union", lapply(1:ncol(cD@locLikelihoods), function(jj) controlFunction(exp(cD@locLikelihoods[,jj]), controlCrit))))
+      selRep <- lapply(1:ncol(cD@locLikelihoods), function(jj) controlFunction(exp(cD@locLikelihoods[,jj]), controlCrit))
+      if(returnBool) {
+        bool <- do.call("cbind", lapply(1:length(selRep), function(ii) {          
+          selBool <- rep(FALSE, nrow(cD))
+          if(length(selRep[[ii]]) > 0) selBool[selRep[[ii]]] <- TRUE
+          selBool
+        }))
+        colnames(bool) <- colnames(cD@locLikelihoods)
+        return(bool)
+      }
+      selLoc <- sort(unique(unlist(selRep)))
     } else {
       selLoc <- controlFunction(1 - exp(rowSums(log(1 - exp(cD@locLikelihoods)))), controlCrit)
+      if(returnBool) {
+        bool <- rep(FALSE, nrow(cD))
+        bool[selLoc] <- TRUE
+        return(bool)
+      }
     }
   }
   if(length(selLoc) == 0) stop("No loci found for the given selection criterion.")

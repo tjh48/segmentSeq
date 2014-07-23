@@ -1,4 +1,5 @@
 import("methods")
+import("S4Vectors")
 import("IRanges")
 import("GenomicRanges")
 importFrom("graphics", "axis", "plot", "rect", "segments", "text")

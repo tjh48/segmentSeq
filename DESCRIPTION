@@ -2,7 +2,7 @@ Package: segmentSeq
 Type: Package
 Title: Methods for identifying small RNA loci from high-throughput
         sequencing data
-Version: 1.17.2
+Version: 1.17.3
 Date: 2010-01-20
 Author: Thomas J. Hardcastle
 Maintainer: Thomas J. Hardcastle <tjh48@cam.ac.uk>
@@ -12,7 +12,7 @@ LazyLoad: yes
 Depends: R (>= 2.3.0), methods, baySeq (>= 1.15.4), ShortRead,
         GenomicRanges, IRanges
 Suggests: snow
-Imports: baySeq, graphics, grDevices, IRanges, methods, utils,
+Imports: baySeq, graphics, grDevices, S4Vectors, IRanges, methods, utils,
         GenomicRanges
 Collate: AllClasses.R alignmentClass-accessors.R 
 	 segClass-accessors.R

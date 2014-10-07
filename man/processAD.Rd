@@ -11,7 +11,7 @@ each sample in each potential segment.
 }
 \usage{
 processAD(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE,
-verbose = TRUE, getCounts = TRUE, cl)
+verbose = TRUE, getCounts = FALSE, cl)
 }
 \arguments{
   \item{aD}{
@@ -41,7 +41,8 @@ verbose = TRUE, getCounts = TRUE, cl)
     If TRUE, counts will be estimated for the constructed `segData'
     object. If FALSE, they will not, and must be estimated on the fly
     for further operations on the `segData' object, which is
-    computationally wasteful but will reduce the memory usage.
+    computationally wasteful but will substantially reduce the memory
+    requirements.
   }
   
   \item{cl}{A SNOW cluster object, or NULL. See Details.}

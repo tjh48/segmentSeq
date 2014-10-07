@@ -70,7 +70,7 @@
     potnullD
   }
 
-.constructNulls <- function(emptyNulls, sDWithin, locDef, forPriors = FALSE, samplesize, aD = aD)
+.constructNulls <- function(emptyNulls, sDWithin, locDef, forPriors = FALSE, samplesize, aD = aD, cl = NULL)
   {
     # find the gap to the left and right of each element of sD within a locus (sDWithin)
     leftRight <- matrix(NA, ncol = 2, nrow = nrow(sDWithin))

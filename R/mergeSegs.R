@@ -13,9 +13,7 @@ mergeMethSegs <- function(segs, aD, gap, cl) {
         end(strandSegs@coordinates)[merges[,1]] <- end(strandSegs@coordinates)[merges[,2]]
         
         countMerge <- getCounts(strandSegs@coordinates[merges[,1]], aD, cl = cl)
-        strandSegs@data[merges[,1],] <- countMerge$Cs
-        strandSegs@pairData[merges[,1],] <- countMerge$Ts
-        
+        strandSegs@data[merges[,1],,] <- array(c(countMerge$Cs, countMerge$Ts), c(dim(countMerge$Cs), 2))        
         strandSegs <- strandSegs[-unlist(lapply(1:nrow(merges), function(ii) (merges[ii,1] + 1):merges[ii,2])),]
       }
       strandSegs
@@ -27,15 +25,7 @@ mergeMethSegs <- function(segs, aD, gap, cl) {
   minusSegs <- strandMerge(segs[which(strand(segs@coordinates) == "-"),])
   nsSegs <- strandMerge(segs[which(strand(segs@coordinates) == "*"),])
 
-  mergesegs <- new("methData",
-                   data = rbind(plusSegs@data, minusSegs@data, nsSegs@data),
-                   pairData = rbind(plusSegs@pairData, minusSegs@pairData, nsSegs@pairData),
-                   replicates = plusSegs@replicates,
-                   coordinates = c(plusSegs@coordinates, minusSegs@coordinates, nsSegs@coordinates),
-                   seglens = rbind(plusSegs@seglens, minusSegs@seglens, nsSegs@seglens),
-                   libsizes = segs@libsizes,
-                   pairLibsizes = segs@pairLibsizes,
-                   locLikelihoods = rbind(plusSegs@locLikelihoods, minusSegs@locLikelihoods, nsSegs@locLikelihoods))
+  mergesegs <- .mergeListLoci(list(plusSegs, minusSegs, nsSegs))
   
   mergesegs <- mergesegs[order(as.factor(seqnames(mergesegs@coordinates)), start(mergesegs@coordinates), end(mergesegs@coordinates)),]
   mergesegs

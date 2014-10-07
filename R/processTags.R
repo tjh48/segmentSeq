@@ -128,7 +128,6 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
     sampleNumbers <- 1:length(files)
 
     Tags <- lapply(sampleNumbers, function(ii) {
-
       tags <- scanBam(files[ii])[[1]]
       if(!is.null(countID)) {
         counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
@@ -447,7 +446,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 #           warning(paste("Chromosome", x, "has tags which extend over the given chromsome length.")))
 
     aD <- new("alignmentData")
-    aD@libnames = libnames
+    aD@libnames = as.character(libnames)
 #    aD@libsizes = libsizes
     aD@replicates = as.factor(replicates)
     aD@alignments = unqTags

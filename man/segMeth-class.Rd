@@ -5,6 +5,7 @@
 \alias{segMeth-class}
 \alias{[,segMeth-method}
 \alias{[,segMeth,ANY,ANY-method}
+\alias{[,segMeth,ANY-method}
 \alias{dim,segMeth-method}
 \alias{initialize,segMeth-method}
 \alias{show,segMeth-method}

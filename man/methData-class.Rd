@@ -5,12 +5,13 @@
 \alias{dim,methData-method}
 \alias{[,methData-method}
 \alias{[,methData,ANY,ANY-method}
+\alias{[,methData,ANY-method}
 \alias{show,methData-method}
 
 \title{Class "methData"}
 
 \description{
-  The \code{methData} class is based on the \code{\link{pairedData}}
+  The \code{methData} class is based on the \code{\link{countData}}
   class defined in the `baySeq' package, but includes a `coordinates'
   slot giving the coordinates of genomic loci and a `locLikelihoods'
   slot which contains the estimated likelihoods that each annotated
@@ -33,8 +34,6 @@
       `coordinates'}
     \item{\code{replicates}:}{Object of class \code{"factor"} defining
       the replicate structure of the data.}
-    \item{\code{libsizes}:}{Object of class \code{"numeric"} describing
-      the library size (scaling factor) for each sample.}
     \item{\code{groups}:}{Object of class \code{"list"} defing the group
       (model) structure of the data (see the
       \code{\link[baySeq:baySeq-package]{baySeq} package})}.
@@ -55,14 +54,24 @@
     \item{\code{estProps}:}{Object of class \code{"numeric"} giving the
       estimated proportion of tags belonnging to each group. Calculated by
       the \link[baySeq:baySeq-package]{baySeq} package.}
-    \item{\code{seglens}:}{Object of class \code{"matrix"} defining the
-      lengths of each segment containing the counts described in the
-      \code{'data'} slot. May be initialised with a vector, or ignored altogether.}
+    \item{\code{cellObservables}}{A list object containing arrays of
+      identical dimension to that in the `@data' slot. These arrays define
+      some observed characteristic of the data (e.g., GC content of
+      sRNAs) which may be used in analysis.}
+    \item{\code{rowObservables}}{A list object containing arrays with
+      first dimension identical to the number of rows in the  `@data'
+      slot. These arrays define some observed characteristic of the data
+      (e.g., genomic length of the region) which may be used in analysis.}
+    \item{\code{sampleObservables}}{A list object containing arrays with
+      first dimension identical to the number of columns of the `@data'
+      slot. These arrays define some observed characteristic of the data
+      (e.g., nonconversion rates) which may be used in analysis.}
+
   }
 }
 
 \section{Extends}{
-  Class \code{"\linkS4class{pairedData}"}, directly.
+  Class \code{"\linkS4class{countData}"}, directly.
 }
 
 \section{Methods}{

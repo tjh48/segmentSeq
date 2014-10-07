@@ -11,11 +11,11 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     if(missing(cD))
       cD <- heuristicSeg(sD, aD, largeness = largeness, getLikes = TRUE, verbose = TRUE, cl = cl)
     
-    sD <- .massiveClassifyLoci(sD = sD, cD = cD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)    
+    sD <- .massiveClassifyLoci(sD = sD, cD = cD, aD = aD, subRegion = subRegion, samplesize = samplesize, lR = lR, lociCutoff = lociCutoff, tempDir = tempDir, largeness = largeness, cl = cl)    
     
     if(!is.null(tempDir)) save(sD, file = paste(tempDir, "/sD_locLikes.RData", sep = ""))
 
-    sD@locLikelihoods <- do.call("DataFrame", lapply(as.list(sD@locLikelihoods), function(x) x >= log(lociCutoff)))
+    sD@locLikelihoods <- do.call("DataFrame", lapply(as.list(sD@locLikelihoods), function(x) log(x >= log(lociCutoff))))
     
     nullD <- .massiveClassifyNulls(sD = sD, cD = cD, aD = aD, subRegion = subRegion, samplesize = samplesize, lR = lR, nullCutoff = nullCutoff, tempDir = tempDir, largeness = largeness, recoverOld = FALSE, cl = cl)
 
@@ -23,15 +23,16 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       nullPD <- nullD[!values(nullD@coordinates)$empty,]
       emptyPD = nullD[values(nullD@coordinates)$empty,]
     } else nullPD <- emptyPD <- nullD
-    
+
     lD <- .processPosteriors(lociPD = sD, nullPD = nullPD, emptyPD = emptyPD, getLikes = FALSE, cl = cl)
+    if(all(is.na(lD@data))) lD@data <- getCounts(lD@coordinates, aD, cl = cl)
     
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")      
     lD
   }
     
 
-.massiveClassifyLoci <- function(sD, cD, subRegion = NULL, samplesize = 1e5, lR = FALSE, lociCutoff = 0.9, largeness = 1e8, tempDir = NULL, cl = cl)
+.massiveClassifyLoci <- function(sD, cD, aD, subRegion = NULL, samplesize = 1e5, lR = FALSE, lociCutoff = 0.9, largeness = 1e8, tempDir = NULL, cl = cl)
   {
     if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
           
@@ -51,7 +52,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     subLoc <- which(subLoc)[.filterSegments(sD@coordinates[subLoc,], runif(sum(subLoc)))]
     prepD <- .convertSegToLoci(sD[subLoc,])
 
-    
+    if(all(is.na(prepD@data))) prepD@data <- getCounts(prepD@coordinates, aD, cl = cl)
     message("done.")
     
     groups(prepD) <- list(prepD@replicates)
@@ -85,6 +86,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                                                                    start(x@coordinates) >= as.numeric(sR[2]) &
                                                                    end(x@coordinates) <= as.numeric(sR[3])))))))
       }
+
+      if(nrow(x@data) == 0) x@data <- getCounts(x@coordinates, aD, cl = cl)
       subLoc <- .classifyLoci(potlociD = x, prepD = prepD, repWeights = repWeights, subLoc = subLoc, locSubset = locSubset, lR = lR, locps = locps, cl = cl)
 
       if(!is.null(tempDir)) save(subLoc, file = paste(tempDir, "/subLocLikes_", ii, ".RData", sep = ""))
@@ -107,8 +110,10 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     if(length(withinLoc > 0))
     {
       emptyNulls <- gaps(sD@coordinates[.fastUniques(cbind(as.character(seqnames(sD@coordinates)), start(sD@coordinates), as.character(strand(sD@coordinates))))])
+      sDWithin <- sD[withinLoc,]
+      if(nrow(sDWithin@data) == 0) sDWithin@data <- getCounts(sDWithin@coordinates, aD, cl = cl)
       
-      curNullsWithin <- .constructNulls(emptyNulls, sD[withinLoc,], sD@coordinates[selLoc,], forPriors = TRUE, samplesize = samplesize, aD = aD)
+      curNullsWithin <- .constructNulls(emptyNulls, sDWithin, sD@coordinates[selLoc,], forPriors = TRUE, samplesize = samplesize, aD = aD, cl = cl)
       
       gc()
 
@@ -158,7 +163,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
           if(any(subWithinLoc))
             {              
 #              if(class(sD) == "segData") {
-#                potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,])
+#                potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,], cl = cl)
 #              } else if(class(sD) == "segMeth") {
 #                sDPSmall <- .fastUniques(data.frame(chr = as.character(seqnames(subSD@coordinates)), start = as.numeric(start(subSD@coordinates))))
 #                empties <- .zeroInMeth(aD = aD, smallSegs = subSD@coordinates[sDPSmall])
@@ -169,7 +174,10 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
 #                potnullD@Ts <- counts$Ts                
 #              }
 
-              potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[.rowSumDF(lapply(as.list(subSD@locLikelihoods), function(x) x == 0)) > 0,], aD = aD)
+              subSDWithin <- subSD[subWithinLoc,]
+              if(nrow(subSDWithin@data) == 0) subSDWithin@data <- getCounts(subSDWithin@coordinates, aD, cl = cl)
+              
+              potnullD <- .constructNulls(emptyNulls, subSDWithin, subSD@coordinates[.rowSumDF(lapply(as.list(subSD@locLikelihoods), function(x) x == 0)) > 0,], aD = aD, cl = cl)
               
               potnullD@locLikelihoods <- (do.call("DataFrame", ((lapply(levels(potnullD@replicates), .classifyNulls, lociPD = subSD, potNulls = potnullD, lR = lR, nullPriors = nullPriors, nullSampled = nullSampled, nullCutoff = nullCutoff, cl = cl)))))
             } else potnullD <- NULL
@@ -321,9 +329,9 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         environment(NBdens) <- getLikelihoodsEnv
       }
 
-    libsizes = pcD@libsizes
+    libsizes = libsizes(pcD)
     NBpriors <- pcD@priors$priors
-    seglens <- pcD@seglens
+    seglens <- seglens(pcD)
     numintSamp <- cbind(pcD@priors$sampled, pcD@priors$weights)
     numintSamp <- numintSamp[order(numintSamp[,2]),]
 
@@ -368,10 +376,14 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
   message(paste("\t\t...for replicate group ", rep, "...", sep = ""), appendLF = FALSE)
   repCol <- which(levels(potNulls@replicates) == rep)
   repD <- potNulls[, potNulls@replicates == rep]
-
+  
   repD <- .convertSegToLoci(repD)
 
-  if(class(repD) == "lociData") repD@priorType = "NB" else if(class(repD) == "methData") repD@priorType = "BB"    
+  if(class(repD) == "lociData") {
+    repD@priorType = "NB"
+    densityFunction(repD) <- nbinomDensity
+    seglens(repD) <- width(repD@coordinates)
+  } else if(class(repD) == "methData") repD@priorType = "BB"    
     
   replicates(repD) <- as.factor(rep(1, ncol(repD)))
   groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
@@ -409,7 +421,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     } else {
       nullFilter <- .filterSegments(overNulls@coordinates, runif(nrow(overNulls)))              
       if(class(overNulls) == "lociData") {
-        fD <- getLikelihoods.NB(cD = overNulls[nullFilter,], bootStraps = 1, 
+        fD <- getLikelihoods(cD = overNulls[nullFilter,], bootStraps = 1, 
                                 verbose = FALSE, 
                                 subset = NULL, priorSubset = NULL, pET = "BIC", 
                                 cl = cl)
@@ -420,10 +432,10 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                                 cl = cl)
       }
       lD[nullFilter] <- fD@posteriors[,1] > log(nullCutoff)
-      prs <- fD@estProps      
+      prs <- colMeans(exp(fD@posteriors))
     }    
 
-    fillInLD <- function(lD, selMin)
+    fillInLD <- function(lD, selMin, prs)
       {
         if(any(is.na(lD)))
           {
@@ -432,15 +444,16 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
             nullFilter <- which(is.na(lD))[subSel]
 
             if(class(overNulls) == "lociData") {
-              fD <- getLikelihoods.NB(cD = overNulls[nullFilter,], bootStraps = 1, 
+              fD <- getLikelihoods(cD = overNulls[nullFilter,], bootStraps = 1, 
                                       verbose = FALSE, 
                                       subset = NULL, priorSubset = NULL, pET = "none", prs = c(prs[1], 1 - prs[1]), 
                                       cl = cl)
             } else if(class(overNulls) == "methData") {
-              fD <- getLikelihoods.BB(cD = overNulls[nullFilter,], bootStraps = 1, 
-                                      verbose = FALSE, 
-                                      subset = NULL, priorSubset = NULL, pET = "none", prs = c(prs[1], 1 - prs[1]), 
-                                      cl = cl)
+#              fD <- getLikelihoods.BB(cD = overNulls[nullFilter,], bootStraps = 1, 
+#                                      verbose = FALSE, 
+#                                      subset = NULL, priorSubset = NULL, pET = "none", prs = c(prs[1], 1 - prs[1]), 
+#                                      cl = cl)
+              stop("classifySeg not currently available for methylation data.")
             }
                             
             lD[nullFilter] <- fD@posteriors[,1] > log(nullCutoff)
@@ -448,12 +461,12 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         lD
       }
 
-    lD <- fillInLD(lD, selMin = TRUE)
+    lD <- fillInLD(lD, selMin = TRUE, prs = prs)
 
     if(any(lD, na.rm = TRUE))
       lD[getOverlaps(overNulls@coordinates, overNulls@coordinates[which(lD),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL)] <- TRUE
 
-    lD <- fillInLD(lD, selMin = FALSE)
+    lD <- fillInLD(lD, selMin = FALSE, prs = prs)
 
     message("...done.", appendLF = TRUE)
 
@@ -511,9 +524,10 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         
         if(length(subset) > 0) {
           if(class(potlociD) == "segData")
-            {            
-              orddat <- do.call("order", c(lapply(1:ncol(repD@seglens), function(ii) repD@seglens[,ii]), lapply(1:ncol(repD), function(ii) repD@data[,ii])))        
-              whunq <- .fastUniques(cbind(repD@seglens, repD@data)[orddat,])
+            {
+              
+              orddat <- do.call("order", c(lapply(1:ncol(as.matrix(seglens(repD))), function(ii) seglens(repD)), lapply(1:ncol(repD), function(ii) repD@data[,ii])))        
+              whunq <- .fastUniques(cbind(seglens(repD), repD@data)[orddat,])
               lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)
               lD[orddat,] <- lD[orddat[rep(which(whunq), diff(c(which(whunq), length(whunq) + 1)))],]
             } else if(class(potlociD) == "segMeth") {

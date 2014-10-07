@@ -1,4 +1,4 @@
-%\VignetteIndexEntry{segmentSeq}
+%\VignetteIndexEntry{segmentSeq: small RNA locus detection}
 %\VignettePackage{segmentSeq}
 
 \documentclass[a4paper]{article}
@@ -7,6 +7,10 @@
 
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
+
+<<<style-Sweave, eval=TRUE, echo=FALSE, results=tex>>=
+BiocStyle::latex()
+@ 
 
 \begin{document}
 
@@ -26,13 +30,11 @@ We begin by loading the \verb'segmentSeq' package.
   library(segmentSeq)
 @
 
-Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information.
+Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information. If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster.
 
 <<results = hide, eval = TRUE>>=
-cl <- makeCluster(8)
+if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
 @
-
-If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster.
 
 The \verb'readGeneric' function is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, to use this function we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
 
@@ -67,20 +69,20 @@ We can now construct a segment map from these potential segments.
 A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
 
 <<>>=
-clustSegs <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TRUE, cl = cl)
+hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TRUE, cl = cl)
 @ 
 
 \subsection*{Segmentation by empirical Bayesian methods}
 
-A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'clustSegs' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identify all
+A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'hS' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identify all
 potential segments in the with a posterior likelihood of being a segment
-greater than some value 'locsens' and containing no subregion with a posterior
-likelihood of being a null greater than 'nulsens'. We then greedily
+greater than some value 'lociCutoff' and containing no subregion with a posterior
+likelihood of being a null greater than 'nullCutoff'. We then greedily
 select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = clustSegs,
+classSegs <- classifySeg(sD = sD, aD = aD, cD = hS,
                          subRegion = NULL, getLikes = TRUE,
                          lociCutoff = 0.9, nullCutoff = 0.9, cl = cl)
 classSegs
@@ -93,7 +95,7 @@ We can use this \verb'lociData' object, in combination with the \verb'alignmentD
 
 <<fig = FALSE, label=segPlot, height = 10, width = 12>>=
 par(mfrow = c(2,1), mar = c(2,6,2,2))
-plotGenome(aD, clustSegs, chr = ">Chr1", limits = c(1, 1e5),
+plotGenome(aD, hS, chr = ">Chr1", limits = c(1, 1e5),
            showNumber = FALSE, cap = 50)
 plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
            showNumber = FALSE, cap = 50)
@@ -126,6 +128,12 @@ Finally, to be a good citizen, we stop the cluster we started earlier:
 <<<stopCluster>>=
 stopCluster(cl)
 @
+
+\section*{Session Info}
+
+<<>>=
+sessionInfo()
+@ 
 
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2010} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{baySeq: Empirical Bayesian Methods For Identifying Differential Expression In Sequence Count Data.} BMC Bioinformatics (2010).

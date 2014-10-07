@@ -27,23 +27,27 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 #        nullLens <- nulls$end - nulls$start + 1    
         countNulls <- getCounts(aD = aD, segments = nulls, cl = cl)
         
-        mD <- new("lociData", data = rbind(countNulls, countLoci),
-                  seglens = c(nullLens, lociLens),
-                  libsizes = as.double(aD@libsizes),
+        mD <- new("lociData", data = abind(countNulls, countLoci, along = 1),
                   replicates = aD@replicates,
-                  coordinates = c(nulls, loci),                  
-                  locLikelihoods = rbind(matrix(-Inf, nrow = nrow(countNulls), ncol = length(levels(aD@replicates))), cD@locLikelihoods))
-      } else {        
-        mD <- new("lociData", data = countLoci,
-                  seglens = lociLens,
-                  libsizes = as.double(cD@libsizes),
-                  replicates = cD@replicates, 
-                  coordinates = loci,
-                  locLikelihoods = cD@locLikelihoods)
+                  coordinates = c(nulls, loci),
+                  seglens = c(nullLens, lociLens))
+
+        if(nrow(cD@locLikelihoods) == nrow(cD))
+          mD@locLikelihoods <- rbind(matrix(-Inf, length(nulls), ncol(cD@locLikelihoods)), cD@locLikelihoods)
+
+        mD@sampleObservables <- c(mD@sampleObservables)        
+      } else {
+        mD <- cD
+        mD@data <- countLoci
       }
 
+    densityFunction(mD) <- nbinomDensity
     mD@groups <- list(mD@replicates)
+    libsizes(mD) <- libsizes(cD)
+    
     mD <- getPriors.NB(mD, verbose = TRUE, cl = cl)
+#    print("stop here!")
+#    return(mD)
     
     if(usePosteriors)
       {
@@ -64,13 +68,13 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
             })
             
           message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
-          repD <- mD[,mD@replicates == rep]
+          repD <- mD[,which(mD@replicates == rep)]
           replicates(repD) <- as.factor(rep(1, ncol(repD)))
           groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- locW
           
-          repD <- getLikelihoods.NB(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
+          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
           
           message("...done!", appendLF = TRUE)
           repD@posteriors[,2]
@@ -109,11 +113,11 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     loci <- cD@coordinates
     lociLens <- width(loci)
     countLoci <- cD@data
-    secondCountLoci <- cD@pairData
 
     if(inferNulls)
       {
         nulls <- gaps(loci)
+        
         nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]        
         if(all(strand(loci) == "*")) {
           nulls <- nulls[strand(nulls) == "*",]
@@ -123,30 +127,31 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
                         which(strand(nulls) == "-")[getOverlaps(nulls[strand(nulls) == "-",], loci[strand(loci) %in% c("*", "-"),], whichOverlaps = FALSE)])
         if(length(removeNull) > 0) nulls <- nulls[-removeNull,]
           
-                                        #nulls <- nulls[strand(nulls) == "*",]        
-
+                                        #nulls <- nulls[strand(nulls) == "*",]
         countNulls <- getCounts(segments = nulls, aD, cl = cl)
         
-        mD <- new("methData",
-                  data = rbind(countNulls$Cs, countLoci),
-                  pairData = rbind(countNulls$Ts, secondCountLoci),
-                  seglens = c(width(nulls), lociLens),
+        mD <- new("lociData",
+                  data = array(data = c(rbind(countNulls$Cs, countLoci[,,1]), rbind(countNulls$Ts, countLoci[,,2])), dim = c(nrow(countNulls$Cs) + nrow(countLoci), ncol(countLoci), 2)),
                   replicates = cD@replicates,
                   coordinates = c(nulls, loci),
-                  libsizes = cD@libsizes,
-                  pairLibsizes = cD@pairLibsizes,
-                  locLikelihoods = rbind(matrix(-Inf, nrow = length(nulls), ncol = length(levels(cD@replicates))), cD@locLikelihoods))
+                  sampleObservables = cD@sampleObservables
+                  )
 
-        mD <- mD[rowSums(mD@data != 0, na.rm = TRUE) > 0 | rowSums(mD@pairData != 0, na.rm = TRUE) > 0,]
-
+        if(nrow(cD@locLikelihoods) == nrow(cD))
+          mD@locLikelihoods <- rbind(matrix(-Inf, nrow(countNulls$Cs), ncol(cD@locLikelihoods)), cD@locLikelihoods)
       } else mD <- cD
 
+    mD <- mD[which(rowSums(mD@data) > 0),]
     mD@groups <- list(mD@replicates)
 
     mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
+    mD@data <- round(mD@data)
+    densityFunction(mD) <- bbNCDist
+    mD <- methObservables(mD)
     
-    mD <- getPriors.BB(mD, verbose = TRUE, cl = cl)        
+    mD <- getPriors(mD, samplesize = 1e4, verbose = TRUE, cl = cl)        
     
+
     if(usePosteriors)
       {
         lociWeights <- sapply(levels(mD@replicates), function(rep) {
@@ -167,7 +172,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- locW
           
-          repD <- getLikelihoods.BB(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
+          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
           
           message("...done!", appendLF = TRUE)
           repD@posteriors[,2]
@@ -183,7 +188,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- NULL
           
-          repD <- getLikelihoods.BB(cD = repD, bootStraps = bootStraps, nullData = TRUE, verbose = FALSE, cl = cl)
+          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, nullData = TRUE, verbose = FALSE, cl = cl)
           
           message("done!", appendLF = TRUE)
           repD@posteriors[,1]

@@ -27,25 +27,25 @@
                            strandSegs
                          })
     strandSegs <- strandSegs[which(!sapply(strandSegs, is.null))]
+
+    segs <- .mergeListLoci(strandSegs)
     
-    if(class(lociPD) == "segMeth") {
-      segs <- new("methData",
-                  data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
-                  pairData = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@pairData)),
-                  replicates = lociPD@replicates,
-                  coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x) && length(x@coordinates) > 0) return(x@coordinates) else return(GRanges(seqinfo = seqinfo(x@coordinates))))),
-                  seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
-                  locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
-                  libsizes = 1 + lociPD@nonconversion,
-                  pairLibsizes = 1 - lociPD@nonconversion)
-      } else {
-        segs <- new("lociData",
-                    data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
-                    replicates = lociPD@replicates,
-                    coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) return(x@coordinates) else return(GRanges()))),
-                    seglens = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@seglens)),
-                    locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)))
-      }
+#    if(class(lociPD) == "segMeth") {
+#      segs <- new("methData",
+#                  data = do.call("abind", c(lapply(splitSeg, function(x) x@data), along = 1))
+#                  data = do.call("abind", c(strandSegs, list(along = 1))),
+#                  replicates = lociPD@replicates,
+#                  coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x) && length(x@coordinates) > 0) ret#urn(x@coordinates) else return(GRanges(seqinfo = seqinfo(x@coordinates))))),                  
+#                  locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)),
+#                  sampleObservables = list(nonconversion = lociPD@nonconversion))
+#      } else {
+#        segs <- new("lociData",
+#                    data = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@data)),
+#                    replicates = lociPD@replicates,
+#                    coordinates = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) return(x@coordinates) else return(GRanges()))),
+#                    seglens = do.call("c", lapply(strandSegs, function(x) if(!is.null(x)) x@rowObservables$seglens)),
+#                    locLikelihoods = do.call("rbind", lapply(strandSegs, function(x) if(!is.null(x)) x@locLikelihoods)))
+#      }
     
     
     segs <- segs[order(as.factor(seqnames(segs@coordinates)), start(segs@coordinates), end(segs@coordinates)),]      

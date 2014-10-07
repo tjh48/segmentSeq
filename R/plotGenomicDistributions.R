@@ -65,7 +65,7 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
         coverage <- profiles[[ii]]
         if(is.matrix(coverage)) coverage <- coverage[,1]
         if(ii == 1 & !add) {
-          plot(x = position, y = coverage, type= "l", col = col[ii], ylim = ylim, xlab = "position", ylab = "proportion of methylation", ...)
+          plot(x = position, y = coverage, type= "l", col = col[ii], ylim = ylim, xlab = "position", ylab = "", ...)
         } else lines(x = position, y = coverage, col = col[ii], ...)
       })
       if(!add) {
@@ -79,7 +79,7 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
 
       if(missing(col)) col <- do.call("rbind", lapply(1:10, function(s) rainbow(length(profiles), s = s / 10)))
       for(mm in 1:length(profiles)) {
-        plot(x = NA, y = NA, ylim = ylim, xlim = range(position), ylab = "proportion of methylation", xlab = "position", ...)
+        plot(x = NA, y = NA, ylim = ylim, xlim = range(position), ylab = "", xlab = "position", ...)
 
         if(!missing(titles))
           title(main = titles[mm], ...)
@@ -119,19 +119,19 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
       chrwidths <- sapply(seqlevels(mD@alignments), function(chr) max(c(0, end(modcod[seqnames(modcod) == chr]))))
       
       if(class(mD) == "alignmentData") {
-        RKPM <- t(t(getCounts(modcod, redMD, cl = NULL) / width(modcod)) / redMD@libsizes) * 1e9
-        sampRKPM <- sapply(redsamp, function(samp) {
-          rowMeans(RKPM[,samp,drop = FALSE])
+        RPKM <- t(t(getCounts(modcod, redMD, cl = NULL) / width(modcod)) / redMD@libsizes) * 1e9
+        sampRPKM <- sapply(redsamp, function(samp) {
+          rowMeans(RPKM[,samp,drop = FALSE])
         })
-        minRKPM <- max(quantile(sampRKPM[sampRKPM != 0], 0.1), 10)
+        minRPKM <- max(quantile(sampRPKM[sampRPKM != 0], 0.1), 10)
         
-                                        #      RKPM <- t(t(getCounts(subcoord, redMD, cl = NULL) / width(subcoord)) / mD@libsizes) * 1e9
+                                        #      RPKM <- t(t(getCounts(subcoord, redMD, cl = NULL) / width(subcoord)) / mD@libsizes) * 1e9
                                         #      end(leftMod[strand(leftMod) != "-"]) <- start(subcoord[strand(leftMod) != "-"]) - 1
                                         #      start(leftMod[strand(leftMod) == "-"]) <- end(subcoord[strand(leftMod) == "-"]) + 1
-                                        #      leftRKPM <- t(t(getCounts(leftMod, redMD, cl = NULL) / width(leftMod)) / mD@libsizes) * 1e9
+                                        #      leftRPKM <- t(t(getCounts(leftMod, redMD, cl = NULL) / width(leftMod)) / mD@libsizes) * 1e9
                                         #      start(rightMod[strand(rightMod) != "-"]) <- end(subcoord[strand(rightMod) != "-"]) + 1
                                         #      end(rightMod[strand(rightMod) == "-"]) <- start(subcoord[strand(rightMod) == "-"]) - 1
-                                        #      rightRKPM <- t(t(getCounts(rightMod, redMD, cl = NULL) / width(rightMod)) / mD@libsizes) * 1e9
+                                        #      rightRPKM <- t(t(getCounts(rightMod, redMD, cl = NULL) / width(rightMod)) / mD@libsizes) * 1e9
         
         
         codbase <- lapply(seqlevels(redMD@alignments), function(chr) {
@@ -177,8 +177,8 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
         repDat <- lapply(redsamp, function(samp) {
           message(".", appendLF = FALSE)
           
-          sampRKPM <- rowMeans(RKPM[,samp,drop = FALSE])
-          sampRKPM[sampRKPM < minRKPM] <- minRKPM
+          sampRPKM <- rowMeans(RPKM[,samp,drop = FALSE])
+          sampRPKM[sampRPKM < minRPKM] <- minRPKM
           
           weights <- rowSums(t(t(redMD@data[overCod,samp] / redMD@alignments$matches[overCod]) / redMD@libsizes[samp]) * 1e6) / length(samp)
           covRep <- coverage(redMD@alignments[overCod[weights > 0]], weight = weights[weights > 0], width = chrwidths)
@@ -196,24 +196,24 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
                                 } else return(c())
                               }))
           
-                                        #        coverBase <- coverBase[which((coverBase$id %in% which(sampRKPM > 0) & coverBase$centre) |
-                                        #                               (coverBase$id %in% which(sampLRKPM > 0) & coverBase$left) |
-                                        #                               (coverBase$id %in% which(sampRRKPM > 0) & coverBase$right)),]
+                                        #        coverBase <- coverBase[which((coverBase$id %in% which(sampRPKM > 0) & coverBase$centre) |
+                                        #                               (coverBase$id %in% which(sampLRPKM > 0) & coverBase$left) |
+                                        #                               (coverBase$id %in% which(sampRRPKM > 0) & coverBase$right)),]
           
                                         #        if(any(coverBase$left)) leftSummary <- sapply(split(coverBase$coverage[coverBase$left], factor(cut(coverBase$adjPos[coverBase$left], breaks = cuts, labels = FALSE, include.lowest = TRUE), levels = 1:cuts)), mean, na.rm = TRUE) else leftSummary <- rep(0, cuts)
                                         #        if(any(coverBase$right)) rightSummary <- sapply(split(coverBase$coverage[coverBase$right], factor(cut(coverBase$adjPos[coverBase$right], breaks = cuts, labels = FALSE, include.lowest = TRUE), levels = 1:cuts)), mean, na.rm = TRUE) else rightSummary <- rep(0, cuts)
           
-          summariseCoverage <- function(split, splitWeight, codRKPM) {
+          summariseCoverage <- function(split, splitWeight, codRPKM) {
             sapply(1:length(split), function(ii) {            
-              weighted.mean(coverage[split[[ii]]] / codRKPM[as.integer(mergeBase$id[split[[ii]]])], w = splitWeight[[ii]], na.rm = TRUE) * mean(codRKPM, trim = 0.1)
+              weighted.mean(coverage[split[[ii]]] / codRPKM[as.integer(mergeBase$id[split[[ii]]])], w = splitWeight[[ii]], na.rm = TRUE) * mean(codRPKM, trim = 0.1)
             })
           }
           
           if(surrounding > 0) {
-            sumCov <- c(summariseCoverage(leftSplit, leftWeight, sampRKPM),
-                        summariseCoverage(centreSplit, centreWeight, sampRKPM),
-                        summariseCoverage(rightSplit, rightWeight, sampRKPM))
-          } else sumCov <- summariseCoverage(centreSplit, centreWeight, sampRKPM)
+            sumCov <- c(summariseCoverage(leftSplit, leftWeight, sampRPKM),
+                        summariseCoverage(centreSplit, centreWeight, sampRPKM),
+                        summariseCoverage(rightSplit, rightWeight, sampRPKM))
+          } else sumCov <- summariseCoverage(centreSplit, centreWeight, sampRPKM)
           sumCov
         })
       }
@@ -223,9 +223,9 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
     }
   }
 
-averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, ...)
+averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, plot = TRUE, ...)
   {
-    message("Plotting...", appendLF = FALSE)
+    message("Calculating...", appendLF = FALSE)
     
     if(missing(cuts))
       cuts <- max(ceiling(median(width(coordinates)) / bw * length(coordinates)), 5)
@@ -261,7 +261,7 @@ averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 
     message(".done!")    
     if(missing(ylim) || is.null(ylim)) ylim <- c(0, max(sapply(profiles, max, na.rm = TRUE), na.rm = TRUE) * 1.1)
     
-    plotAverageProfile(position = position, profiles = profiles, surrounding = surrounding, ylim = ylim,add = add, meanOnly = meanOnly, ...)
+    if(plot) plotAverageProfile(position = position, profiles = profiles, surrounding = surrounding, ylim = ylim,add = add, meanOnly = meanOnly, ...)
       
     invisible(list(position = position, profiles = profiles))
   }
@@ -342,7 +342,7 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     methylation <- methdiv[!is.na(methdiv)]
     position <- breaks[!is.na(methdiv)] #- cuts / 2
     if(!add) {
-      plot(x = position, y = methylation, type = "l", axes = FALSE, xlim = c(0, max(position) * 1.1), ylim = ylim, col = col, ylab = "Proportion of methylation", ...)
+      plot(x = position, y = methylation, type = "l", axes = FALSE, xlim = c(0, max(position) * 1.1), ylim = ylim, col = col, ylab = "", ...)
       axis(2, at = pretty(0:1, n = 5))
       if(length(chrlens) > 1)
         segments(x0 = cumsum(chrlens)[-length(chrlens)], y0 = 0, y1 = 1, col = "red", lty = 2, lwd = 3)    

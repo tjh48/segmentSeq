@@ -128,19 +128,14 @@
     } else if (class(sD) == "segMeth")
       {
         lD <- new("methData",
-                  data = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
-                  pairData = matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
+                  data = list(matrix(ncol = ncol(sD), nrow = length(sD@coordinates)),
+                    matrix(ncol = ncol(sD), nrow = length(sD@coordinates))),
                   replicates = sD@replicates,
                   coordinates = sD@coordinates,
-                  seglens = width(sD@coordinates),
-                  libsizes = sD@nonconversion + 1,
-                  pairLibsizes = 1 - sD@nonconversion
-                  )
-        
-        if(nrow(sD@Ts) > 0)
-          lD@pairData <- sD@Ts
-        if(nrow(sD@Cs) > 0)
-          lD@data <- sD@Cs
+                  seglens = width(sD@coordinates))                  
+    
+        if(nrow(sD@Ts) > 0 & nrow(sD@Cs) > 0)
+          lD@data <- array(c(sD@Cs, sD@Ts), c(dim(sD@Cs), 2))
       }
     if("seglens" %in% slotNames(sD) && nrow(sD@seglens) > 0)
       lD@seglens <- sD@seglens
@@ -149,45 +144,44 @@
     lD
   }
 
-.stratifySample <- function(stratSD, samplesize)
-  {    
-    sampData <- rowSums(sapply(1:ncol(stratSD), function(ii) as.integer(stratSD@data[,ii]) / stratSD@libsizes[ii]))
-    sampData <- sampData[!duplicated(sampData)]
-    
-    sqnum <- length(sampData) / 1000
-    squant <- quantile(sampData, 1:sqnum / sqnum)
-    sqdup <- c(1, which(diff(squant) > min(1 / sD@libsizes) / 10))
-    z <- cbind(as.numeric(squant[sqdup]), c(as.numeric(squant[sqdup[-1]]), max(sampData)))
-    z[1,1] <- -Inf
+#.stratifySample <- function(stratSD, samplesize)
+#  {    
+#    sampData <- rowSums(sapply(1:ncol(stratSD), function(ii) as.integer(stratSD@data[,ii]) / stratSD@libsizes[ii]))
+#    sampData <- sampData[!duplicated(sampData)]
+#    
+#    sqnum <- length(sampData) / 1000
+#    squant <- quantile(sampData, 1:sqnum / sqnum)
+#    sqdup <- c(1, which(diff(squant) > min(1 / sD@libsizes) / 10))
+#    z <- cbind(as.numeric(squant[sqdup]), c(as.numeric(squant[sqdup[-1]]), max(sampData)))
+#    z[1,1] <- -Inf
 
-    sy <- do.call("rbind",
-                  lapply(1:nrow(z), function(ii) {
-                    w <- z[ii,]
-                    inbetweener <- which(sampData > w[1] & sampData <= w[2])
-                    samplenum <- min(length(inbetweener), ceiling(samplesize / nrow(z)))
-                    cbind(sample(inbetweener, size = samplenum, replace = FALSE), length(inbetweener) / samplenum)
-                  })
-                  )
-    
-    weights <- sy[,2]
-    sy <- sy[,1]
-
-    y <- sD@data[sy,,drop = FALSE]
-    if(lensameFlag) seglensy <- seglens[sy] else seglensy <- seglens[sy,,drop = FALSE]
-    
-    ordData <- do.call(order, as.data.frame(cbind(y, seglensy)))
-    y <- y[ordData,, drop = FALSE]
-    weights <- weights[ordData]
-    if(lensameFlag) seglensy <- seglensy[ordData] else seglensy <- seglensy[ordData,,drop = FALSE]
-    
-    dups <- c(1, which(rowSums((cbind(y,seglensy))[-1,] == (cbind(y, seglensy))[-nrow(y),]) != ncol(cbind(y, seglensy))) + 1)
-    copies <- diff(c(dups, nrow(y) + 1))
-
-    sy <- cbind(sampled = sy[ordData], representative = rep(1:length(copies), copies))
-
-    y <- y[dups,, drop = FALSE]
-    if(lensameFlag) seglensy <- seglensy[dups] else seglensy <- seglensy[dups,, drop = FALSE]
-  }
+#    sy <- do.call("rbind",
+#                  lapply(1:nrow(z), function(ii) {
+#                    w <- z[ii,]
+#                    inbetweener <- which(sampData > w[1] & sampData <= w[2])
+#                    samplenum <- min(length(inbetweener), ceiling(samplesize / nrow(z)))
+#                    cbind(sample(inbetweener, size = samplenum, replace = FALSE), length(inbetweener) / samplenum)
+#                  })
+#                  )
+#    
+#    weights <- sy[,2]
+#    sy <- sy[,1]
+#    y <- sD@data[sy,,drop = FALSE]
+#    if(lensameFlag) seglensy <- seglens[sy] else seglensy <- seglens[sy,,drop = FALSE]
+#    
+#    ordData <- do.call(order, as.data.frame(cbind(y, seglensy)))
+#    y <- y[ordData,, drop = FALSE]
+#    weights <- weights[ordData]
+#    if(lensameFlag) seglensy <- seglensy[ordData] else seglensy <- seglensy[ordData,,drop = FALSE]
+#    
+#    dups <- c(1, which(rowSums((cbind(y,seglensy))[-1,] == (cbind(y, seglensy))[-nrow(y),]) != ncol(cbind(y, seglensy))) + 1)
+#    copies <- diff(c(dups, nrow(y) + 1))
+#
+#    sy <- cbind(sampled = sy[ordData], representative = rep(1:length(copies), copies))
+#
+#    y <- y[dups,, drop = FALSE]
+#    if(lensameFlag) seglensy <- seglensy[dups] else seglensy <- seglensy[dups,, drop = FALSE]
+#  }
 
 
 .splitSD <- function(sD, largeness = 1e8)
@@ -220,27 +214,26 @@
 }
 
 .mergeListLoci <- function(splitSeg) {
-  if(class(splitSeg[[1]]) != "methData") {
-    mergeSeg <- new(class(splitSeg[[1]]),
-                    locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
-                    coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-                    data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
-                    replicates = splitSeg[[1]]@replicates,
-                    libsizes = splitSeg[[1]]@libsizes,
-                    groups = splitSeg[[1]]@groups,
-                    annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
-                    seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))
-  } else if(class(splitSeg[[1]]) == "methData")
-    mergeSeg <- new(class(splitSeg[[1]]),
-                    locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
-                    coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
-                    data = do.call("rbind", lapply(splitSeg, function(x) x@data)),
-                    pairData = do.call("rbind", lapply(splitSeg, function(x) x@pairData)),
-                    replicates = splitSeg[[1]]@replicates,
-                    libsizes = splitSeg[[1]]@libsizes,
-                    groups = splitSeg[[1]]@groups,
-                    annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation)),
-                    seglens = do.call("rbind", lapply(splitSeg, function(x) x@seglens)))    
+  mergeSeg <- new(class(splitSeg[[1]]),
+                  locLikelihoods = do.call("rbind", lapply(splitSeg, function(x) x@locLikelihoods)),
+                  coordinates = do.call("c", lapply(splitSeg, function(x) x@coordinates)),
+                  data = do.call("abind", c(lapply(splitSeg, function(x) x@data), list(along = 1))),
+                  replicates = splitSeg[[1]]@replicates,
+                  sampleObservables = splitSeg[[1]]@sampleObservables,
+                  groups = splitSeg[[1]]@groups,
+                  annotation = do.call("rbind", lapply(splitSeg, function(x) x@annotation))
+                  )
+    if(length(splitSeg[[1]]@cellObservables) > 0) {
+      mergeSeg@cellObservables <- lapply(1:length(splitSeg[[1]]@cellObservables), function(ii)
+                                         do.call("abind", c(lapply(splitSeg, function(x) x@cellObservables[[ii]]), list(along = 1))))
+      names(mergeSeg@cellObservables) <- names(splitSeg[[1]]@cellObservables)
+    }
+  if(length(splitSeg[[1]]@rowObservables) > 0) {
+    mergeSeg@rowObservables <- lapply(1:length(splitSeg[[1]]@rowObservables), function(ii)
+                                      do.call("abind", c(lapply(splitSeg, function(x) x@rowObservables[[ii]]), list(along = 1)))
+                                              )
+      names(mergeSeg@rowObservables) <- names(splitSeg[[1]]@rowObservables)
+    }
   mergeSeg
 }
 

@@ -110,7 +110,7 @@
   }
 
 
-processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = TRUE, cl)         
+processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = FALSE, cl)         
   {
 #    if("tag" %in% colnames(values(aD@alignments))) {      
 
@@ -131,7 +131,7 @@ processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit 
     
     data <- Cs <- Ts <- NULL
     
-    partCounts <- function(chunks) {
+    partCounts <- function(chunks, cs, cc) {
       segments <- cs[which(as.integer(cs$csegChunk) %in% chunks),]             
       chad <- which(as.integer(values(cTags)$chunk) %in% chunks)      
       waD <- aD[which(seqnames(aD@alignments) == cc & end(aD@alignments) >= min(start(cTags[chad])) & start(aD@alignments) <= max(end(cTags[chad]))),]
@@ -146,58 +146,60 @@ processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit 
       return(counts)
     }
     
-    for(cc in seqlevels(cTags))
-      {
-        if(any(cTags@seqnames == cc))
-          {
-            if(strandSplit) {
-              cs <- c(.chrProcessing(cTags, cc, strand = "+", verbose = verbose),
+    chrDat <- lapply(seqlevels(cTags), function(cc) {
+      if(any(cTags@seqnames == cc))
+        {
+          if(strandSplit) {
+            cs <- c(.chrProcessing(cTags, cc, strand = "+", verbose = verbose),
                       .chrProcessing(cTags, cc, strand = "-", verbose = verbose))              
-            } else {
-              cs <- .chrProcessing(cTags, cc, verbose = verbose)
+          } else {
+            cs <- .chrProcessing(cTags, cc, verbose = verbose)
+          }
+          cs <- cs[order(as.integer(cs$csegChunk), start(cs), end(cs)),]
+          
+          if(verbose) message(length(cs), " candidate loci found.")
+          
+          if(getCounts) {
+            if(verbose) message("Getting count data for each candidate locus...", appendLF = FALSE)
+            windowChunks <- .windowing(cs)
+            windata <- lapply(windowChunks, partCounts, cs = cs, cc = cc)
+            
+            if(class(aD) == "alignmentData") {
+              data <- do.call("rbind", windata)
+            } else if(class(aD) == "alignmentMeth") {
+              Cs <- do.call("rbind", lapply(windata, function(x) x$Cs))
+              Ts <- do.call("rbind", lapply(windata, function(x) x$Ts))
+              rm(windata)
+              gc()
             }
-            cs <- cs[order(as.integer(cs$csegChunk), start(cs), end(cs)),]
-            
-#            cs <- .chrProcessing(cTags, cc, verbose = verbose)
-#            if(strandSplit) {
-#              cs <- c(cs, cs)
-#              strand(cs) <- c(rep(c("+", "-"), each = length(cs) / 2))
-#              cs <- cs[c(which(strand(cs) == "+")[getOverlaps(cs[strand(cs) == "+",], cTags[strand(cTags) == "+",], whichOverlaps = FALSE)],
-#                         which(strand(cs) == "-")[getOverlaps(cs[strand(cs) == "-",], cTags[strand(cTags) == "-",], whichOverlaps = FALSE)]),]
-#            }
-            
-            if(verbose) message(length(cs), " candidate loci found.")
 
-            if(getCounts) {
-              if(verbose) message("Getting count data for each candidate locus...", appendLF = FALSE)
-              windowChunks <- .windowing(cs)
-              windata <- lapply(windowChunks, partCounts)
-              
-              if(class(aD) == "alignmentData") {
-                data <- rbind(data, do.call("rbind", windata))                                          
-              } else if(class(aD) == "alignmentMeth") {
-                Cs <- rbind(Cs, do.call("rbind", lapply(windata, function(x) x$Cs)))
-                Ts <- rbind(Ts, do.call("rbind", lapply(windata, function(x) x$Ts)))
-                rm(windata)
-                gc()
-              }
-            } else data <- Cs <- Ts <- matrix(nrow = 0, ncol = ncol(aD))
-            
             if(verbose)
-              message("...done!")
+              message("...done!")            
+            
+          } else data <- Cs <- Ts <- matrix(nrow = 0, ncol = ncol(aD))
+                    
+          gc()
+          
+        } else {
+          if(verbose) message("No tags found for chromosome ", cc)
+          cs <- GRanges()
+          data <- Cs <- Ts <- matrix(nrow = 0, ncol = ncol(aD))
+        }
+      if(class(aD) == "alignmentData") {
+        return(list(data = data, coordinates = cs))
+      } else if(class(aD) == "alignmentMeth") return(list(Cs = Cs, Ts = Ts, coordinates = cs))                                              
+    })
 
-            coordinates <- suppressWarnings(c(coordinates, cs))            
-            gc()
-
-          } else if(verbose) message("No tags found for chromosome ", cc)
-      }
-
+    coordinates <- do.call("c", lapply(chrDat, function(x) x$coordinates))
     values(coordinates) <- NULL
 
     if(class(aD) == "alignmentData") {
+      data <- do.call("rbind", lapply(chrDat, function(x) x$data))
       tD <- new("segData", coordinates = coordinates, data = data, libsizes = aD@libsizes, replicates = aD@replicates)
       colnames(tD@data) <- aD@libnames
     } else if(class(aD) == "alignmentMeth") {
+      Cs <- do.call("rbind", lapply(chrDat, function(x) x$Cs))
+      Ts <- do.call("rbind", lapply(chrDat, function(x) x$Ts))
       colnames(Cs) <- colnames(Ts) <- aD@libnames
       tD <- new("segMeth")
       tD@nonconversion <- aD@nonconversion

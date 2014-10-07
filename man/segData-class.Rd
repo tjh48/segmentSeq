@@ -5,6 +5,7 @@
 \alias{segData-class}
 \alias{[,segData-method}
 \alias{[,segData,ANY,ANY-method}
+\alias{[,segData,ANY-method}
 \alias{dim,segData-method}
 \alias{initialize,segData-method}
 \alias{show,segData-method}

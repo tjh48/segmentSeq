@@ -25,7 +25,7 @@ function(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pile
 
   message("Computing plot...", appendLF = FALSE)
   
-  pAD <- processAD(reducedAD, gap = 0, cl = NULL, verbose = FALSE)
+  pAD <- processAD(reducedAD, gap = 0, cl = NULL, verbose = FALSE, getCounts = TRUE)
   
   if(plotType == "pileup") {
     rectPileup <- do.call("rbind", lapply(1:length(samples), function(uu)
@@ -202,7 +202,7 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
           xtext <- (start(redloci@coordinates) + end(redloci@coordinates)) / 2          
           dup <- duplicated(round(xtext / diff(limits), 1))          
           ytext <- unlist(apply(cbind(which(!dup), c(which(!dup)[-1] - 1, length(dup))), 1, function(x) x[1]:x[2] - x[1] + 1)) %% 5 * 0.2
-          if(showNumber) text(xtext, ytext - 1, labels = brlims, col = "black", cex = 0.5)
+          if(showNumber) text(xtext, ytext - 1, labels = brlims, col = "black", cex = 1)
         } else plotLoci <- FALSE         
       } else plotLoci <- FALSE
 
@@ -220,7 +220,7 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
               {
                 alpha = exp(selloc@locLikelihoods[,whrep]) * 0.75
                 alpha[is.na(alpha)] <- 0            
-                brcols <- rgb(rgb[1] * 0.7, rgb[2] * 0.7, rgb[3] * 0.7, alpha = alpha^3)            
+                brcols <- rgb(rgb[1] * 0.7, rgb[2] * 0.7, rgb[3] * 0.7, alpha = alpha^2)            
                 rect(start(selloc@coordinates) - 0.5, which(samples == sN) - loweradj, end(selloc@coordinates) + 0.5, which(samples == sN) + upperadj, col = brcols, border = brcols, density = 2, angle = angle)
               }
           }

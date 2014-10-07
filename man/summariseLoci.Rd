@@ -19,9 +19,6 @@ summariseLoci(cD, perReplicate = TRUE)
     or the total number of loci identified in the dataset?
 }
 }
-\details{
-
-}
 \value{
   A numeric vector summarising the expectated number of loci in the cD object.
 }

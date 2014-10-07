@@ -73,17 +73,17 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
 
     countslist <- lapply(seqlevels(redsegs), function(cc)
                          {                                 
-                           createIntervals <- function(inCluster = FALSE)
-                             {
-                               cummaxEnd <- cummax(end(dupTags))
-                               cumminStart <- cummax(start(dupTags))
-                               
-                               fIns <- cbind(findInterval(start(chrsegs), cummaxEnd) + 1, 
-                                             findInterval(end(chrsegs), cumminStart))
-                               if(inCluster) assign("fIns", fIns, envir = .GlobalEnv) else return(fIns)
-                               return(NULL)
-                             }
-
+#                           createIntervals <- function(inCluster = FALSE)
+#                             {
+#                               cummaxEnd <- cummax(end(dupTags))
+#                               cumminStart <- cummax(start(dupTags))
+#                               
+#                               fIns <- cbind(findInterval(start(chrsegs), cummaxEnd) + 1, 
+#                                             findInterval(end(chrsegs), cumminStart))
+#                               if(inCluster) assign("fIns", fIns, envir = .GlobalEnv) else return(fIns)
+#                               return(NULL)
+#                             }
+#
                            chrsegs <- IRanges(start = start(redsegs[seqnames(redsegs) == cc,]), end = end(redsegs[seqnames(redsegs) == cc,]))
                            if(length(chrsegs) == 0)
                              return(list(Cs = matrix(ncol = ncol(dataCs), nrow = 0), Ts = matrix(ncol = ncol(dataTs), nrow = 0)))
@@ -227,6 +227,9 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
       Cnas <- Cs
       Tnas <- Ts
     }
+
+    if(!is.null(cl))
+      clusterEvalQ(cl, rm(list = ls()))      
 
 #    if(!as.matrix) {
 #      Cdat <- do.call("DataFrame", lapply(1:ncol(Cnas), function(jj) Rle(Cnas[,jj])))

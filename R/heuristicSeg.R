@@ -18,13 +18,12 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
           if(!is.null(tempDir))
             save(sDsplit, file = paste(tempDir, "/sDsplit.RData", sep = ""))
         }
-#      ii <- 35; strand = "+"
 
         if(verbose) message("Segmentation split into ", length(sDsplit), " parts.")
 
         splitSeg <- lapply(1:length(sDsplit), function(ii) {
           if(verbose) message("Segmenting; Part ", ii, " of ", length(sDsplit))
-        
+          
           strandSeg <- lapply(unique(strand(sD@coordinates)), function(strand) {
             if(verbose) message("Strand: ", strand)
             existingSDP <- FALSE
@@ -42,8 +41,8 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
             if(!existingSDP) {
               sDP <- .partheuristicSeg(
                        sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
-                       aDP = aD[strand(aD@alignments) == strand,],
-                       bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+                       aDP = aD,
+                       bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
               
               if(!is.null(tempDir)) save(sDP,
                                          file = paste(tempDir, "/seg", ii, "_", strand, "_", "largeness_", largeness,
@@ -53,12 +52,13 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
             }
             return(sDP)
           })
-          if(length(strandSeg) == 1) sDP <- strandSeg else sDP <- .mergeListLoci(strandSeg)
+          if(length(strandSeg) == 1) sDP <- strandSeg[[1]] else sDP <- .mergeListLoci(strandSeg)
           return(sDP)
-        })
-        splitSeg <- splitSeg[sapply(splitSeg, nrow) > 0]
-        if(length(splitSeg) > 0) lD <- .mergeListLoci(splitSeg) else lD <- new("methData")
-      } else lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = NULL, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+        })        
+        lD <- .mergeListLoci(splitSeg)
+      } else {
+        lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
+      }
     
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")    
     
@@ -77,12 +77,10 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       return(sDP)
     }
     sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
-    if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = FALSE)
+    if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = TRUE)
     sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
     
     dupStarts <- which(fastUniques(cbind(as.character(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)))))
-
-    #if(verbose) if(verbose) message("Evaluating potential loci...", appendLF = FALSE)
 
     replicates <- sDP@replicates
 
@@ -92,12 +90,12 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       {
         locDens <- rowSums(sapply(which(sDP@replicates == rep), function(jj)
                        as.integer(sDP@data[,jj]) / seglens[,1] / sDP@libsizes[jj])) / sum(sDP@replicates == rep)
-        if(verbose) message(".", appendLF = FALSE)
+        #if(verbose) message(".", appendLF = FALSE)
         
         if(!bimodality) return(locDens * 1e9 > RKPM) else {
           logDens <- log10(locDens)          
           nzlocs <- which(logDens != -Inf)
-          bimodalSep(logDens[nzlocs], bQ = c(0, 1))
+          bimodalSeparator(logDens[nzlocs], minperc = 10)
           if(verbose) message("...done!")
           return(Rle(logDens > locCutoff))
         }
@@ -132,7 +130,7 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
 #      internalNulls <- sDP[rowSums(!sDP@locLikelihoods, na.rm = TRUE) > 0 & width(sDP@coordinates) > gap,]
 
       empties <- .zeroInMeth(aD = aDP, smallSegs = sDP@coordinates[sDPSmall])
-      if(verbose) message("done!", appendLF = TRUE)
+
       if(length(empties) > 0) {
         potnullD <- .constructMethNulls(emptyNulls = empties, sDP = sDP, locDef = sDP@coordinates[which(.rowSumDF(locLikes) > 0),], minlen = gap)
 
@@ -174,15 +172,24 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       
       if(verbose) message("...done!")
       seg <- .processPosteriors(lociPD = sDP, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, verbose = TRUE, cl = cl)
+      seg@sampleObservables <- list(nonconversion = sDP@nonconversion)
       gc()
       
       return(seg)
 
     } else {
+      if(nrow(sDP@data) == 0)
+        sDP@data <- getCounts(sDP@coordinates, aDP, cl = cl)
+
+      if(verbose) message("Evaluating candidate loci...", appendLF = FALSE)
+      
       locM <- do.call("DataFrame", lapply(levels(sDP@replicates), densityFunction, sDP = sDP, seglens = seglens, RKPM = RKPM, gap = gap, bimodality = bimodality))                
+      if(verbose) message("done.")
       
       selLoc <- .rowSumDF(locM, na.rm = TRUE) > 0
       potlociD <- sDP[selLoc,]
+
+      if(nrow(potlociD) == 0) return(.convertSegToLoci(potlociD))
       
       potlociD@replicates <- as.factor(sDP@replicates)    
       potlociD@locLikelihoods <- do.call("DataFrame", lapply(as.list(locM[selLoc,,drop = FALSE]), log))
@@ -199,11 +206,11 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
       
       if(bimodality) {
         emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
-        gap <- 10^(bimodalSep(log10(end(emptyNulls) - start(emptyNulls) + 1)))
+        gap <- 10^(bimodalSeparator(log10(end(emptyNulls) - start(emptyNulls) + 1)))
       }
         
       emptyPD@coordinates <- emptyNulls[width(emptyNulls) <= as.integer(floor(gap)),]
-      emptyPD@locLikelihoods <- do.call("DataFrame", lapply(1:length(levels(sDP@replicates)), function(jj) Rle(-Inf, length = length(emptyPD@coordinates))))
+      emptyPD@locLikelihoods <- do.call("DataFrame", lapply(1:length(levels(sDP@replicates)), function(jj) Rle(-Inf, lengths = length(emptyPD@coordinates))))
       colnames(emptyPD@locLikelihoods) <- levels(sDP@replicates)
         
       emptyPD@data <- (matrix(0, ncol = length(sDP@replicates), nrow = length(emptyPD@coordinates)))
@@ -295,7 +302,7 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
         if(length(nullAnnotation) == 0) nulSub <- NULL
         potnullD@data <- nullData[nulSub,,drop = FALSE]
         potnullD@coordinates <- nullAnnotation[nulSub,]
-      print(colnames(nulM))
+      #print(colnames(nulM))
       potnullD@locLikelihoods <- .matrix2Rle(log(nulM[nulSub,, drop = FALSE]))
       
         rm(nullData, nullAnnotation, nulM)

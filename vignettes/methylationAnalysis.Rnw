@@ -1,4 +1,4 @@
-%\VignetteIndexEntry{segmentSeq}
+%\VignetteIndexEntry{segmentsSeq: Methylation locus identification}
 %\VignettePackage{segmentSeq}
 
 \documentclass[a4paper]{article}
@@ -7,6 +7,11 @@
 
 \title{segmentSeq: methods for detecting methylation loci and differential methylation}
 \author{Thomas J. Hardcastle}
+
+<<<style-Sweave, eval=TRUE, echo=FALSE, results=tex>>=
+BiocStyle::latex()
+@ 
+
 
 \begin{document}
 
@@ -24,16 +29,11 @@ Preparation of the segmentSeq package proceeds as in siRNA analysis. We begin by
   library(segmentSeq)
 @
 
-Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information.
+Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information. If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
 
-<<results = hide, eval = FALSE>>=
-cl <- makeCluster(8)
+<<results = hide, eval = TRUE>>=
+if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
 @
-
-If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
-<<results = hide>>=
-  cl <- NULL
-@ 
 
 The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
 
@@ -83,7 +83,7 @@ We can now construct a segment map from these potential segments.
 A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
 
 <<>>=
-hS <- heuristicSeg(sD, mD, prop = 0.2, cl = cl, gap = 100, getLikes = FALSE)
+hS <- heuristicSeg(sD = sD, aD = mD, prop = 0.2, cl = cl, gap = 100, getLikes = FALSE)
 hS
 @ 
 
@@ -139,16 +139,21 @@ We can also examine the \verb'methData' object for differentially methylated reg
 groups(hSL) <- list(NDE = c(1,1,1,1), DE = c("A", "A", "B", "B"))
 @
 
+<<>>=
+hSL <- methObservables(hSL)
+densityFunction(hSL) <- bbNCDist
+@ 
+
 We can then determine a prior distribution on the parameters of a beta-binomial model for the data.
 
 <<>>=
-hSL <- getPriors.BB(hSL, cl = cl)
+hSL <- getPriors(hSL, cl = cl)
 @
 
 We can then find the posterior likelihoods of the models defined in the groups structure.
 
 <<>>=
-hSL <- getLikelihoods.BB(hSL, cl = cl)
+hSL <- getLikelihoods(hSL, cl = cl)
 @ 
 
 We can then retrieve the data for the top differentially methylated regions.
@@ -156,6 +161,13 @@ We can then retrieve the data for the top differentially methylated regions.
 <<>>=
 topCounts(hSL, "DE")
 @ 
+
+\section*{Session Info}
+
+<<>>=
+sessionInfo()
+@ 
+
 
 \begin{thebibliography}{99}
 \bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).

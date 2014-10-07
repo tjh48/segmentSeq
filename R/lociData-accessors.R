@@ -13,6 +13,7 @@ setMethod("[", "lociData", function(x, i, j, ..., drop = FALSE) {
     j <- 1:ncol(x@data)
   if(missing(i))
     i <- 1:nrow(x@data)
+  
 
   if(length(i) == 0) return(x)
   

@@ -16,7 +16,8 @@ sample groups by the user.
 }
 \usage{
 averageProfiles(mD, samples, coordinates, cuts, maxcuts = 200, bw =
-5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, ...)
+5000, surrounding = 0, add = FALSE, col, ylim, meanOnly = TRUE, plot =
+TRUE, ...)
 plotAverageProfile(position, profiles, col, surrounding, ylim, add =
 FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
 }
@@ -71,6 +72,7 @@ FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
     5th percentile is plotted for each member of the sample parameters,
     each on a separate graph.
   }
+  \item{plot}{Should the profile be plotted? Defaults to TRUE.}
   \item{position}{
     A vector describing the position of each point to be plotted. Take
     from the `$position' element in the list object returned by
@@ -101,8 +103,6 @@ FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
   Thomas J. Hardcastle
 }
 
-\examples{
-}
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{hplot}

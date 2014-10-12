@@ -55,7 +55,7 @@ getCounts(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE,
 If `as.matrix', a matrix, each column of which corresponds to a library in the
 \code{alignmentData} object `aD' and each row to the
 segment defined by the corresponding row in `segments'. Otherwise an
-  equivalent DataFrame} object. 
+  equivalent \code{DataFrame} object. 
 }
 
 \author{

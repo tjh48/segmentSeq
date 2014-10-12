@@ -25,9 +25,9 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
     } else if(overlapType == "within") {
       segord <- order(as.factor(seqnames(segments)), start(segments), end(segments))
     }
-    
+
     coordord <- order(as.factor(seqnames(coordinates)), start(coordinates), end(coordinates))
-      
+    
     seg <- segments[segord,, drop = FALSE]
     coord <- coordinates[coordord,, drop = FALSE]
 

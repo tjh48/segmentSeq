@@ -32,7 +32,13 @@ Preparation of the segmentSeq package proceeds as in siRNA analysis. We begin by
 Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information. If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
 
 <<results = hide, eval = TRUE>>=
-if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
+if(require("parallel")) 
+{
+    numCores <- min(8, detectCores())
+    cl <- makeCluster(numCores)
+} else {
+    cl <- NULL
+}
 @
 
 The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
@@ -161,6 +167,14 @@ We can then retrieve the data for the top differentially methylated regions.
 <<>>=
 topCounts(hSL, "DE")
 @ 
+
+Finally, to be a good citizen, we stop the cluster we started earlier:
+
+<<<stopCluster>>=
+if(!is.null(cl))
+    stopCluster(cl)
+@
+
 
 \section*{Session Info}
 

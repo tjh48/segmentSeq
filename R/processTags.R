@@ -93,7 +93,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
 
 
 readBAM <-
-function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
+function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -206,7 +206,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
 
 readGeneric <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, minlen = 15, maxlen = 29, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
+         cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {

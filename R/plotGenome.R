@@ -186,7 +186,7 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
    
     maxVal <- 2.5 * max(plusCs + plusTs, minusCs + minusTs)
 
-    par(mar = c(5, 10, 4, 2))
+    par(mar = c(2, 5, 6, 2))
     if(!add) plot(NA, NA, xlim = limits, ylim = c(!showNumber - 0.5, length(samples) + 0.5), axes = FALSE, xlab = "Position", ylab = "")
 
     if(!missing(loci))
@@ -225,9 +225,10 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
               }
           }
         
-        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "+"),], 0, 0.45)
-        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "-"),], 0.45, 0)
-        plotSelLoci(redloci[which(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "*"),], 0.45, 0.45)
+      
+        plotSelLoci(redloci[as.vector(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "+"),], 0, 0.45)
+        plotSelLoci(redloci[as.vector(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "-"),], 0.45, 0)
+        plotSelLoci(redloci[as.vector(redloci@locLikelihoods[,whrep] > -Inf & strand(redloci@coordinates) == "*"),], 0.45, 0.45)
 
       }
      

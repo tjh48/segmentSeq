@@ -129,7 +129,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
             } else if(class(curNullsWithin) == "methData")
               curNullsWithin <- getPriors.BB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
           
-          curNullsWithin@priors$weights <- matrix(1, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))
+          curNullsWithin@priors$weights <- matrix(0, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))
           
           nullSegPriors <- cD
           nullSegPriors@locLikelihoods <- matrix(nrow = 0, ncol = 0)
@@ -143,7 +143,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
           nullPriors <- lapply(levels(sD@replicates), function(rep) {
             repCol <- which(levels(sD@replicates) == rep)
             list(priors = list(list(nullSegPriors@priors$priors[[1]][[repCol]]), list(curNullsWithin@priors$priors[[1]][[repCol]])),
-                 weights = list(list((1 - exp(cD@locLikelihoods[nullSegPriors@priors$sampled[,1], repCol])) * nullSegPriors@priors$weights), list(exp(curNullsWithin@priors$weights[,repCol])))
+                 weights = list(list((1 - exp(cD@locLikelihoods[nullSegPriors@priors$sampled[,1], repCol]))), list(exp(curNullsWithin@priors$weights[,repCol])))
                  )                
           })          
           if(!is.null(tempDir)) save(nullPriors, nullSampled, file = paste(tempDir, "/nullPriors.RData", sep = ""))
@@ -162,18 +162,6 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
                                       whichOverlaps = FALSE, overlapType = "within", cl = NULL)
           if(any(subWithinLoc))
             {              
-#              if(class(sD) == "segData") {
-#                potnullD <- .constructNulls(emptyNulls, subSD[subWithinLoc,], subSD@coordinates[rowSums(subSD@locLikelihoods == 0) > 0,], cl = cl)
-#              } else if(class(sD) == "segMeth") {
-#                sDPSmall <- .fastUniques(data.frame(chr = as.character(seqnames(subSD@coordinates)), start = as.numeric(start(subSD@coordinates))))
-#                empties <- .zeroInMeth(aD = aD, smallSegs = subSD@coordinates[sDPSmall])
-#                potnullD <- .constructMethNulls(emptyNulls, subSD[subWithinLoc,], subSD[rowSums(subSD@locLikelihoods == 0) > 0,])
-                
-#                counts <- getCounts(potnullD@coordinates, aD, cl = cl)        
-#                potnullD@Cs <- counts$Cs
-#                potnullD@Ts <- counts$Ts                
-#              }
-
               subSDWithin <- subSD[subWithinLoc,]
               if(nrow(subSDWithin@data) == 0) subSDWithin@data <- getCounts(subSDWithin@coordinates, aD, cl = cl)
               
@@ -516,16 +504,16 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
         
         repD@priors$weights <- cbind(1-(withinWeights), withinWeights)
         repD@priors$weights[is.na(repD@priors$weights)] <- 0
-        repD@priors$weights <- repD@priors$weights * weightFactors
-        repD@priors$sampled <- sampled
+        if(is.null(weightFactors)) weightFactors <- rep(1, nrow(sampled))
+        repD@priors$weights <- sampled[,"weights"] * repD@priors$weights * weightFactors
+        repD@priors$sampled <- sampled[,1:2]
         
         subset <- intersect(locSubset, which(rowSums(repD@data) > 0))        
         lD <- matrix(NA, ncol = 2, nrow = nrow(repD))
         
         if(length(subset) > 0) {
           if(class(potlociD) == "segData")
-            {
-              
+            {              
               orddat <- do.call("order", c(lapply(1:ncol(as.matrix(seglens(repD))), function(ii) seglens(repD)), lapply(1:ncol(repD), function(ii) repD@data[,ii])))        
               whunq <- .fastUniques(cbind(seglens(repD), repD@data)[orddat,])
               lD <- .getLocLikelihoods(repD, subset = intersect(orddat[whunq], subset), cl = cl)

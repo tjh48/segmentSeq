@@ -88,9 +88,7 @@ select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = hS,
-                         subRegion = NULL, getLikes = TRUE,
-                         lociCutoff = 0.9, nullCutoff = 0.9, cl = cl)
+classSegs <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)                         
 classSegs
 @ 
 

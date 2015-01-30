@@ -13,12 +13,12 @@ These functions take alignment files of various formats to produce an object
 }
 \usage{
 readGeneric(files, dir = ".", replicates, libnames, chrs, chrlens, cols,
-            header = TRUE, minlen = 15, maxlen = 29,
+            header = TRUE, minlen = 15, maxlen = 1000,
             multireads = 1000, polyLength, estimationType = "quantile",
             verbose = TRUE, filterReport = NULL, ...)
 
 readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
-        minlen = 15, maxlen = 29, multireads = 1000,
+        minlen = 15, maxlen = 1000, multireads = 1000,
         polyLength, estimationType = "quantile", verbose = TRUE,
         filterReport) 
 

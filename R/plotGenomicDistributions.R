@@ -254,7 +254,7 @@ averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 
       splitcod <- split(1:length(coordinates), cut(1:length(coordinates), breaks = ceiling(length(coordinates) / 5000), labels = FALSE))
     } else splitcod <- list(1:length(coordinates))
     
-    splitProf <- lapply(splitcod, function(x) .subProfile(coordinates[x], position = position, lenMod = lenMod, mD = mD, samples = samples, cuts = cuts, surrounding = surrounding))
+    splitProf <- lapply(splitcod, function(x) .subProfile(subcoord = coordinates[x], position = position, lenMod = lenMod, mD = mD, samples = samples, cuts = cuts, surrounding = surrounding))
 
     profiles <- lapply(1:length(samples), function(ii) Reduce("+", lapply(splitProf, function(x) x[[ii]])) / length(splitProf))
     names(profiles) <- names(samples)

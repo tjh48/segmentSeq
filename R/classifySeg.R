@@ -305,17 +305,6 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
       pd
     }
     
-    if(!is.null(cl))
-      {
-        clustAssign <- function(object, name)
-          {
-            assign(name, object, envir = .GlobalEnv)
-            NULL
-          }        
-        getLikelihoodsEnv <- new.env(parent = .GlobalEnv)
-        environment(clustAssign) <- getLikelihoodsEnv
-        environment(NBdens) <- getLikelihoodsEnv
-      }
 
     libsizes = libsizes(pcD)
     NBpriors <- pcD@priors$priors
@@ -329,10 +318,11 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
     
     if(!is.null(cl))
       {
-        clusterCall(cl, clustAssign, NBpriors, "NBpriors")
-        clusterCall(cl, clustAssign, numintSamp, "numintSamp")
-        clusterCall(cl, clustAssign, libsizes, "libsizes")
-        clusterCall(cl, clustAssign, priorWeights, "priorWeights")
+        getLikelihoodsEnv <- new.env(parent = .GlobalEnv)
+        environment(NBdens) <- getLikelihoodsEnv
+        environment(BBdens) <- getLikelihoodsEnv
+        
+        clusterExport(cl, c("NBpriors", "numintSamp", "libsizes", "priorWeights"), envir = environment())
       }
 
     if(class(pcD) == "lociData")

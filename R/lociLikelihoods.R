@@ -174,6 +174,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           
           repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
           
+          
           message("...done!", appendLF = TRUE)
           repD@posteriors[,2]
         })

@@ -371,7 +371,7 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
                                                              list(name = "dupTagID", data = dupTagID[sptag]),
                                                              list(name = "dupData", data = dupData[sptag,,drop = FALSE])))
                                                clusterCall(cl, createIntervals, inCluster = TRUE)
-                                               chrNC[spseg,] <- do.call("rbind", parLapply(cl, 1:length(spseg), countNonUniques))
+                                               chrNC[spseg,] <- do.call("rbind", parLapplyLB(cl, 1:length(spseg), countNonUniques))
                                              }
                                          }
                                        }

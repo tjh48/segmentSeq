@@ -88,19 +88,9 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
         {          
           if(!is.null(cl))
             {
-              clustAssign <- function(object, name)
-                {
-                  assign(name, object, envir = .GlobalEnv)
-                  NULL
-                }
-              overlapsEnv <- new.env(parent = .GlobalEnv)
-              environment(clustAssign) <- overlapsEnv
-              clusterCall(cl, clustAssign, fIns, "fIns")
-              clusterCall(cl, clustAssign, chrseg, "chrseg")
-              clusterCall(cl, clustAssign, chrcoord, "chrcoord")
-              clusterCall(cl, clustAssign, segord, "segord")
-              clusterCall(cl, clustAssign, whseg, "whseg")
-              clusterCall(cl, clustAssign, overlapType, "overlapType")
+#              overlapsEnv <- new.env(parent = .GlobalEnv)
+#              environment(clustAssign) <- overlapsEnv
+              clusterExport(cl, c("fIns", "chrseg", "chrcoord", "segord", "whseg", "overlapType"), envir = environment())
             }          
 
           chkCoord <- chrcoord[coordCheck,,drop = FALSE]
@@ -156,8 +146,8 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
                     NULL
                   }
 
-                  environment(checkOverlaps) <- overlapsEnv
-                  environment(clustRedSeg) <- overlapsEnv                  
+#                  environment(checkOverlaps) <- overlapsEnv
+#                  environment(clustRedSeg) <- overlapsEnv                  
                   
                   clusterCall(cl, clustRedSeg, min(rfIns), max(rfIns))
                   apResult <- parApply(cl, cbind(start(rcoord), end(rcoord), rfIns - adj), 1, checkOverlaps, whichOverlaps = whichOverlaps)                  

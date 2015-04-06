@@ -59,8 +59,9 @@
 
 plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
   {
+    if(missing(col)) col <- rainbow(length(profiles))
+    if(is.null(col)) col <- rainbow(length(profiles))
     if(meanOnly) {
-      if(missing(col)) col <- rainbow(length(profiles))
       lapply(1:length(profiles), function(ii) {
         coverage <- profiles[[ii]]
         if(is.matrix(coverage)) coverage <- coverage[,1]
@@ -240,7 +241,7 @@ averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 
     }
     if(!is.list(samples)) samples <- list(samples)
     if(missing(col))
-      col <- rainbow(length(samples))
+      col <- NULL
 
     if(length(unique(width(coordinates))) == 1) lenMod <- unique(width(coordinates)) else lenMod <- c(1000, surrounding)[as.integer(surrounding != 0) + 1]
     

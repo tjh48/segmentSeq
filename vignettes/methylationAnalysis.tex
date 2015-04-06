@@ -1,0 +1,316 @@
+%\VignetteIndexEntry{segmentsSeq: Methylation locus identification}
+%\VignettePackage{segmentSeq}
+
+\documentclass[a4paper]{article}
+
+%\usepackage{rotating}
+
+\title{segmentSeq: methods for detecting methylation loci and differential methylation}
+\author{Thomas J. Hardcastle}
+
+\RequirePackage{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/Bioconductor}
+
+\AtBeginDocument{\bibliographystyle{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/unsrturl}}
+
+\usepackage{Sweave}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This vignette introduces analysis methods for data from high-throughput sequencing of bisulphite treated DNA to detect cytosine methylation. The \verb'segmentSeq' package was originally designed to detect siRNA loci \cite{Hardcastle:2011} and many of the methods developed for this can be used to detect loci of cytosine methylation from replicated (or unreplicated) sequencing data.
+
+\section{Preparation}
+
+Preparation of the segmentSeq package proceeds as in siRNA analysis. We begin by loading the \verb'segmentSeq' package.
+
+\begin{Schunk}
+\begin{Sinput}
+>   library(segmentSeq)
+\end{Sinput}
+\end{Schunk}
+
+Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information. If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster. Results may be slightly different depending on whether or not a cluster is used owing to the non-deterministic elements of the method.
+
+\begin{Schunk}
+\begin{Sinput}
+> if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
+\end{Sinput}
+\end{Schunk}
+
+The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
+
+\begin{Schunk}
+\begin{Sinput}
+> datadir <- system.file("extdata", package = "segmentSeq")
+> files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls",
++ "short_Sample_17A_trimmed.fastq_CG_methCalls",
++ "short_13_C24_col_trim.fastq_CG_methCalls",
++ "short_Sample_28_trimmed.fastq_CG_methCalls")
+> mD <- readMeths(files = files, dir = datadir,
++ libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
++ nonconversion = c(0.004777, 0.005903, 0.016514, 0.006134))
+\end{Sinput}
+\end{Schunk}
+
+We can begin by plotting the distribution of methylation for these samples. The distribution can be plotted for each sample individually, or as an average across multiple samples. We can also subtract one distribution from another to visualise patterns of differential methylation on the genome.
+
+\begin{Schunk}
+\begin{Sinput}
+> par(mfrow = c(2,1))
+> dists <- plotMethDistribution(mD, main = "Distributions of methylation", chr = "Chr1")
+> plotMethDistribution(mD, subtract = rowMeans(sapply(dists, function(x) x[,2])), main = "Differences between distributions", chr = "Chr1")
+\end{Sinput}
+\end{Schunk}
+
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
+\begin{center}
+\includegraphics{methylationAnalysis-figMethDist}
+\caption{Distributions of methylation on the genome (first two million bases of chromosome 1.}
+\label{fig:Seg}
+\end{center}
+\end{figure}
+%\end{sidewaysfigure}
+
+
+Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
+
+\begin{Schunk}
+\begin{Sinput}
+> sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, verbose = TRUE, strandSplit = TRUE, cl = cl)
+\end{Sinput}
+\end{Schunk}
+
+We can now construct a segment map from these potential segments.
+
+\subsection*{Segmentation by heuristic Bayesian methods}
+
+A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
+
+\begin{Schunk}
+\begin{Sinput}
+> hS <- heuristicSeg(sD = sD, aD = mD, prop = 0.2, cl = cl, gap = 100, getLikes = FALSE)
+> hS
+\end{Sinput}
+\begin{Soutput}
+Slot "coordinates"
+GRanges object with 2317 ranges and 0 metadata columns:
+         seqnames             ranges strand
+            <Rle>          <IRanges>  <Rle>
+     [1]     Chr1       [ 108,  948]      +
+     [2]     Chr1       [ 150,  837]      -
+     [3]     Chr1       [5226, 5465]      +
+     [4]     Chr1       [6452, 6452]      +
+     [5]     Chr1       [7021, 7021]      -
+     ...      ...                ...    ...
+  [2313]     Chr1 [1990298, 1990298]      +
+  [2314]     Chr1 [1993118, 1993149]      +
+  [2315]     Chr1 [1993335, 1993335]      +
+  [2316]     Chr1 [1994611, 1994611]      +
+  [2317]     Chr1 [1994857, 1994886]      +
+  -------
+  seqinfo: 1 sequence from an unspecified genome; no seqlengths
+An object of class "methData"
+2317 rows and 4 columns
+
+Slot "replicates"
+A A B B
+Slot "groups":
+list()
+
+Slot "data":
+     A.1   A.2   B.1   B.2  
+[1,] NA:NA NA:NA NA:NA NA:NA
+[2,] NA:NA NA:NA NA:NA NA:NA
+[3,] NA:NA NA:NA NA:NA NA:NA
+[4,] NA:NA NA:NA NA:NA NA:NA
+[5,] NA:NA NA:NA NA:NA NA:NA
+2312 more rows...
+
+Slot "annotation":
+data frame with 0 columns and 2317 rows
+
+Slot "locLikelihoods" (stored on log scale):
+Matrix with  2317  rows.
+       A   B
+1      1   1
+2      1   1
+3      0   1
+4      1   0
+5      0   1
+...  ... ...
+2313   1   1
+2314   1   1
+2315   1   0
+2316   1   0
+2317   0   1
+\end{Soutput}
+\end{Schunk}
+
+Within a methylation locus, it is not uncommon to find completely unmethylated cytosines. If the coverage of these cytosines is too high, it is possible that these will cause the locus to be split into two or more fragments. The \verb'mergeMethSegs' function can be used to overcome this splitting by merging loci with identical patterns of expression that are not separated by too great a gap. Merging in this manner is optional, but recommended.
+
+\begin{Schunk}
+\begin{Sinput}
+> hS <- mergeMethSegs(hS, mD, gap = 5000, cl = cl)
+\end{Sinput}
+\end{Schunk}
+
+We can then estimate posterior likelihoods on the defined loci by applying empirical Bayesian methods. These will not change the locus definition, but will assign likelihoods that the identified loci represent a true methylation locus in each replicate group.
+
+\begin{Schunk}
+\begin{Sinput}
+> hSL <- lociLikelihoods(hS, mD, cl = cl)
+\end{Sinput}
+\begin{Soutput}
+....
+\end{Soutput}
+\end{Schunk}
+
+%\subsection*{Segmentation by empirical Bayesian Methods}
+
+%Classification of the potential segments can also be carried out using empirical Bayesian methods. These are extremely computationally intensive, but allow %biological variation within replicates to be more accurately modelled, thus providing an improved identification of methylation loci. 
+
+%<<>>=
+%#eBS <- classifySeg(sD, hS, mD, cl = cl)
+%@ 
+
+\subsection*{Visualising loci}
+
+By one of these methods, we finally acquire an annotated \verb'methData' object, with the annotations describing the co-ordinates of each segment.
+
+We can use this \verb'methData' object, in combination with the \verb'alignmentMeth' object, to plot the segmented genome.
+
+\begin{Schunk}
+\begin{Sinput}
+> plotMeth(mD, hSL, chr = "Chr1", limits = c(1, 50000), cap = 10)
+\end{Sinput}
+\end{Schunk}
+
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
+\begin{center}
+\includegraphics{methylationAnalysis-figplotMeth}
+\caption{Methylation and identified loci on the first ten thousand bases of chromosome 1.}
+\label{fig:plotMeth}
+\end{center}
+\end{figure}
+%\end{sidewaysfigure}
+
+
+
+\subsection*{Differential Methylation analysis}
+
+We can also examine the \verb'methData' object for differentially methylated regions using the beta-binomial methods \cite{Hardcastle:2013} implemented in \verb'baySeq'. We first define a group structure on the data.
+
+\begin{Schunk}
+\begin{Sinput}
+> groups(hSL) <- list(NDE = c(1,1,1,1), DE = c("A", "A", "B", "B"))
+\end{Sinput}
+\end{Schunk}
+
+\begin{Schunk}
+\begin{Sinput}
+> hSL <- methObservables(hSL)
+> densityFunction(hSL) <- bbNCDist
+\end{Sinput}
+\end{Schunk}
+
+We can then determine a prior distribution on the parameters of a beta-binomial model for the data.
+
+\begin{Schunk}
+\begin{Sinput}
+> hSL <- getPriors(hSL, cl = cl)
+\end{Sinput}
+\end{Schunk}
+
+We can then find the posterior likelihoods of the models defined in the groups structure.
+
+\begin{Schunk}
+\begin{Sinput}
+> hSL <- getLikelihoods(hSL, cl = cl)
+\end{Sinput}
+\begin{Soutput}
+.
+\end{Soutput}
+\end{Schunk}
+
+We can then retrieve the data for the top differentially methylated regions.
+
+\begin{Schunk}
+\begin{Sinput}
+> topCounts(hSL, "DE")
+\end{Sinput}
+\begin{Soutput}
+   seqnames   start     end width strand    A.1    A.2     B.1   B.2 Likelihood ordering
+1      Chr1  934849  935898  1050      +  0:314  0:410 121:324 17:51  0.9984667      B>A
+2      Chr1 1359786 1360368   583      +  2:530  1:307  90:204  4:12  0.9982065      B>A
+3      Chr1 1054379 1054858   480      +  49:62 82:124   3:163  0:27  0.9981658      A>B
+4      Chr1  833024  834208  1185      + 45:171 55:197   0:185  0:23  0.9970532      A>B
+5      Chr1 1914038 1914100    63      +  32:47  17:29    0:32   0:2  0.9968716      A>B
+6      Chr1 1627523 1628436   914      + 70:312 66:308   0:358  0:45  0.9966580      A>B
+7      Chr1  777184  777313   130      +  21:25   8:13    0:28   0:4  0.9965404      A>B
+8      Chr1 1498676 1499243   568      + 64:110  48:83    1:75   0:3  0.9964955      A>B
+9      Chr1 1346398 1346455    58      + 81:118  32:32   2:133   0:2  0.9961933      A>B
+10     Chr1  887378  887526   149      +  0:172   0:90  39:118  5:13  0.9961839      B>A
+        FDR.DE     FWER.DE
+1  0.001533326 0.001533326
+2  0.001663434 0.003324117
+3  0.001720342 0.005152178
+4  0.002026955 0.008083789
+5  0.002247238 0.011186873
+6  0.002429706 0.014491529
+7  0.002576831 0.017900979
+8  0.002692784 0.021342698
+9  0.002816557 0.025068193
+10 0.002916508 0.028788597
+\end{Soutput}
+\end{Schunk}
+
+\section*{Session Info}
+
+\begin{Schunk}
+\begin{Sinput}
+> sessionInfo()
+\end{Sinput}
+\begin{Soutput}
+R version 3.1.1 (2014-07-10)
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+locale:
+ [1] LC_CTYPE=en_GB.UTF-8       LC_NUMERIC=C               LC_TIME=en_GB.UTF-8       
+ [4] LC_COLLATE=en_GB.UTF-8     LC_MONETARY=en_GB.UTF-8    LC_MESSAGES=en_GB.UTF-8   
+ [7] LC_PAPER=en_GB.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_GB.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats4    parallel  stats     graphics  grDevices utils     datasets  methods  
+[9] base     
+
+other attached packages:
+ [1] segmentSeq_2.1.1         ShortRead_1.23.17        GenomicAlignments_1.1.30
+ [4] Rsamtools_1.17.36        Biostrings_2.33.15       XVector_0.5.8           
+ [7] BiocParallel_0.99.25     futile.logger_1.3.7      baySeq_2.1.7            
+[10] abind_1.4-0              GenomicRanges_1.17.48    GenomeInfoDb_1.1.26     
+[13] IRanges_1.99.32          S4Vectors_0.2.8          BiocGenerics_0.11.5     
+
+loaded via a namespace (and not attached):
+ [1] base64enc_0.1-2      BatchJobs_1.4        BBmisc_1.7           Biobase_2.25.1      
+ [5] BiocStyle_1.3.15     bitops_1.0-6         brew_1.0-6           checkmate_1.4       
+ [9] codetools_0.2-9      DBI_0.3.1            digest_0.6.4         fail_1.2            
+[13] foreach_1.4.2        futile.options_1.0.0 grid_3.1.1           hwriter_1.3.2       
+[17] iterators_1.0.7      lambda.r_1.1.6       lattice_0.20-29      latticeExtra_0.6-26 
+[21] RColorBrewer_1.0-5   RSQLite_0.11.4       sendmailR_1.2-1      stringr_0.6.2       
+[25] tools_3.1.1          zlibbioc_1.11.1     
+\end{Soutput}
+\end{Schunk}
+
+
+\begin{thebibliography}{99}
+\bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).
+\bibitem{Hardcastle:2013} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{Empirical Bayesian analysis of paired high-throughput sequencing data with a beta-binomial distribution.} BMC Bioinformatics (2013).
+
+\end{thebibliography}
+
+\end{document}

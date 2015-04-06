@@ -145,13 +145,17 @@ We can also examine the \verb'methData' object for differentially methylated reg
 groups(hSL) <- list(NDE = c(1,1,1,1), DE = c("A", "A", "B", "B"))
 @
 
+The methObservables function pre-calculates a set of data to improve the speed of prior and posterior estimation (at some minor memory cost).
 <<>>=
 hSL <- methObservables(hSL)
+@ 
+
+The density function used here is a composite of the beta-binomial and a binomial distribution that accounts for the reported non-conversion rates.
+<<>>= 
 densityFunction(hSL) <- bbNCDist
 @ 
 
-We can then determine a prior distribution on the parameters of a beta-binomial model for the data.
-
+We can then determine a prior distribution on the parameters of the model for the data.
 <<>>=
 hSL <- getPriors(hSL, cl = cl)
 @

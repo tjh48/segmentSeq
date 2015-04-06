@@ -1,0 +1,488 @@
+%\VignetteIndexEntry{segmentSeq: small RNA locus detection}
+%\VignettePackage{segmentSeq}
+
+\documentclass[a4paper]{article}
+
+%\usepackage{rotating}
+
+\title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
+\author{Thomas J. Hardcastle}
+
+\RequirePackage{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/Bioconductor}
+
+\AtBeginDocument{\bibliographystyle{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/unsrturl}}
+\usepackage{Sweave}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+High-throughput sequencing technologies allow the production of large volumes of short sequences, which can be aligned to the genome to create a set of \textsl{matches} to the genome. By looking for regions of the genome which to which there are high densities of matches, we can infer a segmentation of the genome into regions of biological significance. The methods we propose allows the simultaneous segmentation of data from multiple samples, taking into account replicate data, in order to create a consensus segmentation. This has obvious applications in a number of classes of sequencing experiments, particularly in the discovery of small RNA loci and novel mRNA transcriptome discovery.
+
+We approach the problem by considering a large set of potential \textsl{segments} upon the genome and counting the number of tags that match to that segment in multiple sequencing experiments (that may or may not contain replication). We then adapt the empirical Bayesian methods implemented in the \verb'baySeq' package \cite{Hardcastle:2010} to establish, for a given segment, the likelihood that the count data in that segment is similar to background levels, or that it is similar to the regions to the left or right of that segment. We then rank all the potential segments in order of increasing likelihood of similarity and reject those segments for which there is a high likelihood of similarity with the background or the regions to the left or right of the segment. This gives us a large list of overlapping segments. We reduce this list to identify non-overlapping loci by choosing, for a set of overlapping segments, the segment which has the lowest likelihood of similarity with either background or the regions to the left or right of that segment and rejecting all other segments that overlap with this segment. For fuller details of the method, see Hardcastle \textsl{et al.} \cite{Hardcastle:2011}.
+
+\section{Preparation}
+
+We begin by loading the \verb'segmentSeq' package.
+
+\begin{Schunk}
+\begin{Sinput}
+>   library(segmentSeq)
+\end{Sinput}
+\end{Schunk}
+
+Note that because the experiments that \verb'segmentSeq' is designed to analyse are usually massive, we should use (if possible) parallel processing as implemented by the \verb'parallel' package. If using this approach, we need to begin by define a \textsl{cluster}. The following command will use eight processors on a single machine; see the help page for 'makeCluster' for more information. If we don't want to parallelise, we can proceed anyway with a \verb'NULL' cluster.
+
+\begin{Schunk}
+\begin{Sinput}
+> if(require("parallel")) 
++ {
++     numCores <- min(8, detectCores())
++     cl <- makeCluster(numCores)
++ } else {
++     cl <- NULL
++ }
+\end{Sinput}
+\end{Schunk}
+
+The \verb'readGeneric' function is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, to use this function we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
+
+A similar function, \verb'readBAM' performs the same operation on files in the BAM format. Please consult the help page for further details.
+
+\begin{Schunk}
+\begin{Sinput}
+> chrlens <- c(1e6, 2e5)
+> datadir <- system.file("extdata", package = "segmentSeq")
+> libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
+> libnames <- c("SL9", "SL10", "SL26", "SL32")
+> replicates <- c("AGO6", "AGO6", "AGO4", "AGO4")
+> aD <- readGeneric(files = libfiles, dir = datadir,
++                   replicates = replicates, libnames = libnames, 
++                   chrs = c(">Chr1", ">Chr2"), chrlens = chrlens,
++                   polyLength = 10, header = TRUE, gap = 200)
+> aD
+\end{Sinput}
+\begin{Soutput}
+An object of class "alignmentData"
+13765 rows and 4 columns
+
+Slot "libnames":
+[1] "SL9"  "SL10" "SL26" "SL32"
+
+Slot "replicates":
+[1] AGO6 AGO6 AGO4 AGO4
+Levels: AGO4 AGO6
+
+Slot "alignments":
+GRanges object with 13765 ranges and 2 metadata columns:
+          seqnames           ranges strand   |                      tag multireads
+             <Rle>        <IRanges>  <Rle>   |              <character>  <numeric>
+      [1]    >Chr1       [265, 284]      -   |     AAATGAAGATAAACCATCCA          1
+      [2]    >Chr1       [405, 427]      -   |  AAGGAGTAAGAATGACAATAAAT          1
+      [3]    >Chr1       [406, 420]      -   |          AAGAATGACAATAAA          1
+      [4]    >Chr1       [600, 623]      +   | AAGGATTGGTGGTTTGAAGACACA          1
+      [5]    >Chr1       [665, 688]      +   | ATCCTTGTAGCACACATTTTGGCA          1
+      ...      ...              ...    ... ...                      ...        ...
+  [13761]    >Chr2 [179972, 179993]      +   |   ATGAATGGCTCTCTCTAGCGGA          1
+  [13762]    >Chr2 [179978, 180000]      -   |  GAGATTCTCCGCTAGAGAGAGCC          1
+  [13763]    >Chr2 [179999, 180022]      -   | ATTAATATTAATTCATCGGGAAGA          1
+  [13764]    >Chr2 [180002, 180022]      -   |    ATTAATATTAATTCATCGGGA          1
+  [13765]    >Chr2 [180014, 180037]      +   | AATATTAATGGTATTTGTGGAAAA          1
+  -------
+  seqinfo: 2 sequences from an unspecified genome
+
+Slot "data":
+Matrix with  13765  rows.
+      SL9 SL10 SL26 SL32
+1       1    0    0    0
+2       0    0    0    2
+3       0    1    0    0
+4       0    1    0    0
+5       7    1    0    0
+...   ...  ...  ...  ...
+13761   2    7    0    0
+13762   0    1    0    0
+13763   0    1    0    0
+13764   0    1    0    0
+13765   1    0    0    0
+
+Slot "libsizes":
+[1] 4447 6531 9666 6675
+\end{Soutput}
+\end{Schunk}
+
+Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
+
+\begin{Schunk}
+\begin{Sinput}
+> sD <- processAD(aD, gap = 100, cl = cl)
+> sD
+\end{Sinput}
+\begin{Soutput}
+An object of class "segData"
+14444 rows and 4 columns
+
+Slot "replicates":
+[1] AGO6 AGO6 AGO4 AGO4
+Levels: AGO4 AGO6
+
+Slot "coordinates":
+GRanges object with 14444 ranges and 0 metadata columns:
+          seqnames           ranges strand
+             <Rle>        <IRanges>  <Rle>
+      [1]    >Chr1       [265, 284]      *
+      [2]    >Chr1       [405, 427]      *
+      [3]    >Chr1       [600, 623]      *
+      [4]    >Chr1       [600, 688]      *
+      [5]    >Chr1       [600, 830]      *
+      ...      ...              ...    ...
+  [14440]    >Chr2 [179708, 179872]      *
+  [14441]    >Chr2 [179708, 180037]      *
+  [14442]    >Chr2 [179738, 179872]      *
+  [14443]    >Chr2 [179738, 180037]      *
+  [14444]    >Chr2 [179923, 180037]      *
+  -------
+  seqinfo: 2 sequences from an unspecified genome
+
+Slot "locLikelihoods" (stored on log scale):
+Matrix with  0  rows.
+<0 x 0 matrix>
+
+Slot "data":
+Matrix with  0  rows.Matrix with  0  rows.
+     SL9 SL10 SL26 SL32
+
+Slot "libsizes":
+[1] 4447 6531 9666 6675
+\end{Soutput}
+\end{Schunk}
+
+We can now construct a segment map from these potential segments.
+
+\subsection*{Segmentation by heuristic methods}
+
+A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
+
+\begin{Schunk}
+\begin{Sinput}
+> hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TRUE, cl = cl)
+\end{Sinput}
+\begin{Soutput}
+......
+\end{Soutput}
+\end{Schunk}
+
+\subsection*{Segmentation by empirical Bayesian methods}
+
+A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'hS' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identify all
+potential segments in the with a posterior likelihood of being a segment
+greater than some value 'lociCutoff' and containing no subregion with a posterior
+likelihood of being a null greater than 'nullCutoff'. We then greedily
+select the longest segments satisfying these criteria that do not
+overlap with any other such segments in defining our segmentation map.
+
+\begin{Schunk}
+\begin{Sinput}
+> classSegs <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
+\end{Sinput}
+\begin{Soutput}
+............
+\end{Soutput}
+\begin{Sinput}
+> classSegs
+\end{Sinput}
+\begin{Soutput}
+GRanges object with 249 ranges and 0 metadata columns:
+        seqnames           ranges strand
+           <Rle>        <IRanges>  <Rle>
+    [1]    >Chr1   [    1,   599]      *
+    [2]    >Chr1   [  600,   938]      *
+    [3]    >Chr1   [  939,   967]      *
+    [4]    >Chr1   [  968, 17054]      *
+    [5]    >Chr1   [17055, 18728]      *
+    ...      ...              ...    ...
+  [245]    >Chr2 [169231, 178343]      *
+  [246]    >Chr2 [178344, 178636]      *
+  [247]    >Chr2 [178637, 179707]      *
+  [248]    >Chr2 [179708, 180037]      *
+  [249]    >Chr2 [180038, 200000]      *
+  -------
+  seqinfo: 2 sequences from an unspecified genome
+An object of class "lociData"
+249 rows and 4 columns
+
+Slot "replicates"
+AGO6 AGO6 AGO4 AGO4
+Slot "groups":
+[[1]]
+[1] AGO6 AGO6 AGO4 AGO4
+Levels: AGO4 AGO6
+
+
+Slot "data":
+     AGO6.1 AGO6.2 AGO4.1 AGO4.2
+[1,]      1      1      0      2
+[2,]     41     39     65     83
+[3,]     13      7      0      0
+[4,]      5      3      0      0
+[5,]    758    705   1552   1648
+244 more rows...
+
+Slot "annotation":
+data frame with 0 columns and 249 rows
+
+Slot "locLikelihoods" (stored on log scale):
+Matrix with  249  rows.
+        AGO4     AGO6
+1    0.23536  0.09792
+2    0.93154  0.96801
+3    0.12181  0.99139
+4   0.032257 0.037122
+5    0.96902  0.99734
+...      ...      ...
+245  0.28815 0.061391
+246  0.92373  0.98211
+247 0.049236 0.059043
+248  0.95039  0.97253
+249 0.031712 0.026715
+
+Expected number of loci in each replicate group
+    AGO4     AGO6 
+105.8310 135.4982 
+\end{Soutput}
+\end{Schunk}
+
+By one of these methods, we finally acquire an annotated \verb'lociData' object, with the annotations describing the co-ordinates of each segment.
+
+
+We can use this \verb'lociData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
+
+\begin{Schunk}
+\begin{Sinput}
+> par(mfrow = c(2,1), mar = c(2,6,2,2))
+> plotGenome(aD, hS, chr = ">Chr1", limits = c(1, 1e5),
++            showNumber = FALSE, cap = 50)
+> plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
++            showNumber = FALSE, cap = 50)
+\end{Sinput}
+\end{Schunk}
+
+%\begin{sidewaysfigure}[!ht]
+\begin{figure}[!ht]
+\begin{center}
+
+\includegraphics{segmentSeq-figSeg}
+\caption{The segmented genome (first $10^5$ bases of chromosome 1.}
+\label{fig:Seg}
+\end{center}
+\end{figure}
+%\end{sidewaysfigure}
+
+Given the calculated likelihoods, we can filter the segmented genome by controlling on likelihood, false discovery rate, or familywise error rate
+
+\begin{Schunk}
+\begin{Sinput}
+> loci <- selectLoci(classSegs, FDR = 0.05)
+> loci
+\end{Sinput}
+\begin{Soutput}
+GRanges object with 112 ranges and 0 metadata columns:
+        seqnames           ranges strand
+           <Rle>        <IRanges>  <Rle>
+    [1]    >Chr1   [  600,   938]      *
+    [2]    >Chr1   [  939,   967]      *
+    [3]    >Chr1   [17055, 18728]      *
+    [4]    >Chr1   [42217, 42435]      *
+    [5]    >Chr1   [44710, 44811]      *
+    ...      ...              ...    ...
+  [108]    >Chr2 [144202, 144327]      *
+  [109]    >Chr2 [152150, 152173]      *
+  [110]    >Chr2 [169196, 169230]      *
+  [111]    >Chr2 [178344, 178636]      *
+  [112]    >Chr2 [179708, 180037]      *
+  -------
+  seqinfo: 2 sequences from an unspecified genome
+An object of class "lociData"
+112 rows and 4 columns
+
+Slot "replicates"
+AGO6 AGO6 AGO4 AGO4
+Slot "groups":
+[[1]]
+[1] AGO6 AGO6 AGO4 AGO4
+Levels: AGO4 AGO6
+
+
+Slot "data":
+     AGO6.1 AGO6.2 AGO4.1 AGO4.2
+[1,]     41     39     65     83
+[2,]     13      7      0      0
+[3,]    758    705   1552   1648
+[4,]     31     11     48     56
+[5,]     73     57     47     21
+107 more rows...
+
+Slot "annotation":
+data frame with 0 columns and 112 rows
+
+Slot "locLikelihoods" (stored on log scale):
+Matrix with  112  rows.
+       AGO4    AGO6
+1   0.93154 0.96801
+2   0.12181 0.99139
+3   0.96902 0.99734
+4    0.9426 0.94344
+5   0.95893  0.9977
+...     ...     ...
+108 0.78025 0.95713
+109 0.12747 0.96689
+110 0.11653 0.98925
+111 0.92373 0.98211
+112 0.95039 0.97253
+
+Expected number of loci in each replicate group
+     AGO4      AGO6 
+ 74.88655 108.90202 
+\end{Soutput}
+\end{Schunk}
+
+The \verb'lociData' objects can now be examined for differential expression with the \verb'baySeq' package.
+
+First we define the possible models of differential expression on the data. In this case, the models are of non-differential expression and pairwise differential expression.
+\begin{Schunk}
+\begin{Sinput}
+> groups(classSegs) <- list(NDE = c(1,1,1,1), DE = c("AGO6", "AGO6", "AGO4", "AGO4"))
+\end{Sinput}
+\end{Schunk}
+
+Then we get empirical distributions on the parameter space of the data.
+\begin{Schunk}
+\begin{Sinput}
+> classSegs <- getPriors(classSegs, cl = cl)
+\end{Sinput}
+\end{Schunk}
+
+Then we get the posterior likelihoods of the data conforming to each model. Since the `classSegs' object contains null regions as well as true loci, we will use the `nullData = TRUE' option to distinguish between non-differentially expressed loci and non-expressed regions. By default, the loci likelihoods calculated earlier will be used to weight the initial parameter fit in order to detect null data.
+\begin{Schunk}
+\begin{Sinput}
+> classSegs <- getLikelihoods(classSegs, nullData = TRUE, cl = cl)
+\end{Sinput}
+\begin{Soutput}
+.
+\end{Soutput}
+\end{Schunk}
+
+We can examine the highest likelihood non-expressed (`null') regions
+
+\begin{Schunk}
+\begin{Sinput}
+> topCounts(classSegs, NULL, number = 3)
+\end{Sinput}
+\begin{Soutput}
+  seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood       FDR.
+1    >Chr1 754198 758593  4396      *      1      0      1      0  0.9408571 0.05914289
+2    >Chr1 950796 958752  7957      *      2      4      3      2  0.9376629 0.06074001
+3    >Chr1 309348 365852 56505      *      1      0      0      3  0.9307081 0.06359064
+       FWER.
+1 0.05914289
+2 0.11779323
+3 0.17892299
+\end{Soutput}
+\end{Schunk}
+
+The highest likelihood expressed but non-differentially expressed regions
+
+\begin{Schunk}
+\begin{Sinput}
+> topCounts(classSegs, "NDE", number = 3)
+\end{Sinput}
+\begin{Soutput}
+  seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood    FDR.NDE
+1    >Chr2   1554  14423 12870      *   7731  18556  20328  13960  0.9765126 0.02348736
+2    >Chr1 446325 447437  1113      *    789    536   1291   1184  0.9172518 0.05311779
+3    >Chr2  28210  28826   617      *    123     96    117    149  0.8770294 0.07640207
+    FWER.NDE
+1 0.02348736
+2 0.10429205
+3 0.21443781
+\end{Soutput}
+\end{Schunk}
+
+And the highest likelihood differentially expressed regions
+
+\begin{Schunk}
+\begin{Sinput}
+> topCounts(classSegs, "DE", number = 3)
+\end{Sinput}
+\begin{Soutput}
+  seqnames start   end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood  ordering
+1    >Chr2 52652 53314   663      *     84     86    982    696  0.9990768 AGO4>AGO6
+2    >Chr2 58131 59084   954      *     81     83    965    677  0.9988190 AGO4>AGO6
+3    >Chr2 49137 50333  1197      *    102    117    992    719  0.9986207 AGO4>AGO6
+        FDR.DE      FWER.DE
+1 0.0009231629 0.0009231629
+2 0.0010520713 0.0021030523
+3 0.0011611569 0.0034794796
+\end{Soutput}
+\end{Schunk}
+
+Finally, to be a good citizen, we stop the cluster we started earlier:
+
+\begin{Schunk}
+\begin{Sinput}
+> if(!is.null(cl))
++     stopCluster(cl)
+\end{Sinput}
+\end{Schunk}
+
+\section*{Session Info}
+
+\begin{Schunk}
+\begin{Sinput}
+> sessionInfo()
+\end{Sinput}
+\begin{Soutput}
+R version 3.1.2 (2014-10-31)
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats4    parallel  stats     graphics  grDevices utils     datasets  methods  
+[9] base     
+
+other attached packages:
+ [1] segmentSeq_2.1.7         ShortRead_1.23.17        GenomicAlignments_1.1.30
+ [4] Rsamtools_1.17.36        Biostrings_2.33.15       XVector_0.5.8           
+ [7] BiocParallel_0.99.25     futile.logger_1.3.7      baySeq_2.1.19           
+[10] perm_1.0-0.0             abind_1.4-0              GenomicRanges_1.17.48   
+[13] GenomeInfoDb_1.1.26      IRanges_1.99.32          S4Vectors_0.2.8         
+[16] BiocGenerics_0.11.5     
+
+loaded via a namespace (and not attached):
+ [1] base64enc_0.1-2      BatchJobs_1.4        BBmisc_1.7           Biobase_2.25.1      
+ [5] BiocStyle_1.3.15     bitops_1.0-6         brew_1.0-6           checkmate_1.4       
+ [9] codetools_0.2-10     DBI_0.3.1            digest_0.6.4         fail_1.2            
+[13] foreach_1.4.2        futile.options_1.0.0 grid_3.1.2           hwriter_1.3.2       
+[17] iterators_1.0.7      lambda.r_1.1.6       lattice_0.20-29      latticeExtra_0.6-26 
+[21] RColorBrewer_1.0-5   RSQLite_0.11.4       sendmailR_1.2-1      stringr_0.6.2       
+[25] tools_3.1.2          zlibbioc_1.11.1     
+\end{Soutput}
+\end{Schunk}
+
+\begin{thebibliography}{99}
+\bibitem{Hardcastle:2010} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{baySeq: Empirical Bayesian Methods For Identifying Differential Expression In Sequence Count Data.} BMC Bioinformatics (2010).
+\bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).
+
+\end{thebibliography}
+
+\end{document}
+
+
+
+

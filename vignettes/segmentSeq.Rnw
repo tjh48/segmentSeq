@@ -125,7 +125,40 @@ loci <- selectLoci(classSegs, FDR = 0.05)
 loci
 @ 
 
-This \verb'lociData' object can now be examined for differential expression with the \verb'baySeq' package.
+The \verb'lociData' objects can now be examined for differential expression with the \verb'baySeq' package.
+
+First we define the possible models of differential expression on the data. In this case, the models are of non-differential expression and pairwise differential expression.
+<<>>=
+groups(classSegs) <- list(NDE = c(1,1,1,1), DE = c("AGO6", "AGO6", "AGO4", "AGO4"))
+@
+
+Then we get empirical distributions on the parameter space of the data.
+<<>>=
+classSegs <- getPriors(classSegs, cl = cl)
+@ 
+
+Then we get the posterior likelihoods of the data conforming to each model. Since the `classSegs' object contains null regions as well as true loci, we will use the `nullData = TRUE' option to distinguish between non-differentially expressed loci and non-expressed regions. By default, the loci likelihoods calculated earlier will be used to weight the initial parameter fit in order to detect null data.
+<<>>=
+classSegs <- getLikelihoods(classSegs, nullData = TRUE, cl = cl)
+@ 
+
+We can examine the highest likelihood non-expressed (`null') regions
+
+<<>>=
+topCounts(classSegs, NULL, number = 3)
+@ 
+
+The highest likelihood expressed but non-differentially expressed regions
+
+<<>>=
+topCounts(classSegs, "NDE", number = 3)
+@ 
+
+And the highest likelihood differentially expressed regions
+
+<<>>=
+topCounts(classSegs, "DE", number = 3)
+@ 
 
 Finally, to be a good citizen, we stop the cluster we started earlier:
 

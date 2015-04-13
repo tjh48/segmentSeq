@@ -59,9 +59,9 @@
 
 plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
   {
-    if(missing(col)) col <- rainbow(length(profiles))
-    if(is.null(col)) col <- rainbow(length(profiles))
     if(meanOnly) {
+      if(missing(col)) col <- rainbow(length(profiles))
+      if(is.null(col)) col <- rainbow(length(profiles))
       lapply(1:length(profiles), function(ii) {
         coverage <- profiles[[ii]]
         if(is.matrix(coverage)) coverage <- coverage[,1]
@@ -79,6 +79,8 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
       if(names(dev.cur()) == "null device" || all(par()$mfrow == c(1,1))) par(mfrow = c(1,length(profiles)))
 
       if(missing(col)) col <- do.call("rbind", lapply(1:10, function(s) rainbow(length(profiles), s = s / 10)))
+      if(is.null(col)) col <- do.call("rbind", lapply(1:10, function(s) rainbow(length(profiles), s = s / 10)))
+      
       for(mm in 1:length(profiles)) {
         plot(x = NA, y = NA, ylim = ylim, xlim = range(position), ylab = "", xlab = "position", ...)
 

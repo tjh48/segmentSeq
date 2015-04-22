@@ -35,11 +35,11 @@ function(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pile
              
              if(plotDuplicated)
                {                 
-                 uTags <- sTags[values(sTags)$matches == 1,]
+                 uTags <- sTags[values(sTags)$multireads == 1,]
                  uTags <- uTags[order(start(uTags), end(uTags)),]
                  uTags <- uTags[values(uTags)$count > 0,, drop = FALSE]
                  
-                 dTags <- sTags[values(sTags)$matches > 1,]
+                 dTags <- sTags[values(sTags)$multireads > 1,]
                  dTags <- dTags[order(start(dTags), end(dTags)),]
                  dTags <- dTags[values(dTags)$count > 0,, drop = FALSE]
                  

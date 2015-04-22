@@ -183,7 +183,7 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
           sampRPKM <- rowMeans(RPKM[,samp,drop = FALSE])
           sampRPKM[sampRPKM < minRPKM] <- minRPKM
           
-          weights <- rowSums(t(t(redMD@data[overCod,samp] / redMD@alignments$matches[overCod]) / redMD@libsizes[samp]) * 1e6) / length(samp)
+          weights <- rowSums(t(t(redMD@data[overCod,samp] / redMD@alignments$multireads[overCod]) / redMD@libsizes[samp]) * 1e6) / length(samp)
           covRep <- coverage(redMD@alignments[overCod[weights > 0]], weight = weights[weights > 0], width = chrwidths)
           
           nonzeros <- which(rowSums(redMD@data[,samp,drop = FALSE]) > 0)

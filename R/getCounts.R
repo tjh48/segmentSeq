@@ -300,8 +300,8 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
                                      nondupTags <- ranges(chralignments)[!chralignments$chunkDup,]
                                      nondupData <- intData[!chralignments$chunkDup,, drop = FALSE]
                                    } else {
-                                     nondupTags <- ranges(chralignments)[chralignments$matches == 1,]
-                                     nondupData <- intData[chralignments$matches == 1,, drop = FALSE]
+                                     nondupTags <- ranges(chralignments)[chralignments$multireads == 1,]
+                                     nondupData <- intData[chralignments$multireads == 1,, drop = FALSE]
                                    }
                                  } else {
                                    nondupTags <- ranges(chralignments)
@@ -329,7 +329,7 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
                                  if("tag" %in% names(values(alignments))) {
                                    if("chunkDup" %in% names(values(chralignments)) & useChunk) {
                                      dup <- which(!chralignments$chunkDup)
-                                   } else dup <- which(chralignments$matches > 1)
+                                   } else dup <- which(chralignments$multireads > 1)
 
                                    selNC <- dup[getOverlaps(chralignments[dup,],
                                                             GRanges(seqnames = cc, chrsegs), whichOverlaps = FALSE, cl = NULL)]

@@ -8,9 +8,9 @@
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
 
-\RequirePackage{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/Bioconductor}
+\RequirePackage{/applications/R/R-3.2.0/library/BiocStyle/resources/latex/Bioconductor}
 
-\AtBeginDocument{\bibliographystyle{/home/bioinf/tjh48/R/x86_64-unknown-linux-gnu-library/3.1/BiocStyle/resources/latex/unsrturl}}
+\AtBeginDocument{\bibliographystyle{/applications/R/R-3.2.0/library/BiocStyle/resources/latex/unsrturl}}
 \usepackage{Sweave}
 \begin{document}
 
@@ -193,24 +193,24 @@ overlap with any other such segments in defining our segmentation map.
 > classSegs
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 249 ranges and 0 metadata columns:
+GRanges object with 299 ranges and 0 metadata columns:
         seqnames           ranges strand
            <Rle>        <IRanges>  <Rle>
-    [1]    >Chr1   [    1,   599]      *
-    [2]    >Chr1   [  600,   938]      *
-    [3]    >Chr1   [  939,   967]      *
-    [4]    >Chr1   [  968, 17054]      *
-    [5]    >Chr1   [17055, 18728]      *
+    [1]    >Chr1    [   1,   599]      *
+    [2]    >Chr1    [ 600,   967]      *
+    [3]    >Chr1    [ 968,  8669]      *
+    [4]    >Chr1    [8670,  8698]      *
+    [5]    >Chr1    [8699, 17054]      *
     ...      ...              ...    ...
-  [245]    >Chr2 [169231, 178343]      *
-  [246]    >Chr2 [178344, 178636]      *
-  [247]    >Chr2 [178637, 179707]      *
-  [248]    >Chr2 [179708, 180037]      *
-  [249]    >Chr2 [180038, 200000]      *
+  [295]    >Chr2 [169231, 178343]      *
+  [296]    >Chr2 [178344, 178636]      *
+  [297]    >Chr2 [178637, 179707]      *
+  [298]    >Chr2 [179708, 180037]      *
+  [299]    >Chr2 [180038, 200000]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-249 rows and 4 columns
+299 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -223,33 +223,33 @@ Levels: AGO4 AGO6
 Slot "data":
      AGO6.1 AGO6.2 AGO4.1 AGO4.2
 [1,]      1      1      0      2
-[2,]     41     39     65     83
-[3,]     13      7      0      0
-[4,]      5      3      0      0
-[5,]    758    705   1552   1648
-244 more rows...
+[2,]     54     46     65     83
+[3,]      1      2      0      0
+[4,]      5      0      0      0
+[5,]      0      1      0      0
+294 more rows...
 
 Slot "annotation":
-data frame with 0 columns and 249 rows
+data frame with 0 columns and 299 rows
 
 Slot "locLikelihoods" (stored on log scale):
-Matrix with  249  rows.
+Matrix with  299  rows.
         AGO4     AGO6
-1    0.23536  0.09792
-2    0.93154  0.96801
-3    0.12181  0.99139
-4   0.032257 0.037122
-5    0.96902  0.99734
+1    0.24446  0.14002
+2    0.93653  0.93482
+3    0.04248 0.045765
+4    0.11958  0.82694
+5   0.042167 0.052788
 ...      ...      ...
-245  0.28815 0.061391
-246  0.92373  0.98211
-247 0.049236 0.059043
-248  0.95039  0.97253
-249 0.031712 0.026715
+295   0.3786  0.10344
+296  0.93606  0.96377
+297 0.056084 0.082052
+298  0.95291  0.93677
+299 0.039763 0.032808
 
 Expected number of loci in each replicate group
     AGO4     AGO6 
-105.8310 135.4982 
+129.1519 151.0502 
 \end{Soutput}
 \end{Schunk}
 
@@ -287,24 +287,24 @@ Given the calculated likelihoods, we can filter the segmented genome by controll
 > loci
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 112 ranges and 0 metadata columns:
-        seqnames           ranges strand
-           <Rle>        <IRanges>  <Rle>
-    [1]    >Chr1   [  600,   938]      *
-    [2]    >Chr1   [  939,   967]      *
-    [3]    >Chr1   [17055, 18728]      *
-    [4]    >Chr1   [42217, 42435]      *
-    [5]    >Chr1   [44710, 44811]      *
-    ...      ...              ...    ...
-  [108]    >Chr2 [144202, 144327]      *
-  [109]    >Chr2 [152150, 152173]      *
-  [110]    >Chr2 [169196, 169230]      *
-  [111]    >Chr2 [178344, 178636]      *
-  [112]    >Chr2 [179708, 180037]      *
+GRanges object with 73 ranges and 0 metadata columns:
+       seqnames           ranges strand
+          <Rle>        <IRanges>  <Rle>
+   [1]    >Chr1 [ 17055,  18728]      *
+   [2]    >Chr1 [ 44710,  44811]      *
+   [3]    >Chr1 [ 77115,  77523]      *
+   [4]    >Chr1 [222441, 222458]      *
+   [5]    >Chr1 [238359, 238417]      *
+   ...      ...              ...    ...
+  [69]    >Chr2 [127618, 127649]      *
+  [70]    >Chr2 [152768, 152829]      *
+  [71]    >Chr2 [169196, 169230]      *
+  [72]    >Chr2 [178344, 178636]      *
+  [73]    >Chr2 [179708, 180037]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-112 rows and 4 columns
+73 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -316,34 +316,34 @@ Levels: AGO4 AGO6
 
 Slot "data":
      AGO6.1 AGO6.2 AGO4.1 AGO4.2
-[1,]     41     39     65     83
-[2,]     13      7      0      0
-[3,]    758    705   1552   1648
-[4,]     31     11     48     56
-[5,]     73     57     47     21
-107 more rows...
+[1,]    834    789   1699   2193
+[2,]     73     58     47     21
+[3,]    176    148    275    131
+[4,]      4      2      0      0
+[5,]      9      9      0      0
+68 more rows...
 
 Slot "annotation":
-data frame with 0 columns and 112 rows
+data frame with 0 columns and 73 rows
 
 Slot "locLikelihoods" (stored on log scale):
-Matrix with  112  rows.
+Matrix with  73  rows.
        AGO4    AGO6
-1   0.93154 0.96801
-2   0.12181 0.99139
-3   0.96902 0.99734
-4    0.9426 0.94344
-5   0.95893  0.9977
+1   0.96893 0.99339
+2   0.96011  0.9944
+3   0.96259  0.9866
+4   0.13446 0.93928
+5   0.10147 0.94802
 ...     ...     ...
-108 0.78025 0.95713
-109 0.12747 0.96689
-110 0.11653 0.98925
-111 0.92373 0.98211
-112 0.95039 0.97253
+69  0.90034 0.98642
+70   0.9534 0.89738
+71  0.11435 0.97356
+72  0.93606 0.96377
+73  0.95291 0.93677
 
 Expected number of loci in each replicate group
-     AGO4      AGO6 
- 74.88655 108.90202 
+    AGO4     AGO6 
+58.42580 70.60195 
 \end{Soutput}
 \end{Schunk}
 
@@ -381,13 +381,13 @@ We can examine the highest likelihood non-expressed (`null') regions
 \end{Sinput}
 \begin{Soutput}
   seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood       FDR.
-1    >Chr1 754198 758593  4396      *      1      0      1      0  0.9408571 0.05914289
-2    >Chr1 950796 958752  7957      *      2      4      3      2  0.9376629 0.06074001
-3    >Chr1 309348 365852 56505      *      1      0      0      3  0.9307081 0.06359064
+1    >Chr1 309348 365852 56505      *      1      0      0      3  0.9182292 0.08177083
+2    >Chr1 754198 758593  4396      *      1      0      1      0  0.9171167 0.08232705
+3    >Chr1 950796 958752  7957      *      2      4      3      2  0.9061391 0.08617166
        FWER.
-1 0.05914289
-2 0.11779323
-3 0.17892299
+1 0.08177083
+2 0.15787667
+3 0.23691911
 \end{Soutput}
 \end{Schunk}
 
@@ -399,13 +399,13 @@ The highest likelihood expressed but non-differentially expressed regions
 \end{Sinput}
 \begin{Soutput}
   seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood    FDR.NDE
-1    >Chr2   1554  14423 12870      *   7731  18556  20328  13960  0.9765126 0.02348736
-2    >Chr1 446325 447437  1113      *    789    536   1291   1184  0.9172518 0.05311779
-3    >Chr2  28210  28826   617      *    123     96    117    149  0.8770294 0.07640207
+1    >Chr2   1554   8147  6594      *   5463  12603  13784   9816  0.9827915 0.01720854
+2    >Chr2   8148   8209    62      *     76   2999    643    217  0.9707103 0.02324913
+3    >Chr1 446325 447437  1113      *    789    536   1291   1184  0.9439841 0.03417137
     FWER.NDE
-1 0.02348736
-2 0.10429205
-3 0.21443781
+1 0.01720854
+2 0.04599422
+3 0.09943367
 \end{Soutput}
 \end{Schunk}
 
@@ -417,13 +417,13 @@ And the highest likelihood differentially expressed regions
 \end{Sinput}
 \begin{Soutput}
   seqnames start   end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood  ordering
-1    >Chr2 52652 53314   663      *     84     86    982    696  0.9990768 AGO4>AGO6
-2    >Chr2 58131 59084   954      *     81     83    965    677  0.9988190 AGO4>AGO6
-3    >Chr2 49137 50333  1197      *    102    117    992    719  0.9986207 AGO4>AGO6
+1    >Chr2 58131 59084   954      *    155    159   1930   1340  0.9995871 AGO4>AGO6
+2    >Chr2 49137 50333  1197      *    203    233   1984   1438  0.9986514 AGO4>AGO6
+3    >Chr2 52652 53314   663      *    168    172   1964   1392  0.9970792 AGO4>AGO6
         FDR.DE      FWER.DE
-1 0.0009231629 0.0009231629
-2 0.0010520713 0.0021030523
-3 0.0011611569 0.0034794796
+1 0.0004128966 0.0004128966
+2 0.0008807443 0.0017609318
+3 0.0015607704 0.0046766110
 \end{Soutput}
 \end{Schunk}
 
@@ -443,8 +443,9 @@ Finally, to be a good citizen, we stop the cluster we started earlier:
 > sessionInfo()
 \end{Sinput}
 \begin{Soutput}
-R version 3.1.2 (2014-10-31)
+R version 3.2.0 (2015-04-16)
 Platform: x86_64-unknown-linux-gnu (64-bit)
+Running under: Debian GNU/Linux 7 (wheezy)
 
 locale:
  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
@@ -457,21 +458,17 @@ attached base packages:
 [9] base     
 
 other attached packages:
- [1] segmentSeq_2.1.7         ShortRead_1.23.17        GenomicAlignments_1.1.30
- [4] Rsamtools_1.17.36        Biostrings_2.33.15       XVector_0.5.8           
- [7] BiocParallel_0.99.25     futile.logger_1.3.7      baySeq_2.1.19           
-[10] perm_1.0-0.0             abind_1.4-0              GenomicRanges_1.17.48   
-[13] GenomeInfoDb_1.1.26      IRanges_1.99.32          S4Vectors_0.2.8         
-[16] BiocGenerics_0.11.5     
+ [1] segmentSeq_2.2.1        ShortRead_1.26.0        GenomicAlignments_1.4.1
+ [4] Rsamtools_1.20.4        Biostrings_2.36.1       XVector_0.8.0          
+ [7] BiocParallel_1.2.6      baySeq_2.1.21           perm_1.0-0.0           
+[10] abind_1.4-3             GenomicRanges_1.20.5    GenomeInfoDb_1.4.1     
+[13] IRanges_2.2.4           S4Vectors_0.6.0         BiocGenerics_0.14.0    
 
 loaded via a namespace (and not attached):
- [1] base64enc_0.1-2      BatchJobs_1.4        BBmisc_1.7           Biobase_2.25.1      
- [5] BiocStyle_1.3.15     bitops_1.0-6         brew_1.0-6           checkmate_1.4       
- [9] codetools_0.2-10     DBI_0.3.1            digest_0.6.4         fail_1.2            
-[13] foreach_1.4.2        futile.options_1.0.0 grid_3.1.2           hwriter_1.3.2       
-[17] iterators_1.0.7      lambda.r_1.1.6       lattice_0.20-29      latticeExtra_0.6-26 
-[21] RColorBrewer_1.0-5   RSQLite_0.11.4       sendmailR_1.2-1      stringr_0.6.2       
-[25] tools_3.1.2          zlibbioc_1.11.1     
+ [1] zlibbioc_1.14.0      lattice_0.20-31      hwriter_1.3.2        tools_3.2.0         
+ [5] grid_3.2.0           Biobase_2.28.0       latticeExtra_0.6-26  lambda.r_1.1.7      
+ [9] futile.logger_1.4.1  RColorBrewer_1.1-2   futile.options_1.0.0 bitops_1.0-6        
+[13] compiler_3.2.0       BiocStyle_1.6.0     
 \end{Soutput}
 \end{Schunk}
 

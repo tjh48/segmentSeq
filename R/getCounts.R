@@ -4,9 +4,10 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
       counts <- matrix(NA, ncol = ncol(aD), nrow = length(segments))
       for(ss in levels(strand(segments)))
         if(any(strand(segments) == ss))
-          counts[which(strand(segments) == ss),] <- .getCounts(segments[strand(segments) == ss,],
-                               aD = aD[which(strand(aD@alignments) %in% list(c("+", "*"), c("-", "*"), c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
-                               preFiltered = preFiltered, as.matrix = TRUE, useChunk = useChunk, cl = list(NULL, cl)[[as.integer(length(segments) > 1) + 1]])
+          counts[which(strand(segments) == ss),] <-
+            .getCounts(segments[strand(segments) == ss,],
+                       aD = aD[which(strand(aD@alignments) %in% list(c("+", "*"), c("-", "*"), c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
+                       preFiltered = preFiltered, as.matrix = TRUE, useChunk = useChunk, cl = list(NULL, cl)[[as.integer(length(segments) > 1) + 1]])
     } else if(class(aD) == "alignmentMeth") {
       Cs <- Ts <- matrix(NA, ncol = ncol(aD), nrow = length(segments))
       for (ss in levels(strand(segments))) {
@@ -274,7 +275,7 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
       } else redsegs <- segments
     
     countsmat <- do.call("rbind", lapply(seqlevels(redsegs), function(cc)
-                               {
+                                         {
                                  createIntervals <- function(inCluster = FALSE)
                                    {
                                      cummaxEnd <- cummax(end(dupTags))
@@ -295,7 +296,7 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
                                  
                                  chralignments <- alignments[whchr,]
 
-                                 if("tags" %in% names(values(chralignments))) {
+                                 if("tag" %in% names(values(chralignments))) {
                                    if("chunkDup" %in% names(values(chralignments)) & useChunk) {
                                      nondupTags <- ranges(chralignments)[!chralignments$chunkDup,]
                                      nondupData <- intData[!chralignments$chunkDup,, drop = FALSE]

@@ -3,7 +3,7 @@
     cat("Matrix with ", nrow(x), " rows.\n")
     if(nrow(x) > 10)
       {      
-        print(rbind(as.data.frame(x)[1:5,], matrix("...", nrow = 1, ncol = ncol(x), dimnames = list("...", colnames(x))), as.data.frame(x)[nrow(x) + (-4):0,]))
+        print(rbind(as.data.frame(x)[1:5,,drop = FALSE], matrix("...", nrow = 1, ncol = ncol(x), dimnames = list("...", colnames(x))), as.data.frame(x)[nrow(x) + (-4):0,,drop = FALSE]))
       } else print(x)  
   }
 

@@ -207,13 +207,15 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
                                         #        if(any(coverBase$right)) rightSummary <- sapply(split(coverBase$coverage[coverBase$right], factor(cut(coverBase$adjPos[coverBase$right], breaks = cuts, labels = FALSE, include.lowest = TRUE), levels = 1:cuts)), mean, na.rm = TRUE) else rightSummary <- rep(0, cuts)
           
           summariseCoverage <- function(split, splitWeight, codRPKM) {
+            if(is.null(split)) return(rep(0, cuts))
             sapply(1:length(split), function(ii) {            
               weighted.mean(coverage[split[[ii]]] / codRPKM[as.integer(mergeBase$id[split[[ii]]])], w = splitWeight[[ii]], na.rm = TRUE) * mean(codRPKM, trim = 0.1)
             })
           }
           
           if(surrounding > 0) {
-            sumCov <- c(summariseCoverage(leftSplit, leftWeight, sampRPKM),
+            sumCov <- c(
+                        summariseCoverage(leftSplit, leftWeight, sampRPKM),
                         summariseCoverage(centreSplit, centreWeight, sampRPKM),
                         summariseCoverage(rightSplit, rightWeight, sampRPKM))
           } else sumCov <- summariseCoverage(centreSplit, centreWeight, sampRPKM)
@@ -262,18 +264,18 @@ averageProfiles <- function(mD, samples, coordinates, cuts, maxcuts = 200, bw = 
     profiles <- lapply(1:length(samples), function(ii) Reduce("+", lapply(splitProf, function(x) x[[ii]])) / length(splitProf))
     names(profiles) <- names(samples)
     message(".done!")    
-    if(missing(ylim) || is.null(ylim)) ylim <- c(0, max(sapply(profiles, max, na.rm = TRUE), na.rm = TRUE) * 1.1)
+    if(missing(ylim) || is.null(ylim))
+      ylim <- c(0, max(sapply(profiles, max, na.rm = TRUE), na.rm = TRUE) * 1.1)
     
-    if(plot) plotAverageProfile(position = position, profiles = profiles, surrounding = surrounding, ylim = ylim,add = add, meanOnly = meanOnly, ...)
+    if(plot) plotAverageProfile(position = position, profiles = profiles, surrounding = surrounding, ylim = ylim,add = add, meanOnly = meanOnly)
       
     invisible(list(position = position, profiles = profiles))
   }
 
-plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centromeres, add = FALSE, col, legend = TRUE, ...)
+plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centromeres, add = FALSE, col, ylim = NULL, legend = TRUE, ...)
   {
     if(missing(samples)) samples <- meth@replicates
     if(missing(chrs)) chrs <- NULL
-    if(missing(col)) col <- rainbow(length(samples))
     
     if(is.factor(samples)) {
       namSamp <- levels(samples)
@@ -282,19 +284,21 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     }
     if(!is.list(samples)) samples <- list(samples) else samples <- samples
 
+    if(missing(col)) col <- rainbow(length(samples))
+    
     if(missing(subtract)) subtract <- NULL
     if(!is.list(subtract)) subtract <- lapply(1:length(samples), function(rep) subtract)
     
     if(missing(centromeres)) centromeres <- NULL
     
     methDist <- lapply(1:length(samples), function(samps)
-                       .plotSampleMeth(meth[,samples[[samps]]], bw = bw, subtract = subtract[[samps]], col = col[samps], centromeres = centromeres, add = c(add, TRUE)[as.integer(samps > 1) + 1], chrs = chrs, ...))
+                       .plotSampleMeth(meth = meth[,samples[[samps]]], bw = bw, subtract = subtract[[samps]], col = col[samps], centromeres = centromeres, add = c(add, TRUE)[as.integer(samps > 1) + 1], chrs = chrs, ylim = ylim, ...))
 
     if(length(samples) > 1 & legend) legend(x = "topright", legend = names(samples), lwd = 2, lty = 1, col = col)
     invisible(methDist)
   }
     
-.plotSampleMeth <- function(meth, bw = 1e-2, subtract, centromeres, chrs, add = FALSE, col = col, ...) #adjustByCs = FALSE, ...) {
+.plotSampleMeth <- function(meth, bw = 1e-2, subtract, centromeres, chrs, add = FALSE, col = col, ylim = NULL, ...) #adjustByCs = FALSE, , ...) {
   {
     chrlens <- seqlengths(meth@alignments)
     if(any(is.na(chrlens)))
@@ -308,6 +312,13 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
       (end(meth@alignments[seqnames(meth@alignments) == chrs[chr]]) + start(meth@alignments[seqnames(meth@alignments) == chrs[chr]])) / 2 + sumchr[chr]
     }))
 
+    ks <- t(t(meth@Ts) * meth@nonconversion / (1 - meth@nonconversion))
+
+    meth@Cs <- meth@Cs - ks
+    meth@Ts <- meth@Ts + ks
+    meth@Cs[meth@Cs < 0] <- 0
+
+    
     adjCs <- rowSums(meth@Cs / as.integer(meth@alignments$multireads))
     adjTs <- rowSums(meth@Ts / as.integer(meth@alignments$multireads))
     
@@ -327,6 +338,9 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     ints <- findInterval(breaks, c(CHGpos), all.inside = TRUE)
     sumC <- cumsum(adjCs)[ints]; sumT <- cumsum(adjTs)[ints]
     countC <- sumC - c(0, sumC[-length(sumC)]); countT <- sumT - c(0, sumT[-length(sumT)])
+
+    
+    
     methdiv <- (countC / (countC + countT))
     
                                         #  if(adjustByCs) {
@@ -337,8 +351,8 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     
     if(!is.null(subtract)) {
       methdiv <- methdiv - subtract
-      ylim <- c(-1.1, 1)
-    } else ylim = c(-0.1, 1)
+      if(is.null(ylim)) ylim <- c(-1.1, 1)
+    } else if(is.null(ylim)) ylim = c(-0.1, 1)
 
     if(missing(col)) col = "black"
     
@@ -346,11 +360,11 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     position <- breaks[!is.na(methdiv)] #- cuts / 2
     if(!add) {
       plot(x = position, y = methylation, type = "l", axes = FALSE, xlim = c(0, max(position) * 1.1), ylim = ylim, col = col, ylab = "", ...)
-      axis(2, at = pretty(0:1, n = 5))
+      axis(2, at = pretty(c(ylim[1] + range(ylim) * 0.1 / 1.1, ylim[2]), n = 5))
       if(length(chrlens) > 1)
         segments(x0 = cumsum(chrlens)[-length(chrlens)], y0 = 0, y1 = 1, col = "red", lty = 2, lwd = 3)    
       if(!missing(centromeres) && !is.null(centromeres)) segments(x0 = c(centromeres[,1] + c(0, cumsum(chrlens)[-length(chrlens)]), centromeres[,2] + c(0, cumsum(chrlens)[-length(chrlens)])), y0 = 0, y1 = 1, lty = 2, lwd = 2, col = "blue")
-      text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05, x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 1.5)
+      text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05 * ylim[2], x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 1.5)
     } else lines(x = position, y = methylation, col = col, ...)
     invisible(data.frame(position = breaks, methylation = methdiv))
   }

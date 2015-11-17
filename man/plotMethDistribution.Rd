@@ -10,7 +10,7 @@ Plots the distribution of methylation (as defined in an
 }
 \usage{
 plotMethDistribution(meth, samples, bw = 1e-3, subtract, chrs, centromeres,
-add = FALSE, col, legend = TRUE, ...)
+add = FALSE, col, ylim = NULL, legend = TRUE, ...)
 }
 \arguments{
   \item{meth}{
@@ -50,6 +50,10 @@ add = FALSE, col, legend = TRUE, ...)
     A vector of colours to be used to plot the distributions. If
     missing, generated from \code{\link{rainbow}}.
   }
+  \item{ylim}{
+    Limits on the y-axis. Defaults to NULL, in which case limits are
+    automatically set.
+    }
   \item{legend}{
     Should a legend be added to the plot? Defaults to TRUE.
   }

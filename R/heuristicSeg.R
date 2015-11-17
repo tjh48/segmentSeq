@@ -58,7 +58,17 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff =
         lD <- .mergeListLoci(splitSeg)
       } else {
         lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, largeness = largeness, tempDir = tempDir)
-      }
+    }
+    if(class(sD) == "segMeth")
+        {
+            if(nrow(sD@Cs) == 0) {
+                gcts <- getCounts(lD@coordinates, aD, cl = cl)
+                lD@data[,,1] <- round(gcts$Cs); lD@data[,,2] <- round(gcts$Ts)
+            }
+        } else {
+            if(nrow(sD@data) == 0)
+                lD@data <- round(getCounts(lD@coordinates, aD, cl = cl))
+        }    
     
     if(getLikes & !missing(aD)) lD <- lociLikelihoods(lD, aD, cl = cl) else if(getLikes & missing(aD)) warning("I can't calculate locus likelihoods without an aD object. You can run lociLikelihoods on the output of this function for the same result.")    
     

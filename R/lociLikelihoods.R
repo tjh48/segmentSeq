@@ -2,9 +2,9 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
   {
     if(class(cD) == "methData")
       {
-        mD <- .methLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, usePosteriors = usePosteriors, cl = cl)
+          mD <- .methLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, usePosteriors = usePosteriors, cl = cl)
       } else if(class(cD) == "lociData")
-        mD <- .lociLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, nasZero = nasZero, usePosteriors = usePosteriors, cl = cl)
+            mD <- .lociLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, nasZero = nasZero, usePosteriors = usePosteriors, cl = cl)
     mD
   }
 
@@ -40,10 +40,12 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
         mD <- cD
         mD@data <- countLoci
       }
-
+    
     densityFunction(mD) <- nbinomDensity
     mD@groups <- list(mD@replicates)
     libsizes(mD) <- libsizes(cD)
+    mD@posteriors <- matrix(nrow = 0, ncol = length(groups(mD)))
+    mD@estProps <- numeric(0)
     
     mD <- getPriors.NB(mD, verbose = TRUE, cl = cl)
 #    print("stop here!")

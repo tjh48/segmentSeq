@@ -35,6 +35,10 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
         if(nrow(cD@locLikelihoods) == nrow(cD))
           mD@locLikelihoods <- rbind(matrix(-Inf, length(nulls), ncol(cD@locLikelihoods)), cD@locLikelihoods)
 
+        if(nrow(cD@posteriors) == nrow(cD))
+          mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
+
+        
         mD@sampleObservables <- c(mD@sampleObservables)        
       } else {
         mD <- cD
@@ -44,6 +48,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     densityFunction(mD) <- nbinomDensity
     mD@groups <- list(mD@replicates)
     libsizes(mD) <- libsizes(cD)
+    oldPosteriors <- mD@posteriors
     mD@posteriors <- matrix(nrow = 0, ncol = length(groups(mD)))
     mD@estProps <- numeric(0)
     
@@ -106,6 +111,11 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 
     mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
 
+    mD@groups <- cD@groups
+    mD@estProps <- cD@estProps
+    mD@posteriors <- oldPosteriors
+
+
     mD
   }
 
@@ -140,11 +150,18 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
                   )
 
         if(nrow(cD@locLikelihoods) == nrow(cD))
-          mD@locLikelihoods <- rbind(matrix(-Inf, nrow(countNulls$Cs), ncol(cD@locLikelihoods)), cD@locLikelihoods)
+            mD@locLikelihoods <- rbind(matrix(-Inf, nrow(countNulls$Cs), ncol(cD@locLikelihoods)), cD@locLikelihoods)
+
+        if(nrow(cD@posteriors) == nrow(cD))
+            mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
+
       } else mD <- cD
 
     mD <- mD[which(rowSums(mD@data) > 0),]
     mD@groups <- list(mD@replicates)
+    oldPosteriors <- mD@posteriors
+    mD@posteriors <- matrix(nrow = 0, ncol = length(groups(mD)))
+    mD@estProps <- numeric(0)
 
     mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
     mD@data <- round(mD@data)
@@ -203,5 +220,9 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 
     #mD@annotation <- subset(mD@annotation, select = c("chr", "start", "end"))    
 
+    mD@groups <- cD@groups
+    mD@estProps <- cD@estProps
+    mD@posteriors <- oldPosteriors
+    
     mD
   }

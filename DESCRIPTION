@@ -2,7 +2,7 @@ Package: segmentSeq
 Type: Package
 Title: Methods for identifying small RNA loci from high-throughput
         sequencing data
-Version: 2.5.2
+Version: 2.5.3
 Date: 2010-01-20
 Author: Thomas J. Hardcastle
 Maintainer: Thomas J. Hardcastle <tjh48@cam.ac.uk>

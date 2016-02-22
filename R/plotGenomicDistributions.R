@@ -109,8 +109,8 @@ plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add =
     }
             
     methOvers <- findOverlaps(modcod, mD@alignments, select = "all")
-    overMD <- sort(unique(unlist(methOvers@subjectHits)))
-    redOvers <- split(match(methOvers@subjectHits, overMD), factor(methOvers@queryHits, levels = 1:length(modcod)))
+    overMD <- sort(unique(unlist(subjectHits(methOvers))))
+    redOvers <- split(match(subjectHits(methOvers), overMD), factor(queryHits(methOvers), levels = 1:length(modcod)))
 
     uus <- unique(unlist(samples))
     redsamp <- lapply(samples, match, uus)

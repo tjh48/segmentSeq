@@ -11,10 +11,11 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
     
     message("Reading files...", appendLF = FALSE)
     methReads <- lapply(files, function(file, chrs) {
-      message(".", appendLF = FALSE)
-      mreads <- read.delim(file, as.is = TRUE, header = FALSE)
-      mreads <- mreads[mreads[,2] >= 0,]
-      if(!is.null(chrs)) mreads <- mreads[mreads[,1] %in% chrs,]
+        message(".", appendLF = FALSE)
+        mreads <- read.delim(file, as.is = TRUE, header = FALSE)
+        mreads <- mreads[mreads[,2] >= 0,]
+        if(!is.null(chrs)) mreads <- mreads[mreads[,1] %in% chrs,]
+        mreads <- mreads[mreads[,3] %in% c("+", "-", "*"),]
       mr <- GRanges(seqnames = mreads[,1], IRanges(mreads[,2], width = 1), strand = mreads[,3], #multireads = as.integer(mreads[,6]),
                     Cs = as.integer(mreads[,4]), Ts = as.integer(mreads[,5]))
       if(ncol(mreads) == 6) mr$multireads <- Rle(mreads[,6]) else mr$multireads <- Rle(1)

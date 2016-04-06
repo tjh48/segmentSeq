@@ -24,7 +24,7 @@ setMethod("replicates", signature = "alignmentClass", function(x) {
 })
 
 
-setValidity("alignmentClass", function(object) {
+.valid.alignmentClass <- function(object) {
   valid <- TRUE
   validmess <- c()
   if(length(object@replicates) != length(object@libnames))
@@ -32,8 +32,10 @@ setValidity("alignmentClass", function(object) {
       valid <- FALSE
       validmess <- c(validmess, "The length of the '@replicates' slot must equal the length of the '@libnames' slot.")
     }
-  if(valid) return(valid) else validmess
-})
+  if(valid) return(valid) else return(validmess)
+}
+
+setValidity("alignmentClass", .valid.alignmentClass)
   
 
 setMethod("dim", "alignmentClass", function(x) {

@@ -352,19 +352,19 @@ plotMethDistribution <- function(meth, samples, bw = 1e-3, subtract, chrs, centr
     if(!is.null(subtract)) {
       methdiv <- methdiv - subtract
       if(is.null(ylim)) ylim <- c(-1.1, 1)
-    } else if(is.null(ylim)) ylim = c(-0.1, 1)
+    } else if(is.null(ylim)) ylim = c(0, 1)
 
     if(missing(col)) col = "black"
     
     methylation <- methdiv[!is.na(methdiv)]
     position <- breaks[!is.na(methdiv)] #- cuts / 2
     if(!add) {
-      plot(x = position, y = methylation, type = "l", axes = FALSE, xlim = c(0, max(position) * 1.1), ylim = ylim, col = col, ylab = "", ...)
-      axis(2, at = pretty(c(ylim[1] + range(ylim) * 0.1 / 1.1, ylim[2]), n = 5))
+      plot(x = position, y = methylation, type = "l", axes = FALSE, xlim = c(0, max(position) * 1.1), ylim = ylim + diff(range(ylim)) * c(-0.25, 0), col = col, ylab = "", ...)
+      axis(2, at = pretty(ylim, n = 3), las = 1, ...)
       if(length(chrlens) > 1)
         segments(x0 = cumsum(chrlens)[-length(chrlens)], y0 = 0, y1 = 1, col = "red", lty = 2, lwd = 3)    
       if(!missing(centromeres) && !is.null(centromeres)) segments(x0 = c(centromeres[,1] + c(0, cumsum(chrlens)[-length(chrlens)]), centromeres[,2] + c(0, cumsum(chrlens)[-length(chrlens)])), y0 = 0, y1 = 1, lty = 2, lwd = 2, col = "blue")
-      text(names(chrlens), srt = 10, adj = 1, y = ylim[1] + 0.05 * ylim[2], x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 1.5)
+      text(names(chrlens), srt = 10, adj = 1, y = diff(range(ylim)) * c(-0.1), x = cumsum(c(0, chrlens[-length(chrlens)])) + chrlens / 2, cex = 2)
     } else lines(x = position, y = methylation, col = col, ...)
     invisible(data.frame(position = breaks, methylation = methdiv))
   }

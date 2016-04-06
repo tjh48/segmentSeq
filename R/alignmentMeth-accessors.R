@@ -28,14 +28,39 @@ setMethod("[", "alignmentMeth", function(x, i, j, ..., drop = FALSE) {
   x        
 })
 
-setValidity("alignmentData", function(object) {
-  acValid <- callNextMethod(object)
-  if(class(acValid) == "character") valid <- FALSE else valid = TRUE
-  if(class(acValid) == "character") valid <- acValid else valid = ""
-  if(length(object@nonconversion) > 0 && any(object@nonconversion < 0) && any(object@nonconversion > 1))
-    {
-      valid <- FALSE
-      validmess <- c(validmess, "Non-conversion rates must be between zero and one.")
-    }
-  if(valid) return(valid) else validmess
+setValidity("alignmentMeth", function(object) {
+    valid <- TRUE
+    validmess <- c()
+    if(length(object@replicates) != length(object@libnames))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "The length of the '@replicates' slot must equal the length of the '@libnames' slot.")
+        }  
+    if(nrow(object@Cs) != length(object@alignments))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "The number of rows in the '@Cs' slot must equal the number of rows in the '@alignments' slot.")
+        }
+    if(nrow(object@Ts) != length(object@alignments))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "The number of rows in the '@Ts' slot must equal the number of rows in the '@alignments' slot.")
+        }
+    if(any(as.integer(object@Cs) != object@Cs))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "All members of the '@Cs' matrix must be castable as integers.")
+        }
+    if(any(as.integer(object@Ts) != object@Ts))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "All members of the '@Cs' matrix must be castable as integers.")
+        }
+
+    if(length(object@nonconversion) > 0 && any(object@nonconversion < 0) && any(object@nonconversion > 1))
+        {
+            valid <- FALSE
+            validmess <- c(validmess, "Non-conversion rates must be between zero and one.")
+        }
+    if(valid) return(valid) else validmess
 })

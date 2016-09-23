@@ -94,7 +94,7 @@ readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chr
 
 
 readBAM <-
-function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL)
+function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE, filterReport = NULL)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -106,14 +106,14 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
     chrs <- as.character(chrs)
     replicates <- as.factor(replicates)
 
-    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
+    seqinf <- Seqinfo(seqnames = chrs)#, seqlengths = chrlens)
 
     if(!all(levels(replicates) %in% replicates))
       stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
     
-    if(any(chrlens != as.integer(chrlens)))
-      stop("The 'chrlens' vector must be castable as an integer")
-    chrlens <- as.integer(chrlens)    
+#    if(any(chrlens != as.integer(chrlens)))
+#      stop("The 'chrlens' vector must be castable as an integer")
+#    chrlens <- as.integer(chrlens)    
 
     if(missing(libnames))
       libnames <- sub(".*/", "", files)
@@ -131,7 +131,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
     Tags <- lapply(sampleNumbers, function(ii) {
       tags <- scanBam(files[ii])[[1]]
       if(!is.null(countID)) {
-        counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
+          counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
       } else counts <- (rep(1L, length(tags$seq)))
 
       revcomp <- sapply(tags$flag, function(flag) intToBits(flag)[5] == 1)
@@ -199,15 +199,17 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
       })
 
     message(".done!")
+    #if(!missing(tempFile)) save(Tags, file = paste("tags_", tempFile, sep = ""))
     
-    .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
+    aD <- .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates, discardTags = discardTags)
+    aD
     
   }
 
 
 readGeneric <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", verbose = TRUE, filterReport = NULL, ...)
+         cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE, filterReport = NULL, ...)
   {
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
@@ -257,7 +259,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       } else if(is.null(cols) & header == FALSE) warning("No 'cols' argument supplied and 'header = FALSE'. Using default values for columns")
 
     if(missing(libnames))
-      libnames <- sub(".*/", "", files)
+        libnames <- sub(".*/", "", files)
 
     files <- paste(dir, files, sep = "/")
 
@@ -382,81 +384,89 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     }, cols = cols, header = header)
 
     message(".done!")
+    #if(!missing(tempFile)) save(Tags, paste("tags_", tempFile, sep = ""))
     
-    .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates)
+    aD <- .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates, discardTags = discardTags)
+    aD
   }
 
 
-.processTags <- function(GTags, estimationType, verbose = TRUE, seqinf, libnames, replicates)
+.processTags <- function(GTags, estimationType, verbose = TRUE, seqinf, libnames, replicates, discardTags)
   {
     if(verbose)
       message("Analysing tags...", appendLF = FALSE)
 
+    if(discardTags) {
+        GTags <- lapply(GTags, function(x) {
+            x$tag <- NULL
+            x <- sort(x)
+            if(any(duplicated(x))){
+                stop("The author meant to fix this bug with 'discardTags=TRUE' option, but hasn't. Please contact tjh48@cam.ac.uk")
+            }
+            x
+        })
+    }
+
     unqTags <- GTags[[1]]
     if(length(GTags) > 1) {
-      for(ii in 2:length(GTags)) {
-        message(".", appendLF = FALSE)
-        unqTags <- GRanges(seqnames = c(seqnames(unqTags), seqnames(GTags[[ii]])),
-                           IRanges(start = c(start(unqTags), start(GTags[[ii]])), end = c(end(unqTags), end(GTags[[ii]]))),
-                           strand = c(strand(unqTags), strand(GTags[[ii]])),
-                           tag = c(values(unqTags)$tag, values(GTags[[ii]])$tag))
-        ordTag <- order(as.integer(seqnames(unqTags)), as.integer(start(unqTags)), as.integer(end(unqTags)), as.character(values(unqTags)$tag), as.character(strand(unqTags)))
-
-        purgeTags <- which(as.integer(seqnames(unqTags)[ordTag]) == c(as.integer(seqnames(unqTags)[ordTag[-1]]), -1) &
-                           start(unqTags)[ordTag] == c(start(unqTags)[ordTag[-1]], Inf) &
-                           end(unqTags)[ordTag] == c(end(unqTags)[ordTag[-1]], Inf) &
-                           as.character(strand(unqTags)[ordTag]) == c(as.character(strand(unqTags)[ordTag[-1]]), "!") &
-                           (values(unqTags)$tag[ordTag] == c(values(unqTags)$tag[ordTag[-1]], "!") | (is.na(values(unqTags)$tag[ordTag]) & is.na(c(values(unqTags)$tag[ordTag[-1]], NA))))) + 1
-        if(length(purgeTags) > 0)
-          unqTags <- unqTags[ordTag[-purgeTags],]
-      }      
+        for(ii in 2:length(GTags)) {
+            message(".", appendLF = FALSE)
+            unqTags <- GRanges(seqnames = c(seqnames(unqTags), seqnames(GTags[[ii]])),
+                               IRanges(start = c(start(unqTags), start(GTags[[ii]])), end = c(end(unqTags), end(GTags[[ii]]))),
+                               strand = c(strand(unqTags), strand(GTags[[ii]])),
+                               tag = c(values(unqTags)$tag, values(GTags[[ii]])$tag))
+            unqTags <- sort(unique(unqTags))
+                                        # need to check this works on the tag data if present
+            unqTags
+        }      
     }                    
 
+    #if(is.null(unqTags$tag)) unqTags$tag <- NA
     if(length(GTags) > 1) {
-      values(unqTags)$count <- 0
-      counts <- do.call("cbind",
-                        lapply(GTags, function(GTag) {
-                          
-                          countTag <- c(GTag, unqTags)
-                          countTag <- countTag[order(as.integer(seqnames(countTag)), as.integer(start(countTag)), as.integer(end(countTag)), as.character(values(countTag)$tag), as.character(strand(countTag))),]
-                          
-                          purgeTags <- which(as.integer(seqnames(countTag)) == c(as.integer(seqnames(countTag)[-1]), -1) &
-                                             start(countTag) == c(start(countTag)[-1], Inf) &
-                                             end(countTag) == c(end(countTag)[-1], Inf) &
-                                             as.character(strand(countTag)) == c(as.character(strand(countTag)[-1]), "!") &
-                                             (values(countTag)$tag == c(values(countTag)$tag[-1], "!") | (is.na(values(countTag)$tag) & is.na(c(values(countTag)$tag[-1], NA))))) + 1
-                                  message(".", appendLF = FALSE)
-                                  if(length(purgeTags) > 0) return(values(countTag)$count[-purgeTags]) else return(values(countTag)$count)
-                        })
-                        )
+        #values(unqTags)$count <- Rle(0, length(unqTags))
+        counts <- do.call("cbind",
+                          lapply(GTags, function(GTag) {
+                                        # this new analysis method basically discards tag information - perhaps this should be put back later.
+                              mt <- match(GTag, unqTags)
+                              counts <- Rle(0, length(unqTags))
+                              counts[mt] <- GTag$count
+                              DataFrame(counts)
+                          })
+                          )
     } else counts <- matrix(values(GTags[[1]])$count, ncol = 1)
     
     colnames(counts) <- libnames
 
-    values(unqTags) <- values(unqTags)$tag
-    colnames(values(unqTags)) <- "tag"
+    if(!is.null(unqTags$tag)) {
+        values(unqTags) <- values(unqTags)$tag
+        colnames(values(unqTags)) <- "tag"
 
-    ordTags <- order(as.factor(values(unqTags)$tag))
-    dups <- which(!duplicated(as.factor(values(unqTags)$tag)[ordTags]))
-    diffDups <- diff(c(dups, length(unqTags) + 1))
-    values(unqTags)$multireads[ordTags] <- rep(diffDups, diffDups)
+        ordTags <- order(as.factor(values(unqTags)$tag))
+        dups <- which(!duplicated(as.factor(values(unqTags)$tag)[ordTags]))
+        diffDups <- diff(c(dups, length(unqTags) + 1))
+        values(unqTags)$multireads[ordTags] <- rep(diffDups, diffDups)
+    } else {
+        unqTags$tag <- NA
+        unqTags$multireads <- 1
+    }
     
     if(verbose) message(".done!")
     
 #    sapply(chrs, function(x) if(any(uniqueTags$end[uniqueTags$chr == x] > chrlens[chrs == x]))
 #           warning(paste("Chromosome", x, "has tags which extend over the given chromsome length.")))
 
+    gc()
     aD <- new("alignmentData")
     aD@libnames = as.character(libnames)
 #    aD@libsizes = libsizes
     aD@replicates = as.factor(replicates)
     aD@alignments = unqTags
-    aD@data = counts    
+    aD@data = do.call("cbind", lapply(counts, as.integer))
 
-    libSet <- !duplicated(as.character(values(aD@alignments)$tag))
+    libSet <- !duplicated(as.character(values(aD@alignments)$tag)) | is.na(aD@alignments$tag)
     repSizes <- do.call("rbind", lapply(levels(aD@replicates), function(rep) {
-      whichRep <- which(aD@replicates == rep)
-      libRep <- getLibsizes(data = sapply(whichRep, function(ii) as.integer(aD@data[libSet,ii])), replicates = aD@replicates, estimationType = estimationType)
+        whichRep <- which(aD@replicates == rep)
+        libRep <- getLibsizes(data = sapply(whichRep, function(ii) as.integer(aD@data[libSet,ii])), replicates = aD@replicates, estimationType = estimationType)
       cbind(whichRep, libRep)
     }))
     
@@ -467,10 +477,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     
     maxlens <- sapply(seqlevels(seqinf), function(x) max(end(aD@alignments[seqnames(aD@alignments) == x])))
 
-    if(any(seqlengths(seqinf) < maxlens)) {
-      seqlengths(seqinf)[seqlengths(seqinf) < maxlens] <- maxlens[seqlengths(seqinf) < maxlens]
-      warning("Some chromosomes contain tags extending over the given lengths!")
-    }
+    if(!all(is.na(seqlengths(seqinf)))) 
+        if(any(seqlengths(seqinf) < maxlens)) {
+            seqlengths(seqinf)[seqlengths(seqinf) < maxlens] <- maxlens[seqlengths(seqinf) < maxlens]
+            warning("Some chromosomes contain tags extending over the given lengths!")
+        }
     
     seqinfo(aD@alignments, new2old = chrmatch) <- seqinf
     

@@ -138,7 +138,6 @@ getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whic
               if(!is.null(cl) & length(rcoord) > 1)
                 {
                   clustRedSeg <- function(minseg, maxseg) {
-                    library(GenomicRanges)
                     rwhseg <- whseg[minseg:maxseg]
                     rseg <- chrseg[minseg:maxseg,,drop = FALSE]
                     assign("rseg", rseg, envir = .GlobalEnv)

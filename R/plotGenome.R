@@ -163,6 +163,8 @@ plotMeth <- function(aM, loci, chr, limits, samples, showNumber = TRUE, rgb = c(
   {
     normalise = FALSE
     if(missing(samples)) samples <- 1:ncol(aM)
+
+    if(!"multireads" %in% colnames(values(aM@alignments))) aM@alignments$multireads <- 1
     
     redADPlus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "+"),]
     redADMinus <- aM[which(seqnames(aM@alignments) == chr & start(aM@alignments) >= limits[1] & end(aM@alignments) <= limits[2] & strand(aM@alignments) == "-"),]

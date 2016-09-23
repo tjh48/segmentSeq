@@ -259,21 +259,38 @@
   mergeSeg
 }
 
-.methFunction <- function(methD, prop, locCutoff, nullP = FALSE, prior = c(0.5, 0.5))
-  {
-    if(nrow(methD) == 0) return(matrix(nrow = 0, ncol = length(levels(methD@replicates))))
-    nonconversion <- methD@nonconversion
+
+normaliseNC <- function(mD, nonconversion) {
+    if(inherits(mD, "alignmentMeth") | inherits(mD, "segMeth")) {
+        nonconversion <- mD@nonconversion
+        Cs <- mD@Cs
+        Ts <- mD@Ts
+    } else {
+        Cs <- mD@data[,,1]
+        Ts <- mD@data[,,2]
+    }
     
-    Cs <- methD@Cs
-    Ts <- methD@Ts
     ks <- t(t(Ts) * nonconversion / (1 - nonconversion))
 
     Cs <- Cs - ks
     Ts <- Ts + ks
     Cs[Cs < 0] <- 0
-    
-    combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(Cs[,methD@replicates == rep,drop = FALSE])))
-    combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(Ts[,methD@replicates == rep,drop = FALSE])))
+    if(inherits(mD, "alignmentMeth") | inherits(mD, "segMeth")) {
+        mD@Cs <- Cs
+        mD@Ts <- Ts
+    } else {
+        mD@data[,,1] <- Cs
+        mD@data[,,2] <- Ts
+    }
+    return(mD)
+}
+
+.methFunction <- function(methD, prop, locCutoff, nullP = FALSE, prior = c(0.5, 0.5))
+  {
+    if(nrow(methD) == 0) return(matrix(nrow = 0, ncol = length(levels(methD@replicates))))
+    nD <- normaliseNC(methD)
+    combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Cs[,methD@replicates == rep,drop = FALSE])))
+    combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Ts[,methD@replicates == rep,drop = FALSE])))
 
     combDat <- cbind(combCs, combTs)
     rodDat <- order(combDat[,1], combDat[,2])
@@ -342,4 +359,3 @@
   if(na.rm && length(nas) > 0) sumz[nas] <- NA
   sumz
 }
-

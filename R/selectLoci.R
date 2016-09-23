@@ -2,9 +2,9 @@
 summariseLoci <- function(cD, perReplicate = TRUE)
   {
     if(perReplicate) {
-      colSums(exp(cD@locLikelihoods))
+      colSums(exp(cD@locLikelihoods), na.rm = TRUE)
     } else {
-      sum(1 - exp(rowSums(log(1-exp(cD@locLikelihoods)))))
+      sum(1 - exp(rowSums(log(1-exp(cD@locLikelihoods)), na.rm = TRUE)), na.rm = TRUE)
     }
   }
 
@@ -49,7 +49,7 @@ selectLoci <- function(cD, likelihood, FDR, FWER, perReplicate = TRUE) {
       }
       selLoc <- sort(unique(unlist(selRep)))
     } else {
-      selLoc <- controlFunction(1 - exp(rowSums(log(1 - exp(cD@locLikelihoods)))), controlCrit)
+      selLoc <- controlFunction(1 - exp(rowSums(log(1 - exp(cD@locLikelihoods)), na.rm = TRUE)), controlCrit)
       if(returnBool) {
         bool <- rep(FALSE, nrow(cD))
         bool[selLoc] <- TRUE

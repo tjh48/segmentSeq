@@ -44,7 +44,9 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
         mD <- cD
         mD@data <- countLoci
       }
-    
+
+    if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1))
+        replicates(mD) <- rep(1, ncol(mD))
     densityFunction(mD) <- nbinomDensity
     mD@groups <- list(mD@replicates)
     libsizes(mD) <- libsizes(cD)

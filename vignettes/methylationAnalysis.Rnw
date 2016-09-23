@@ -41,14 +41,14 @@ if(require("parallel"))
 }
 @
 
-The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
+The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location. The files used here have been compressed to save space.
 
 <<>>=
 datadir <- system.file("extdata", package = "segmentSeq")
-files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls",
-"short_Sample_17A_trimmed.fastq_CG_methCalls",
-"short_13_C24_col_trim.fastq_CG_methCalls",
-"short_Sample_28_trimmed.fastq_CG_methCalls")
+files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls.gz",
+"short_Sample_17A_trimmed.fastq_CG_methCalls.gz",
+"short_13_C24_col_trim.fastq_CG_methCalls.gz",
+"short_Sample_28_trimmed.fastq_CG_methCalls.gz")
 
 mD <- readMeths(files = files, dir = datadir,
 libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
@@ -89,7 +89,7 @@ We can now construct a segment map from these potential segments.
 A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
 
 <<>>=
-hS <- heuristicSeg(sD = sD, aD = mD, prop = 0.2, cl = cl, gap = 100, getLikes = FALSE)
+hS <- heuristicSeg(sD = sD, aD = mD, prop = "auto", cl = cl, gap = 100, getLikes = FALSE)
 hS
 @ 
 

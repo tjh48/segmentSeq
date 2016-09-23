@@ -8,9 +8,9 @@
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
 
-\RequirePackage{/applications/R/R-3.2.0/library/BiocStyle/resources/latex/Bioconductor}
+\RequirePackage{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/Bioconductor}
 
-\AtBeginDocument{\bibliographystyle{/applications/R/R-3.2.0/library/BiocStyle/resources/latex/unsrturl}}
+\AtBeginDocument{\bibliographystyle{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/unsrturl}}
 \usepackage{Sweave}
 \begin{document}
 
@@ -76,39 +76,39 @@ Levels: AGO4 AGO6
 
 Slot "alignments":
 GRanges object with 13765 ranges and 2 metadata columns:
-          seqnames           ranges strand   |                      tag multireads
-             <Rle>        <IRanges>  <Rle>   |              <character>  <numeric>
-      [1]    >Chr1       [265, 284]      -   |     AAATGAAGATAAACCATCCA          1
-      [2]    >Chr1       [405, 427]      -   |  AAGGAGTAAGAATGACAATAAAT          1
-      [3]    >Chr1       [406, 420]      -   |          AAGAATGACAATAAA          1
-      [4]    >Chr1       [600, 623]      +   | AAGGATTGGTGGTTTGAAGACACA          1
-      [5]    >Chr1       [665, 688]      +   | ATCCTTGTAGCACACATTTTGGCA          1
-      ...      ...              ...    ... ...                      ...        ...
-  [13761]    >Chr2 [179972, 179993]      +   |   ATGAATGGCTCTCTCTAGCGGA          1
-  [13762]    >Chr2 [179978, 180000]      -   |  GAGATTCTCCGCTAGAGAGAGCC          1
-  [13763]    >Chr2 [179999, 180022]      -   | ATTAATATTAATTCATCGGGAAGA          1
-  [13764]    >Chr2 [180002, 180022]      -   |    ATTAATATTAATTCATCGGGA          1
-  [13765]    >Chr2 [180014, 180037]      +   | AATATTAATGGTATTTGTGGAAAA          1
+          seqnames           ranges strand   |       tag multireads
+             <Rle>        <IRanges>  <Rle>   | <logical>  <numeric>
+      [1]    >Chr1       [600, 623]      +   |      <NA>      13765
+      [2]    >Chr1       [665, 688]      +   |      <NA>      13765
+      [3]    >Chr1       [762, 785]      +   |      <NA>      13765
+      [4]    >Chr1       [762, 786]      +   |      <NA>      13765
+      [5]    >Chr1       [774, 794]      +   |      <NA>      13765
+      ...      ...              ...    ... ...       ...        ...
+  [13761]    >Chr2 [179857, 179872]      -   |      <NA>      13765
+  [13762]    >Chr2 [179964, 179987]      -   |      <NA>      13765
+  [13763]    >Chr2 [179978, 180000]      -   |      <NA>      13765
+  [13764]    >Chr2 [179999, 180022]      -   |      <NA>      13765
+  [13765]    >Chr2 [180002, 180022]      -   |      <NA>      13765
   -------
   seqinfo: 2 sequences from an unspecified genome
 
 Slot "data":
 Matrix with  13765  rows.
       SL9 SL10 SL26 SL32
-1       1    0    0    0
-2       0    0    0    2
-3       0    1    0    0
-4       0    1    0    0
-5       7    1    0    0
+1       0    1    0    0
+2       7    1    0    0
+3       0    0   17    0
+4       1    0    0    0
+5       0    1    0    0
 ...   ...  ...  ...  ...
-13761   2    7    0    0
-13762   0    1    0    0
+13761   0    1    0    0
+13762   0    0    0    7
 13763   0    1    0    0
 13764   0    1    0    0
-13765   1    0    0    0
+13765   0    1    0    0
 
 Slot "libsizes":
-[1] 4447 6531 9666 6675
+[1] 5238 7507 9875 7687
 \end{Soutput}
 \end{Schunk}
 
@@ -121,27 +121,27 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 \end{Sinput}
 \begin{Soutput}
 An object of class "segData"
-14444 rows and 4 columns
+2109 rows and 4 columns
 
 Slot "replicates":
 [1] AGO6 AGO6 AGO4 AGO4
 Levels: AGO4 AGO6
 
 Slot "coordinates":
-GRanges object with 14444 ranges and 0 metadata columns:
-          seqnames           ranges strand
-             <Rle>        <IRanges>  <Rle>
-      [1]    >Chr1       [265, 284]      *
-      [2]    >Chr1       [405, 427]      *
-      [3]    >Chr1       [600, 623]      *
-      [4]    >Chr1       [600, 688]      *
-      [5]    >Chr1       [600, 830]      *
-      ...      ...              ...    ...
-  [14440]    >Chr2 [179708, 179872]      *
-  [14441]    >Chr2 [179708, 180037]      *
-  [14442]    >Chr2 [179738, 179872]      *
-  [14443]    >Chr2 [179738, 180037]      *
-  [14444]    >Chr2 [179923, 180037]      *
+GRanges object with 2109 ranges and 0 metadata columns:
+         seqnames           ranges strand
+            <Rle>        <IRanges>  <Rle>
+     [1]    >Chr1       [600, 623]      *
+     [2]    >Chr1       [600, 688]      *
+     [3]    >Chr1       [600, 830]      *
+     [4]    >Chr1       [600, 916]      *
+     [5]    >Chr1       [665, 688]      *
+     ...      ...              ...    ...
+  [2105]    >Chr2 [179708, 179872]      *
+  [2106]    >Chr2 [179708, 180037]      *
+  [2107]    >Chr2 [179738, 179872]      *
+  [2108]    >Chr2 [179738, 180037]      *
+  [2109]    >Chr2 [179923, 180037]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 
@@ -154,7 +154,7 @@ Matrix with  0  rows.Matrix with  0  rows.
      SL9 SL10 SL26 SL32
 
 Slot "libsizes":
-[1] 4447 6531 9666 6675
+[1] 5238 7507 9875 7687
 \end{Soutput}
 \end{Schunk}
 
@@ -187,69 +187,66 @@ overlap with any other such segments in defining our segmentation map.
 > classSegs <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
 \end{Sinput}
 \begin{Soutput}
-............
+.........
 \end{Soutput}
 \begin{Sinput}
 > classSegs
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 299 ranges and 0 metadata columns:
-        seqnames           ranges strand
-           <Rle>        <IRanges>  <Rle>
-    [1]    >Chr1    [   1,   599]      *
-    [2]    >Chr1    [ 600,   967]      *
-    [3]    >Chr1    [ 968,  8669]      *
-    [4]    >Chr1    [8670,  8698]      *
-    [5]    >Chr1    [8699, 17054]      *
-    ...      ...              ...    ...
-  [295]    >Chr2 [169231, 178343]      *
-  [296]    >Chr2 [178344, 178636]      *
-  [297]    >Chr2 [178637, 179707]      *
-  [298]    >Chr2 [179708, 180037]      *
-  [299]    >Chr2 [180038, 200000]      *
+GRanges object with 52 ranges and 0 metadata columns:
+       seqnames           ranges strand
+          <Rle>        <IRanges>  <Rle>
+   [1]    >Chr1 [     1, 257671]      *
+   [2]    >Chr1 [257672, 257696]      *
+   [3]    >Chr1 [257697, 366740]      *
+   [4]    >Chr1 [366741, 366761]      *
+   [5]    >Chr1 [366762, 634296]      *
+   ...      ...              ...    ...
+  [48]    >Chr2 [102081, 121970]      *
+  [49]    >Chr2 [121971, 121994]      *
+  [50]    >Chr2 [121995, 152794]      *
+  [51]    >Chr2 [152795, 152829]      *
+  [52]    >Chr2 [152830, 200000]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-299 rows and 4 columns
+52 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
 Slot "groups":
-[[1]]
-[1] AGO6 AGO6 AGO4 AGO4
-Levels: AGO4 AGO6
-
+list()
 
 Slot "data":
      AGO6.1 AGO6.2 AGO4.1 AGO4.2
-[1,]      1      1      0      2
-[2,]     54     46     65     83
-[3,]      1      2      0      0
-[4,]      5      0      0      0
-[5,]      0      1      0      0
-294 more rows...
+[1,]      0      1      0      0
+[2,]      0      0      0     10
+[3,]      0      1      0      0
+[4,]      0      0     14      0
+[5,]      1      0      0      0
+47 more rows...
 
 Slot "annotation":
-data frame with 0 columns and 299 rows
+data frame with 0 columns and 52 rows
 
 Slot "locLikelihoods" (stored on log scale):
-Matrix with  299  rows.
-        AGO4     AGO6
-1    0.24446  0.14002
-2    0.93653  0.93482
-3    0.04248 0.045765
-4    0.11958  0.82694
-5   0.042167 0.052788
-...      ...      ...
-295   0.3786  0.10344
-296  0.93606  0.96377
-297 0.056084 0.082052
-298  0.95291  0.93677
-299 0.039763 0.032808
+Matrix with  52  rows.
+         AGO4      AGO6
+1   0.0051896 0.0057492
+2     0.99993  0.033594
+3   0.0047697 0.0057517
+4     0.99995   0.03508
+5   0.0052282 0.0063119
+...       ...       ...
+48  0.0050284 0.0079857
+49    0.99995  0.033935
+50  0.0048858  0.011743
+51    0.99994  0.030946
+52  0.0047875 0.0063115
 
 Expected number of loci in each replicate group
-    AGO4     AGO6 
-129.1519 151.0502 
+     AGO4      AGO6 
+24.057989  5.272103 
 \end{Soutput}
 \end{Schunk}
 
@@ -265,221 +262,3 @@ We can use this \verb'lociData' object, in combination with the \verb'alignmentD
 +            showNumber = FALSE, cap = 50)
 > plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 +            showNumber = FALSE, cap = 50)
-\end{Sinput}
-\end{Schunk}
-
-%\begin{sidewaysfigure}[!ht]
-\begin{figure}[!ht]
-\begin{center}
-
-\includegraphics{segmentSeq-figSeg}
-\caption{The segmented genome (first $10^5$ bases of chromosome 1.}
-\label{fig:Seg}
-\end{center}
-\end{figure}
-%\end{sidewaysfigure}
-
-Given the calculated likelihoods, we can filter the segmented genome by controlling on likelihood, false discovery rate, or familywise error rate
-
-\begin{Schunk}
-\begin{Sinput}
-> loci <- selectLoci(classSegs, FDR = 0.05)
-> loci
-\end{Sinput}
-\begin{Soutput}
-GRanges object with 73 ranges and 0 metadata columns:
-       seqnames           ranges strand
-          <Rle>        <IRanges>  <Rle>
-   [1]    >Chr1 [ 17055,  18728]      *
-   [2]    >Chr1 [ 44710,  44811]      *
-   [3]    >Chr1 [ 77115,  77523]      *
-   [4]    >Chr1 [222441, 222458]      *
-   [5]    >Chr1 [238359, 238417]      *
-   ...      ...              ...    ...
-  [69]    >Chr2 [127618, 127649]      *
-  [70]    >Chr2 [152768, 152829]      *
-  [71]    >Chr2 [169196, 169230]      *
-  [72]    >Chr2 [178344, 178636]      *
-  [73]    >Chr2 [179708, 180037]      *
-  -------
-  seqinfo: 2 sequences from an unspecified genome
-An object of class "lociData"
-73 rows and 4 columns
-
-Slot "replicates"
-AGO6 AGO6 AGO4 AGO4
-Slot "groups":
-[[1]]
-[1] AGO6 AGO6 AGO4 AGO4
-Levels: AGO4 AGO6
-
-
-Slot "data":
-     AGO6.1 AGO6.2 AGO4.1 AGO4.2
-[1,]    834    789   1699   2193
-[2,]     73     58     47     21
-[3,]    176    148    275    131
-[4,]      4      2      0      0
-[5,]      9      9      0      0
-68 more rows...
-
-Slot "annotation":
-data frame with 0 columns and 73 rows
-
-Slot "locLikelihoods" (stored on log scale):
-Matrix with  73  rows.
-       AGO4    AGO6
-1   0.96893 0.99339
-2   0.96011  0.9944
-3   0.96259  0.9866
-4   0.13446 0.93928
-5   0.10147 0.94802
-...     ...     ...
-69  0.90034 0.98642
-70   0.9534 0.89738
-71  0.11435 0.97356
-72  0.93606 0.96377
-73  0.95291 0.93677
-
-Expected number of loci in each replicate group
-    AGO4     AGO6 
-58.42580 70.60195 
-\end{Soutput}
-\end{Schunk}
-
-The \verb'lociData' objects can now be examined for differential expression with the \verb'baySeq' package.
-
-First we define the possible models of differential expression on the data. In this case, the models are of non-differential expression and pairwise differential expression.
-\begin{Schunk}
-\begin{Sinput}
-> groups(classSegs) <- list(NDE = c(1,1,1,1), DE = c("AGO6", "AGO6", "AGO4", "AGO4"))
-\end{Sinput}
-\end{Schunk}
-
-Then we get empirical distributions on the parameter space of the data.
-\begin{Schunk}
-\begin{Sinput}
-> classSegs <- getPriors(classSegs, cl = cl)
-\end{Sinput}
-\end{Schunk}
-
-Then we get the posterior likelihoods of the data conforming to each model. Since the `classSegs' object contains null regions as well as true loci, we will use the `nullData = TRUE' option to distinguish between non-differentially expressed loci and non-expressed regions. By default, the loci likelihoods calculated earlier will be used to weight the initial parameter fit in order to detect null data.
-\begin{Schunk}
-\begin{Sinput}
-> classSegs <- getLikelihoods(classSegs, nullData = TRUE, cl = cl)
-\end{Sinput}
-\begin{Soutput}
-.
-\end{Soutput}
-\end{Schunk}
-
-We can examine the highest likelihood non-expressed (`null') regions
-
-\begin{Schunk}
-\begin{Sinput}
-> topCounts(classSegs, NULL, number = 3)
-\end{Sinput}
-\begin{Soutput}
-  seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood       FDR.
-1    >Chr1 309348 365852 56505      *      1      0      0      3  0.9182292 0.08177083
-2    >Chr1 754198 758593  4396      *      1      0      1      0  0.9171167 0.08232705
-3    >Chr1 950796 958752  7957      *      2      4      3      2  0.9061391 0.08617166
-       FWER.
-1 0.08177083
-2 0.15787667
-3 0.23691911
-\end{Soutput}
-\end{Schunk}
-
-The highest likelihood expressed but non-differentially expressed regions
-
-\begin{Schunk}
-\begin{Sinput}
-> topCounts(classSegs, "NDE", number = 3)
-\end{Sinput}
-\begin{Soutput}
-  seqnames  start    end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood    FDR.NDE
-1    >Chr2   1554   8147  6594      *   5463  12603  13784   9816  0.9827915 0.01720854
-2    >Chr2   8148   8209    62      *     76   2999    643    217  0.9707103 0.02324913
-3    >Chr1 446325 447437  1113      *    789    536   1291   1184  0.9439841 0.03417137
-    FWER.NDE
-1 0.01720854
-2 0.04599422
-3 0.09943367
-\end{Soutput}
-\end{Schunk}
-
-And the highest likelihood differentially expressed regions
-
-\begin{Schunk}
-\begin{Sinput}
-> topCounts(classSegs, "DE", number = 3)
-\end{Sinput}
-\begin{Soutput}
-  seqnames start   end width strand AGO6.1 AGO6.2 AGO4.1 AGO4.2 Likelihood  ordering
-1    >Chr2 58131 59084   954      *    155    159   1930   1340  0.9995871 AGO4>AGO6
-2    >Chr2 49137 50333  1197      *    203    233   1984   1438  0.9986514 AGO4>AGO6
-3    >Chr2 52652 53314   663      *    168    172   1964   1392  0.9970792 AGO4>AGO6
-        FDR.DE      FWER.DE
-1 0.0004128966 0.0004128966
-2 0.0008807443 0.0017609318
-3 0.0015607704 0.0046766110
-\end{Soutput}
-\end{Schunk}
-
-Finally, to be a good citizen, we stop the cluster we started earlier:
-
-\begin{Schunk}
-\begin{Sinput}
-> if(!is.null(cl))
-+     stopCluster(cl)
-\end{Sinput}
-\end{Schunk}
-
-\section*{Session Info}
-
-\begin{Schunk}
-\begin{Sinput}
-> sessionInfo()
-\end{Sinput}
-\begin{Soutput}
-R version 3.2.0 (2015-04-16)
-Platform: x86_64-unknown-linux-gnu (64-bit)
-Running under: Debian GNU/Linux 7 (wheezy)
-
-locale:
- [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
- [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
- [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
-[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
-
-attached base packages:
-[1] stats4    parallel  stats     graphics  grDevices utils     datasets  methods  
-[9] base     
-
-other attached packages:
- [1] segmentSeq_2.2.1        ShortRead_1.26.0        GenomicAlignments_1.4.1
- [4] Rsamtools_1.20.4        Biostrings_2.36.1       XVector_0.8.0          
- [7] BiocParallel_1.2.6      baySeq_2.1.21           perm_1.0-0.0           
-[10] abind_1.4-3             GenomicRanges_1.20.5    GenomeInfoDb_1.4.1     
-[13] IRanges_2.2.4           S4Vectors_0.6.0         BiocGenerics_0.14.0    
-
-loaded via a namespace (and not attached):
- [1] zlibbioc_1.14.0      lattice_0.20-31      hwriter_1.3.2        tools_3.2.0         
- [5] grid_3.2.0           Biobase_2.28.0       latticeExtra_0.6-26  lambda.r_1.1.7      
- [9] futile.logger_1.4.1  RColorBrewer_1.1-2   futile.options_1.0.0 bitops_1.0-6        
-[13] compiler_3.2.0       BiocStyle_1.6.0     
-\end{Soutput}
-\end{Schunk}
-
-\begin{thebibliography}{99}
-\bibitem{Hardcastle:2010} Thomas J. Hardcastle and Krystyna A. Kelly. \textsl{baySeq: Empirical Bayesian Methods For Identifying Differential Expression In Sequence Count Data.} BMC Bioinformatics (2010).
-\bibitem{Hardcastle:2011} Thomas J. Hardcastle and Krystyna A. Kelly and David C. Baulcombe. \textsl{Identifying small RNA loci from high-throughput sequencing data.} Bioinformatics (2012).
-
-\end{thebibliography}
-
-\end{document}
-
-
-
-

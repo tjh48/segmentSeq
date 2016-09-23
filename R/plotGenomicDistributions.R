@@ -3,16 +3,11 @@
   uus <- unique(unlist(samples))
 #  redsamp <- lapply(samples, match, uus)
 
-  nonconversion <- redMD@nonconversion
-  modC <- redMD@Cs[unlist(redOvers), uus, drop = FALSE]/as.integer(redMD@alignments$multireads[unlist(redOvers)])
-  modT <- redMD@Ts[unlist(redOvers), uus, drop = FALSE]/as.integer(redMD@alignments$multireads[unlist(redOvers)])
-
-  ks <- t(t(modT) * nonconversion / (1 - nonconversion))
-  modC <- modC - ks
-  modT <- modT + ks
-  modC[modC < 0] <- 0    
+  rredMD <- normaliseNC(redMD[unlist(redOvers), uus])
   
   lenOvers <- sapply(redOvers, length)
+
+  # this is going to be a matrix where the first column gives the normalised position of the data point relative to the coordinate structure
   startData <- cbind(start = unlist(redOvers),
                      codstart = rep(start(subcoord), lenOvers),
                      codwidth = rep(width(subcoord), lenOvers))                                                 
@@ -39,11 +34,11 @@
 
   
   splitcod <- split(rep(1:length(redOvers), sapply(redOvers, length)), splits)
-  splitdat <- split(1:nrow(modC), splits)
+  splitdat <- split(1:nrow(rredMD@Cs), splits)
   sumstats <- mapply(function(x, y) {
     geneProps <- do.call("rbind", lapply(split(x, y), function(sp) {
-      sumC <- colSums(modC[sp,,drop = FALSE])
-      sumT <- colSums(modT[sp,,drop = FALSE])
+      sumC <- colSums(rredMD@Cs[sp,,drop = FALSE])
+      sumT <- colSums(rredMD@Ts[sp,,drop = FALSE])
       sumC / (sumC + sumT)
     }))
     sgProps <- lapply(samples, function(samps) geneProps[,samps,drop = FALSE])
@@ -56,6 +51,7 @@
   message(".", appendLF = FALSE)
   return(sampstats)
 }
+
 
 plotAverageProfile <- function(position, profiles, col, surrounding, ylim, add = FALSE, meanOnly = TRUE, legend = TRUE, titles, ...)
   {

@@ -55,16 +55,13 @@ Thomas J. Hardcastle
 }
 \examples{
 datadir <- system.file("extdata", package = "segmentSeq")
-files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls",
-"short_Sample_17A_trimmed.fastq_CG_methCalls",
-"short_13_C24_col_trim.fastq_CG_methCalls",
-"short_Sample_28_trimmed.fastq_CG_methCalls")
+files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls.gz",
+"short_Sample_17A_trimmed.fastq_CG_methCalls.gz",
+"short_13_C24_col_trim.fastq_CG_methCalls.gz",
+"short_Sample_28_trimmed.fastq_CG_methCalls.gz")
 
 mD <- readMeths(files = files, dir = datadir,
 libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
 nonconversion = c(0.004777, 0.005903, 0.016514, 0.006134))
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
 \keyword{files}
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

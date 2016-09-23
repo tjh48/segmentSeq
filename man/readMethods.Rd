@@ -15,12 +15,12 @@ These functions take alignment files of various formats to produce an object
 readGeneric(files, dir = ".", replicates, libnames, chrs, chrlens, cols,
             header = TRUE, minlen = 15, maxlen = 1000,
             multireads = 1000, polyLength, estimationType = "quantile",
-            verbose = TRUE, filterReport = NULL, ...)
+            discardTags = FALSE, verbose = TRUE, filterReport = NULL, ...)
 
 readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
         minlen = 15, maxlen = 1000, multireads = 1000,
-        polyLength, estimationType = "quantile", verbose = TRUE,
-        filterReport) 
+        polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE,
+        filterReport = NULL) 
 
 }
 \arguments{
@@ -72,6 +72,10 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
     \code{\link[baySeq]{getLibsizes}} to infer the library sizes of the
     samples.
   }
+  \item{discardTags}{
+    If TRUE, information about the sequence of the aligned reads will be
+    discarded. Useful for very large data sets. Defaults to FALSE.
+    }
   \item{verbose}{
     Should processing information be displayed? Defaults to TRUE.
   }

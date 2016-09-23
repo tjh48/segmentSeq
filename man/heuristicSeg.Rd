@@ -12,7 +12,7 @@ criteria for being a null. These criteria can be defined by the user or
 inferred from the data. 
 }
 \usage{
-heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = 0.2, locCutoff = 0.99, subRegion =
+heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = "auto", locCutoff = 0.99, subRegion =
 NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL,
 cl = NULL, recoverFromTemp = FALSE)
 }
@@ -36,7 +36,7 @@ cl = NULL, recoverFromTemp = FALSE)
 % Ignored if \code{bimodality = TRUE}.}
   \item{prop}{For analysis of a \code{\linkS4class{segMeth}} object,
     what proportion of methylated cytosines distinguishes between a
-    locus and a null region?. Defaults to 0.2.}
+    locus and a null region?. By default, determined automatically.}
   \item{locCutoff}{For analysis of a \code{\linkS4class{segMeth}}
     object, with what likelihood must the proportion of methylated
     cytosines exceed the `prop' option? Defaults to 0.99.}
@@ -74,7 +74,6 @@ cl = NULL, recoverFromTemp = FALSE)
 \references{
 Hardcastle T.J., Kelly, K.A. and Balcombe D.C. (2011). Identifying small
 RNA loci from high-throughput sequencing data. In press.
-
 }
 \author{
 Thomas J. Hardcastle

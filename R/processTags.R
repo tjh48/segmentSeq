@@ -1,3 +1,6 @@
+.tagDuplicated <- function(x)
+    if(!"tag" %in% colnames(values(x))) return(duplicated(x)) else duplicatedIntegerQuads(seqnames(x), start(x), strand(x), match(x$tag, unique(x$tag)))
+
 readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chrs)#, splitStrands = TRUE)#, duplicateFiles)
   {
     if(missing(nonconversion))
@@ -133,33 +136,33 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
       if(!is.null(countID)) {
           counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
       } else counts <- (rep(1L, length(tags$seq)))
-
-      revcomp <- sapply(tags$flag, function(flag) intToBits(flag)[5] == 1)
-      if(any(revcomp)) tags$seq[revcomp] <- reverseComplement(tags$seq[revcomp])
-     
-      
-      keepReads <- which(!is.na(tags$pos))
-      
+           
+      keepReads <- which(!is.na(tags$pos))      
       ir <- IRanges(start = as.integer(tags$pos[keepReads]), width = tags$qwidth[keepReads])
-      aln <- GRanges(seqnames = tags$rname[keepReads], ir, strand = tags$strand[keepReads], tag = (as.character(tags$seq[keepReads])), count = counts[keepReads])
+      aln <- GRanges(seqnames = tags$rname[keepReads], ir, strand = tags$strand[keepReads], count = counts[keepReads])
       
-      if(is.null(countID)) {
-        aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.character(values(aln)$tag)),]
-        dupTags <- which(!(as.character(seqnames(aln)) == c(as.character(seqnames(aln))[-1], "!") &
-                           start(aln) == c(start(aln)[-1], Inf) &
-                           end(aln) == c(end(aln)[-1], Inf) &
-                           as.character(strand(aln)) == c(as.character(strand(aln))[-1], "!") &
-                           as.character(values(aln)$tag) == as.character(c(values(aln)$tag[-1], "!"))))
-        aln <- aln[dupTags,]
-        values(aln)$count <- diff(c(0, dupTags))
+      if(!discardTags) {
+          revcomp <- sapply(tags$flag, function(flag) intToBits(flag)[5] == 1)
+          if(any(revcomp)) tags$seq[revcomp] <- reverseComplement(tags$seq[revcomp])
+          aln$tag = (as.character(tags$seq[keepReads]))
+          aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.factor(values(aln)$tag)),]
+      } else aln <- sort(aln)
+
+      dupTags <- .tagDuplicated(aln)
+      if(any(dupTags)) {
+          count <- diff(c(which(!dupTags), length(dupTags) + 1))
+          if(!is.null(countID)) count <- sapply(split(aln$count, rep(1:length(count), count)), sum)
+          aln <- aln[!dupTags,]
+          values(aln)$count <- count
       }
+
       
       filterTags <- rep(NA, 4)     
       filterInfo <- function(seltags, filname) {
-        if(!is.null(filterReport)) {
-          write(unique(as.character(aln$tag[!seltags])), file = paste(gsub(".*/", "", files[ii]), filterReport, filname, sep = "_"))
-                return(paste(length(unique(aln$tag[!seltags])), sum(!seltags), sep = ":"))
-              } else return(NA)
+          if(!is.null(filterReport) & !discardTags) {
+              write(unique(as.character(aln$tag[!seltags])), file = paste(gsub(".*/", "", files[ii]), filterReport, filname, sep = "_"))
+              return(paste(length(unique(aln$tag[!seltags])), sum(!seltags), sep = ":"))
+          } else return(NA)
       }
       
       chrtags <- as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs)
@@ -172,14 +175,14 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
       filterTags[2] <- filterInfo(goodwidths, "widths")
       aln <- aln[goodwidths,]      
       
-      if(!is.null(multireads)) {
+      if(!is.null(multireads) & !discardTags) {
         tabtags <- table(as.character(aln$tag))
         goodmult <- as.character(aln$tag) %in% names(tabtags[tabtags < multireads])
         filterTags[3] <- filterInfo(goodmult, "multireads")
         aln <- aln[goodmult,]
       }
 
-      if(!is.null(polyLength)) {        
+      if(!is.null(polyLength) & !discardTags) {        
         polyBaseRemove <- unique(unlist(lapply(polyBase, grep, as.character(values(aln)$tag))))
         goodpolyBase <- rep(TRUE, length(aln))
         if(length(polyBaseRemove) > 0) goodpolyBase[polyBaseRemove] <- FALSE
@@ -210,7 +213,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
 readGeneric <-
 function(files, dir = ".", replicates, libnames, chrs, chrlens,
          cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE, filterReport = NULL, ...)
-  {
+    {
+        if(discardTags) stop("readGeneric does not currently support discarding tag information. Either include this data, or switch to BAM files (recommended).")
     if(missing(polyLength)) polyLength <- NULL
     if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
       suppressWarnings(apply(matrix(c(".", rep(polybase, polyLength + 1)),
@@ -396,17 +400,6 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
     if(verbose)
       message("Analysing tags...", appendLF = FALSE)
 
-    if(discardTags) {
-        GTags <- lapply(GTags, function(x) {
-            x$tag <- NULL
-            x <- sort(x)
-            if(any(duplicated(x))){
-                stop("The author meant to fix this bug with 'discardTags=TRUE' option, but hasn't. Please contact tjh48@cam.ac.uk")
-            }
-            x
-        })
-    }
-
     unqTags <- GTags[[1]]
     if(length(GTags) > 1) {
         for(ii in 2:length(GTags)) {
@@ -415,8 +408,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                                IRanges(start = c(start(unqTags), start(GTags[[ii]])), end = c(end(unqTags), end(GTags[[ii]]))),
                                strand = c(strand(unqTags), strand(GTags[[ii]])),
                                tag = c(values(unqTags)$tag, values(GTags[[ii]])$tag))
-            unqTags <- sort(unique(unqTags))
-                                        # need to check this works on the tag data if present
+            unqTags <- sort(unqTags[!.tagDuplicated(unqTags)])
             unqTags
         }      
     }                    
@@ -426,8 +418,16 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
         #values(unqTags)$count <- Rle(0, length(unqTags))
         counts <- do.call("cbind",
                           lapply(GTags, function(GTag) {
-                                        # this new analysis method basically discards tag information - perhaps this should be put back later.
-                              mt <- match(GTag, unqTags)
+                              GTag <- sort(GTag)
+
+                              if(!discardTags) {
+                                  mt <- selfmatchIntegerQuads(c(seqnames(unqTags), seqnames(GTag)),
+                                                              c(start(unqTags), start(GTag)),
+                                                              c(strand(unqTags), strand(GTag)),
+                                                              match(c(unqTags$tag,GTag$tag), unique(unqTags$tag)))
+                                  mt <- mt[-(1:length(unqTags))]
+                              } else mt <- match(GTag, unqTags)
+                              
                               counts <- Rle(0, length(unqTags))
                               counts[mt] <- GTag$count
                               DataFrame(counts)
@@ -484,6 +484,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
         }
     
     seqinfo(aD@alignments, new2old = chrmatch) <- seqinf
-    
+
+    aD <- aD[order(as.numeric(seqnames(aD@alignments)), start(aD@alignments), end(aD@alignments)),]
+
     aD
   }

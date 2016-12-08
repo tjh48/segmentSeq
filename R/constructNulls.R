@@ -64,9 +64,9 @@
     nullCoords <- nullCoords[.fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords)))]
     nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
 
-    potnullD <- new("segMeth",
+    potnullD <- new("lociData",
                     replicates = sDP@replicates,
-                    coordinates = nullCoords)    
+                    coordinates = nullCoords, locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
     potnullD
   }
 
@@ -133,20 +133,20 @@
     }
                                         # empty regions carry no data    
     
-    if(class(sDWithin) == "segData") {
+    if(class(aD) == "alignmentData") {
       nullData <- matrix(0L, nrow = length(nullCoords), ncol = ncol(sDWithin))
       colnames(nullData) <- colnames(sDWithin@data)
       nullData[nullCoords$sDID > 0,] <- sDWithin@data[nullCoords$sDID[nullCoords$sDID > 0],]
       values(nullCoords) <- NULL
-      potnullD <- new("segData", data = nullData,
-                      libsizes = sDWithin@libsizes,
+      potnullD <- new("lociData", data = nullData,
+                      libsizes = libsizes(sDWithin),
                       replicates = sDWithin@replicates,
                       coordinates = nullCoords)
-    } else if(class(sDWithin) == "segMeth") {
+    } else if(class(sDWithin) == "alignmentMeth") {
       values(nullCoords) <- NULL
-      potnullD <- new("segMeth",
-                      Cs = matrix(NA, ncol = ncol(sDWithin), nrow = length(nullCoords)),
-                      Ts = matrix(NA, ncol = ncol(sDWithin), nrow = length(nullCoords)),        
+      potnullD <- new("lociData",
+                      data = list(matrix(NA, ncol = ncol(sDWithin), nrow = length(nullCoords)), 
+                          matrix(NA, ncol = ncol(sDWithin), nrow = length(nullCoords))),        
                       replicates = sDWithin@replicates,
                       coordinates = nullCoords)      
       nullCounts <- getCounts(potnullD@coordinates, aD, cl = cl)
@@ -205,7 +205,7 @@
     if(class(sDWithin) == "segData") {
       colnames(emptyData) <- colnames(sDWithin@data)
       potnullD <- new("segData", data = rbind(emptyData, sDWithin@data[c(lrChoose, leftChoose, rightChoose),]),
-                      libsizes = sDWithin@libsizes,
+                      libsizes = libsizes(sDWithin),
                       replicates = sDWithin@replicates,
                       coordinates = nullCoords[filNulls])
     } else if(class(sDWithin) == "segMeth") {

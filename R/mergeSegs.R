@@ -21,9 +21,13 @@ mergeMethSegs <- function(segs, aD, gap, cl) {
     return(strandSegs)
   }
 
-  plusSegs <- strandMerge(segs[which(strand(segs@coordinates) == "+"),])
-  minusSegs <- strandMerge(segs[which(strand(segs@coordinates) == "-"),])
-  nsSegs <- strandMerge(segs[which(strand(segs@coordinates) == "*"),])
+  if(any(strand(segs@coordinates) == "+")) 
+      plusSegs <- strandMerge(segs[which(strand(segs@coordinates) == "+"),]) else plusSegs <- segs[0,]
+
+  if(any(strand(segs@coordinates) == "-")) 
+      minusSegs <- strandMerge(segs[which(strand(segs@coordinates) == "-"),]) else minusSegs <- segs[0,]
+  if(any(strand(segs@coordinates) == "*")) 
+      nsSegs <- strandMerge(segs[which(strand(segs@coordinates) == "*"),]) else nsSegs <- segs[0,]
 
   mergesegs <- .mergeListLoci(list(plusSegs, minusSegs, nsSegs))
   

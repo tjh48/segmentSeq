@@ -9,7 +9,7 @@
   sDPlus
 }
 
-.processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, verbose = TRUE, cl)
+.processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, extendLoci, getLikes = FALSE, verbose = TRUE, cl)
   {
     if(missing(emptyPD)) emptyPD <- NULL
     
@@ -17,12 +17,12 @@
                          if(any(strand(lociPD@coordinates) == ss))
                          {
                            if(!is.null(emptyPD)) strandEmpty <- emptyPD[which(strand(emptyPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),] else strandEmpty <- NULL
-                           message("Strand ", ss)
+                           if(verbose) message("Strand ", ss)
                            strandSegs <- .processPosts(
                                            lociPD = lociPD[which(strand(lociPD@coordinates) == ss),],
                                            nullPD = nullPD[which(strand(nullPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
                                            emptyPD = strandEmpty,
-                                           aD, lociCutoff, nullCutoff, getLikes = FALSE,
+                                           aD, lociCutoff, nullCutoff, extendLoci = extendLoci, getLikes = FALSE,
                                            verbose = verbose, cl = cl)
                            strandSegs
                          })
@@ -52,13 +52,13 @@
     segs
   }
 
-.processPosts <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, verbose = TRUE, cl)
+.processPosts <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, verbose = TRUE, extendLoci, cl)
   {
     if(!is.null(cl))
       clusterEvalQ(cl, rm(list = ls()))
 
-    if(nrow(lociPD) > 0) selLoci <- lociPD[which(.rowSumDF(lapply(as.list(lociPD@locLikelihoods), function(x) x >= log(lociCutoff)), na.rm = TRUE) > 0),] else selLoci <- lociPD
-    if(nrow(nullPD) > 0) selNull <- nullPD[which(.rowSumDF(lapply(as.list(nullPD@locLikelihoods), function(x) x >= log(nullCutoff)), na.rm = TRUE) > 0),] else selNull <- nullPD
+    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
+    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
     
 #    if(missing(emptyPD) & class(lociPD) == "segData")
 #      emptyPD <- nullPD[rowSums(sapply(1:ncol(nullPD), function(jj) as.integer(nullPD@data[,jj]))) == 0,]
@@ -91,6 +91,7 @@
     filterOnNumberLength <- function(segAccept, selLoci)
       {
         selTrue <- sort(unique(unlist(lapply(1:ncol(segAccept), function(rep) which(segAccept[,rep])))))
+        if(length(selTrue) == 0) selTrue <- 0
         segAccept <- segAccept[selTrue,,drop = FALSE]
         selLoci <- selLoci[selTrue,,drop = FALSE]
         
@@ -107,7 +108,7 @@
 
     if(verbose) message("done!")
 
-    if(class(lociPD) == "segData")
+    if(extendLoci)
       {
         potDiscards <- unique(unlist(lapply(seqlevels(emptyPD@coordinates), function(chrom)
                                             {
@@ -189,7 +190,7 @@
           } else extSegs <- filSegs
       } else extSegs <- filSegs
 
-    extSegs <- .convertSegToLoci(extSegs)
+    #extSegs <- .convertSegToLoci(extSegs)
 
     if (getLikes & nrow(extSegs) > 1) likeSegs <- lociLikelihoods(aD = aD, cD = extSegs, cl = cl) else likeSegs <- extSegs    
     if(ncol(likeSegs@locLikelihoods) > 0) colnames(likeSegs@locLikelihoods) <- levels(likeSegs@replicates)

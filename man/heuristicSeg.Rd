@@ -12,9 +12,10 @@ criteria for being a null. These criteria can be defined by the user or
 inferred from the data. 
 }
 \usage{
-heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop = "auto", locCutoff = 0.99, subRegion =
-NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL,
-cl = NULL, recoverFromTemp = FALSE)
+heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop, locCutoff =
+0.99, nullCutoff = 0.99, subRegion = NULL, largeness = 1e8, getLikes =
+TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp =
+FALSE, trimMeth = FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -36,10 +37,13 @@ cl = NULL, recoverFromTemp = FALSE)
 % Ignored if \code{bimodality = TRUE}.}
   \item{prop}{For analysis of a \code{\linkS4class{segMeth}} object,
     what proportion of methylated cytosines distinguishes between a
-    locus and a null region?. By default, determined automatically.}
+    locus and a null region? (see Details).}
   \item{locCutoff}{For analysis of a \code{\linkS4class{segMeth}}
     object, with what likelihood must the proportion of methylated
-    cytosines exceed the `prop' option? Defaults to 0.99.}
+    cytosines exceed the `prop' option to define a locus? Defaults to 0.99.}
+    \item{nullCutoff}{For analysis of a \code{\linkS4class{segMeth}}
+    object, with what likelihood must the proportion of methylated
+    cytosines be less than the `prop' option to define a null region? Defaults to 0.99.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
     the genome to be segmented. If NULL (default), the whole genome is
     segmented.}
@@ -53,6 +57,8 @@ cl = NULL, recoverFromTemp = FALSE)
     Details.}
   \item{recoverFromTemp}{If TRUE, will attempt to recover the position
     saved in 'tempDir'. Defaults to FALSE. See Details.}
+  \item{trimMeth}{Should putative methylation regions be trimmed?
+    Defaults to FALSE; see Details.}
 }
 
 \details{
@@ -66,6 +72,17 @@ cl = NULL, recoverFromTemp = FALSE)
   present, the function assumes you know what you are doing, and will
   perform no checking that these files are suitable for the specified
   recovery. Use with caution.
+
+  The \code{prop} variable can be used to set the proportion of
+  methylation required to identify a locus by giving a numerical value
+  between 0-1. It can also be determined automatically (see
+  thresholdFinder).
+
+  Due to the way that methylation loci are identified, it is possible
+  that the cytosines at the edges of methylation loci have limited
+  evidence for methylation. The 'trimMeth' option trims cytosines at the
+  edge of predicted methylation loci that have less than 50\% likelihood
+  of being above the required threshold.
 }
 \value{
   A \code{\link{lociData}} object, containing count
@@ -81,6 +98,8 @@ Thomas J. Hardcastle
 \seealso{
   \code{\link{classifySeg}}, an alternative approach to this problem using an empirical
   Bayes approach to classify segments.
+  \code{\link{thresholdFinder}}, a function for determining a suitable
+  threshold on methylation by examining the data.
   \code{\link{plotGenome}}, a function for plotting the alignment of
   tags to the genome (together with the segments defined by this
   function).
@@ -115,7 +134,7 @@ sD <- processAD(alignData, gap = 100, cl = NULL)
 
 # Use the segData object to produce a segmentation of the genome.
 
-segD <- heuristicSeg(sD = sD, aD = alignData,
+segD <- heuristicSeg(sD = sD, aD = alignData, prop = 0.2,
 subRegion = data.frame(chr = ">Chr1", start = 1, end = 1e5),
 cl = NULL)
 }

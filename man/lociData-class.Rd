@@ -4,6 +4,7 @@
 \alias{lociData-class}
 \alias{dim,lociData-method}
 \alias{[,lociData-method}
+\alias{[,lociData,ANY,ANY,ANY-method}
 \alias{[,lociData,ANY,ANY-method}
 \alias{[,lociData,ANY-method}
 \alias{show,lociData-method}

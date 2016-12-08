@@ -8,9 +8,9 @@
 \title{segmentSeq: methods for identifying small RNA loci from high-throughput sequencing data}
 \author{Thomas J. Hardcastle}
 
-\RequirePackage{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/Bioconductor}
+\RequirePackage{/home/bioinf/tjh48/R/x86_64-pc-linux-gnu-library/3.3/BiocStyle/resources/tex/Bioconductor}
 
-\AtBeginDocument{\bibliographystyle{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/unsrturl}}
+\AtBeginDocument{\bibliographystyle{/home/bioinf/tjh48/R/x86_64-pc-linux-gnu-library/3.3/BiocStyle/resources/tex/unsrturl}}
 \usepackage{Sweave}
 \begin{document}
 
@@ -46,6 +46,8 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 \end{Sinput}
 \end{Schunk}
 
+
+
 The \verb'readGeneric' function is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, to use this function we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
 
 A similar function, \verb'readBAM' performs the same operation on files in the BAM format. Please consult the help page for further details.
@@ -76,39 +78,39 @@ Levels: AGO4 AGO6
 
 Slot "alignments":
 GRanges object with 13765 ranges and 2 metadata columns:
-          seqnames           ranges strand   |       tag multireads
-             <Rle>        <IRanges>  <Rle>   | <logical>  <numeric>
-      [1]    >Chr1       [600, 623]      +   |      <NA>      13765
-      [2]    >Chr1       [665, 688]      +   |      <NA>      13765
-      [3]    >Chr1       [762, 785]      +   |      <NA>      13765
-      [4]    >Chr1       [762, 786]      +   |      <NA>      13765
-      [5]    >Chr1       [774, 794]      +   |      <NA>      13765
-      ...      ...              ...    ... ...       ...        ...
-  [13761]    >Chr2 [179857, 179872]      -   |      <NA>      13765
-  [13762]    >Chr2 [179964, 179987]      -   |      <NA>      13765
-  [13763]    >Chr2 [179978, 180000]      -   |      <NA>      13765
-  [13764]    >Chr2 [179999, 180022]      -   |      <NA>      13765
-  [13765]    >Chr2 [180002, 180022]      -   |      <NA>      13765
+          seqnames           ranges strand |                      tag multireads
+             <Rle>        <IRanges>  <Rle> |              <character>  <numeric>
+      [1]    >Chr1       [265, 284]      - |     AAATGAAGATAAACCATCCA          1
+      [2]    >Chr1       [405, 427]      - |  AAGGAGTAAGAATGACAATAAAT          1
+      [3]    >Chr1       [406, 420]      - |          AAGAATGACAATAAA          1
+      [4]    >Chr1       [600, 623]      + | AAGGATTGGTGGTTTGAAGACACA          1
+      [5]    >Chr1       [665, 688]      + | ATCCTTGTAGCACACATTTTGGCA          1
+      ...      ...              ...    ... .                      ...        ...
+  [13761]    >Chr2 [179972, 179993]      + |   ATGAATGGCTCTCTCTAGCGGA          1
+  [13762]    >Chr2 [179978, 180000]      - |  GAGATTCTCCGCTAGAGAGAGCC          1
+  [13763]    >Chr2 [179999, 180022]      - | ATTAATATTAATTCATCGGGAAGA          1
+  [13764]    >Chr2 [180002, 180022]      - |    ATTAATATTAATTCATCGGGA          1
+  [13765]    >Chr2 [180014, 180037]      + | AATATTAATGGTATTTGTGGAAAA          1
   -------
   seqinfo: 2 sequences from an unspecified genome
 
 Slot "data":
 Matrix with  13765  rows.
       SL9 SL10 SL26 SL32
-1       0    1    0    0
-2       7    1    0    0
-3       0    0   17    0
-4       1    0    0    0
-5       0    1    0    0
+1       1    0    0    0
+2       0    0    0    2
+3       0    1    0    0
+4       0    1    0    0
+5       7    1    0    0
 ...   ...  ...  ...  ...
-13761   0    1    0    0
-13762   0    0    0    7
+13761   2    7    0    0
+13762   0    1    0    0
 13763   0    1    0    0
 13764   0    1    0    0
-13765   0    1    0    0
+13765   1    0    0    0
 
 Slot "libsizes":
-[1] 5238 7507 9875 7687
+[1] 4447 6531 9666 6675
 \end{Soutput}
 \end{Schunk}
 
@@ -120,43 +122,43 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 > sD
 \end{Sinput}
 \begin{Soutput}
-An object of class "segData"
-2109 rows and 4 columns
-
-Slot "replicates":
-[1] AGO6 AGO6 AGO4 AGO4
-Levels: AGO4 AGO6
-
-Slot "coordinates":
-GRanges object with 2109 ranges and 0 metadata columns:
-         seqnames           ranges strand
-            <Rle>        <IRanges>  <Rle>
-     [1]    >Chr1       [600, 623]      *
-     [2]    >Chr1       [600, 688]      *
-     [3]    >Chr1       [600, 830]      *
-     [4]    >Chr1       [600, 916]      *
-     [5]    >Chr1       [665, 688]      *
-     ...      ...              ...    ...
-  [2105]    >Chr2 [179708, 179872]      *
-  [2106]    >Chr2 [179708, 180037]      *
-  [2107]    >Chr2 [179738, 179872]      *
-  [2108]    >Chr2 [179738, 180037]      *
-  [2109]    >Chr2 [179923, 180037]      *
+GRanges object with 14444 ranges and 0 metadata columns:
+          seqnames           ranges strand
+             <Rle>        <IRanges>  <Rle>
+      [1]    >Chr1       [265, 284]      *
+      [2]    >Chr1       [405, 427]      *
+      [3]    >Chr1       [600, 623]      *
+      [4]    >Chr1       [600, 688]      *
+      [5]    >Chr1       [600, 830]      *
+      ...      ...              ...    ...
+  [14440]    >Chr2 [179708, 179872]      *
+  [14441]    >Chr2 [179708, 180037]      *
+  [14442]    >Chr2 [179738, 179872]      *
+  [14443]    >Chr2 [179738, 180037]      *
+  [14444]    >Chr2 [179923, 180037]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
+An object of class "lociData"
+14444 rows and 4 columns
+
+Slot "replicates"
+AGO6 AGO6 AGO4 AGO4
+Slot "groups":
+list()
+
+Slot "data":
+     SL9 SL10 SL26 SL32
+
+Slot "annotation":
+data frame with 0 columns and 0 rows
 
 Slot "locLikelihoods" (stored on log scale):
 Matrix with  0  rows.
 <0 x 0 matrix>
-
-Slot "data":
-Matrix with  0  rows.Matrix with  0  rows.
-     SL9 SL10 SL26 SL32
-
-Slot "libsizes":
-[1] 5238 7507 9875 7687
 \end{Soutput}
 \end{Schunk}
+
+
 
 We can now construct a segment map from these potential segments.
 
@@ -173,6 +175,7 @@ A fast method of segmentation can be achieved by exploiting the bimodality of th
 \end{Soutput}
 \end{Schunk}
 
+
 \subsection*{Segmentation by empirical Bayesian methods}
 
 A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'hS' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identify all
@@ -184,33 +187,33 @@ overlap with any other such segments in defining our segmentation map.
 
 \begin{Schunk}
 \begin{Sinput}
-> classSegs <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
+> cS <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
 \end{Sinput}
 \begin{Soutput}
-.........
+...........
 \end{Soutput}
 \begin{Sinput}
-> classSegs
+> cS
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 52 ranges and 0 metadata columns:
-       seqnames           ranges strand
-          <Rle>        <IRanges>  <Rle>
-   [1]    >Chr1 [     1, 257671]      *
-   [2]    >Chr1 [257672, 257696]      *
-   [3]    >Chr1 [257697, 366740]      *
-   [4]    >Chr1 [366741, 366761]      *
-   [5]    >Chr1 [366762, 634296]      *
-   ...      ...              ...    ...
-  [48]    >Chr2 [102081, 121970]      *
-  [49]    >Chr2 [121971, 121994]      *
-  [50]    >Chr2 [121995, 152794]      *
-  [51]    >Chr2 [152795, 152829]      *
-  [52]    >Chr2 [152830, 200000]      *
+GRanges object with 182 ranges and 0 metadata columns:
+        seqnames           ranges strand
+           <Rle>        <IRanges>  <Rle>
+    [1]    >Chr1   [    1,   599]      *
+    [2]    >Chr1   [  600,   967]      *
+    [3]    >Chr1   [  968, 17054]      *
+    [4]    >Chr1   [17055, 18728]      *
+    [5]    >Chr1   [18729, 27656]      *
+    ...      ...              ...    ...
+  [178]    >Chr2 [177100, 178343]      *
+  [179]    >Chr2 [178344, 178636]      *
+  [180]    >Chr2 [178637, 179707]      *
+  [181]    >Chr2 [179708, 180037]      *
+  [182]    >Chr2 [180038, 200000]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-52 rows and 4 columns
+182 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -219,36 +222,38 @@ list()
 
 Slot "data":
      AGO6.1 AGO6.2 AGO4.1 AGO4.2
-[1,]      0      1      0      0
-[2,]      0      0      0     10
-[3,]      0      1      0      0
-[4,]      0      0     14      0
-[5,]      1      0      0      0
-47 more rows...
+[1,]      1      1      0      2
+[2,]     54     46     65     83
+[3,]      2      3      0      0
+[4,]    682    621   1405   1103
+[5,]      0      3      0      0
+177 more rows...
 
 Slot "annotation":
-data frame with 0 columns and 52 rows
+data frame with 0 columns and 182 rows
 
 Slot "locLikelihoods" (stored on log scale):
-Matrix with  52  rows.
-         AGO4      AGO6
-1   0.0051896 0.0057492
-2     0.99993  0.033594
-3   0.0047697 0.0057517
-4     0.99995   0.03508
-5   0.0052282 0.0063119
-...       ...       ...
-48  0.0050284 0.0079857
-49    0.99995  0.033935
-50  0.0048858  0.011743
-51    0.99994  0.030946
-52  0.0047875 0.0063115
+Matrix with  182  rows.
+        AGO4     AGO6
+1    0.33858  0.13432
+2    0.90306  0.99805
+3    0.03836 0.042551
+4    0.95123  0.99992
+5   0.040181 0.066448
+...      ...      ...
+178 0.052626 0.038104
+179  0.86804  0.99906
+180 0.054215 0.081754
+181  0.91839  0.99829
+182 0.037827 0.029708
 
 Expected number of loci in each replicate group
-     AGO4      AGO6 
-24.057989  5.272103 
+    AGO4     AGO6 
+76.26509 95.41831 
 \end{Soutput}
 \end{Schunk}
+
+
 
 By one of these methods, we finally acquire an annotated \verb'lociData' object, with the annotations describing the co-ordinates of each segment.
 
@@ -258,7 +263,3 @@ We can use this \verb'lociData' object, in combination with the \verb'alignmentD
 \begin{Schunk}
 \begin{Sinput}
 > par(mfrow = c(2,1), mar = c(2,6,2,2))
-> plotGenome(aD, hS, chr = ">Chr1", limits = c(1, 1e5),
-+            showNumber = FALSE, cap = 50)
-> plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
-+            showNumber = FALSE, cap = 50)

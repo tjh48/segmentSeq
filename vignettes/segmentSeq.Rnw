@@ -42,6 +42,11 @@ if(require("parallel"))
 }
 @
 
+<<echo = FALSE, results = hide>>=
+set.seed(1)
+@ 
+
+
 The \verb'readGeneric' function is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, to use this function we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
 
 A similar function, \verb'readBAM' performs the same operation on files in the BAM format. Please consult the help page for further details.
@@ -68,6 +73,11 @@ sD <- processAD(aD, gap = 100, cl = cl)
 sD
 @ 
 
+
+<<echo = FALSE, results = hide>>=
+if(nrow(sD) != 14444) stop("sD object is the wrong size (should have 14444 rows). Failure.")
+@ 
+
 We can now construct a segment map from these potential segments.
 
 \subsection*{Segmentation by heuristic methods}
@@ -76,6 +86,11 @@ A fast method of segmentation can be achieved by exploiting the bimodality of th
 
 <<>>=
 hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TRUE, cl = cl)
+@ 
+
+<<echo = FALSE, results = hide>>=
+if(nrow(hS) != 790) stop("hS object is the wrong size (should have 790 rows). Failure.")
+if(any(abs(colSums(exp(hS@locLikelihoods)) - c(179, 394)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
 @ 
 
 \subsection*{Segmentation by empirical Bayesian methods}
@@ -88,9 +103,15 @@ select the longest segments satisfying these criteria that do not
 overlap with any other such segments in defining our segmentation map.
 
 <<>>=
-classSegs <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
-classSegs
+cS <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      
+cS
 @ 
+
+<<echo = FALSE, results = hide>>=
+if(abs(nrow(cS) - 182) > 2) stop("cS object is the wrong size (should have ~182 rows). Likely failure.")
+if(any(abs(colSums(exp(cS@locLikelihoods)) - c(76,95)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
+@ 
+
 
 By one of these methods, we finally acquire an annotated \verb'lociData' object, with the annotations describing the co-ordinates of each segment.
 
@@ -101,7 +122,7 @@ We can use this \verb'lociData' object, in combination with the \verb'alignmentD
 par(mfrow = c(2,1), mar = c(2,6,2,2))
 plotGenome(aD, hS, chr = ">Chr1", limits = c(1, 1e5),
            showNumber = FALSE, cap = 50)
-plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
+plotGenome(aD, cS, chr = ">Chr1", limits = c(1, 1e5),
            showNumber = FALSE, cap = 50)
 @
 
@@ -121,7 +142,7 @@ plotGenome(aD, classSegs, chr = ">Chr1", limits = c(1, 1e5),
 Given the calculated likelihoods, we can filter the segmented genome by controlling on likelihood, false discovery rate, or familywise error rate
 
 <<>>=
-loci <- selectLoci(classSegs, FDR = 0.05)
+loci <- selectLoci(cS, FDR = 0.05)
 loci
 @ 
 
@@ -129,35 +150,35 @@ The \verb'lociData' objects can now be examined for differential expression with
 
 First we define the possible models of differential expression on the data. In this case, the models are of non-differential expression and pairwise differential expression.
 <<>>=
-groups(classSegs) <- list(NDE = c(1,1,1,1), DE = c("AGO6", "AGO6", "AGO4", "AGO4"))
+groups(cS) <- list(NDE = c(1,1,1,1), DE = c("AGO6", "AGO6", "AGO4", "AGO4"))
 @
 
 Then we get empirical distributions on the parameter space of the data.
 <<>>=
-classSegs <- getPriors(classSegs, cl = cl)
+cS <- getPriors(cS, cl = cl)
 @ 
 
-Then we get the posterior likelihoods of the data conforming to each model. Since the `classSegs' object contains null regions as well as true loci, we will use the `nullData = TRUE' option to distinguish between non-differentially expressed loci and non-expressed regions. By default, the loci likelihoods calculated earlier will be used to weight the initial parameter fit in order to detect null data.
+Then we get the posterior likelihoods of the data conforming to each model. Since the `cS' object contains null regions as well as true loci, we will use the `nullData = TRUE' option to distinguish between non-differentially expressed loci and non-expressed regions. By default, the loci likelihoods calculated earlier will be used to weight the initial parameter fit in order to detect null data.
 <<>>=
-classSegs <- getLikelihoods(classSegs, nullData = TRUE, cl = cl)
+cS <- getLikelihoods(cS, nullData = TRUE, cl = cl)
 @ 
 
 We can examine the highest likelihood non-expressed (`null') regions
 
 <<>>=
-topCounts(classSegs, NULL, number = 3)
+topCounts(cS, NULL, number = 3)
 @ 
 
 The highest likelihood expressed but non-differentially expressed regions
 
 <<>>=
-topCounts(classSegs, "NDE", number = 3)
+topCounts(cS, "NDE", number = 3)
 @ 
 
 And the highest likelihood differentially expressed regions
 
 <<>>=
-topCounts(classSegs, "DE", number = 3)
+topCounts(cS, "DE", number = 3)
 @ 
 
 Finally, to be a good citizen, we stop the cluster we started earlier:

@@ -1,3 +1,107 @@
+
+thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100, verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list()) {
+    if(!missing(subset)) aMS <- aM[subset,] else aMS <- aM
+    nD <- normaliseNC(aMS)
+
+    findProp <- function(method, nD, loci, minprop, verbose, cl, processAD.args, heuristicSeg.args) {
+    
+    repSep <- sapply(levels(nD@replicates), function(rep) {
+        if(inherits(nD, "alignmentMeth")) {
+            Cs <- rowSums(nD@Cs[,nD@replicates == rep, drop = FALSE])
+            Ts <- rowSums(nD@Ts[,nD@replicates == rep, drop = FALSE])
+            if(!is.null(loci))
+            {
+                ov <- getOverlaps(loci@coordinates, nD@alignments)
+                if(any(loci@locLikelihoods < 0)) ll <- exp(loci@locLikelihoods) else ll <- loci@locLikelihoods
+                sel <- ll[,rep] == 1 | rowSums(ll) == 0
+                llsamp <- unlist(ov[sel])
+                Cs <- Cs[llsamp]; Ts <- Ts[llsamp]                
+                ovec <- c(); ovec[unlist(ov)] <- rep(1:length(ov), sapply(ov, length))
+                ovec <- ovec[unlist(ov[sel])]
+            } else ovec <- rep(1,length(Cs))            
+        } else if(inherits(nD, "lociData")) {
+            loci <- NULL
+            Cs <- rowSums(nD@data[,nD@replicates == rep,1,drop = FALSE])
+            Ts <- rowSums(nD@data[,nD@replicates == rep,2,drop = FALSE])
+            if(nrow(mD@locLikelihoods) == length(Cs)) {
+                if(any(mD@locLikelihoods < 0)) ll <- exp(mD@locLikelihoods) else ll <- mD@locLikelihoods
+                sel <- ll[,rep] == 1 | rowSums(ll) == 0
+                Cs <- Cs[sel]
+                Ts <- Ts[sel]
+            }
+            ovec <- rep(1, length(Cs))
+        }        
+        
+        if(method == "varsum") return(bimodalSeparator(Cs / (Cs + Ts)))
+        if(method == "minden") {
+            z <- Cs / (Cs + Ts); z <- z[!is.na(z)]
+            dd <- density(z, from = 0, to = 1)
+            xes <- dd$x[which(dd$y < c(dd$y[-1], Inf) & dd$y < c(Inf, dd$y[-length(dd$y)]))]
+            return(min(xes[xes > quantile(z, minprop)]))
+        }
+        if(method == "beta") {
+            meanbeta <- function(x, Cs, Ts, ovec) {
+                db <- dbeta(x, 0.5 + Cs, 0.5 + Ts)
+                mean(sapply(split(db, ovec), mean))
+            }
+                                        #nCs <- Cs[Cs >0]; nTs <- Ts[Cs > 0]
+            nCs <- Cs; nTs <- Ts
+                
+            divisions <- 1000; samp <- 100000
+            basamp <- sample(1:length(nCs), min(samp, length(nCs)))
+            
+            if(!is.null(cl)) {
+                mb <- parSapply(cl, seq_len(divisions - 1) / divisions, meanbeta, Cs = nCs[basamp], Ts = nTs[basamp], ovec = ovec[basamp])
+            } else mb <- sapply(seq_len(divisions - 1) / divisions, meanbeta, Cs = nCs[basamp], Ts = nTs[basamp], ovec = ovec[basamp])
+                
+                                        #            lowdens <- which(mb / divisions < 1 / min(samp, length(nCs)))
+#            suppressWarnings(lowdens <- min(lowdens[lowdens / divisions > minprop]) / divisions)
+                                        #            if(lowdens < 1) return(lowdens)
+                
+            maxima <- c(which(mb > c(mb[-1], -Inf) & mb > c(-Inf, mb[-length(mb)])) / divisions, 1)
+            minima <- c(which(mb < c(mb[-1], Inf) & mb < c(Inf, mb[-length(mb)])) / divisions)
+            if(any(minima > minprop)) minmin <- min(minima[which(minima > minprop)]) else minmin <- max(minima)
+            return(optimise(meanbeta, interval = c(max(maxima[maxima < minmin]), min(maxima[maxima > minmin])), Cs = nCs, Ts = nTs, ovec = ovec)$minimum)            
+        }
+        if(method == "abc") {
+            divisions <- 1000; samp <- 1000
+            #nCs <- Cs[Cs >0]; nTs <- Ts[Cs > 0]
+            nCs <- Cs; nTs <- Ts
+            abcs <- do.call("rbind", lapply(sample(1:length(nCs), min(samp,length(nCs))), function(jj) {
+                rs1 <- runif(1000, max(0, 0.5 + nCs[jj] - 5), 0.5+nCs[jj] + 5)
+                rs2 <- runif(1000, max(0, 0.5 + nTs[jj] - 5), 0.5+nTs[jj] + 5)
+                rnCs <- rbinom(1000, size = round(nCs[jj] + nTs[jj]), rbeta(1000, rs1, rs2))
+                equal <- abs(rnCs - nCs[jj]) < 0.01 * (nCs[jj] + nTs[jj])                
+                rowMeans(matrix(dbeta(rep(seq_len(divisions - 1) / divisions, sum(equal)), rep(rs1[equal], each = divisions - 1), rep(rs2[equal], each = divisions - 1)), ncol = sum(equal)))
+            }))
+            ma <- colMeans(abcs)
+            maxima <- c(which(ma > c(ma[-1], -Inf) & ma > c(-Inf, ma[-length(ma)])) / divisions, 1)
+            minima <- c(which(ma < c(ma[-1], -Inf) & ma < c(-Inf, ma[-length(ma)])) / divisions, 1)
+            return(min(minima[minima > minprop]))
+        }
+    })
+    return(repSep)
+}
+
+
+    
+    if(bootstrap > 1) sD <- do.call("processAD", c(list(aD = aMS, verbose = FALSE, getCounts = TRUE, cl = cl), processAD.args))
+    propVec <- c()
+    for(pp in 1:bootstrap) {
+        if(pp == 1) mD <- NULL else mD <- .inferMethNulls(hS, aMS, cl = cl)
+        repSep <- findProp(method, nD, loci = mD, minprop = minprop, verbose = verbose, cl = cl)
+        prop = mean(repSep)
+        if(verbose) message("Currently estimated threshold: ", prop)
+        if(prop %in% propVec | pp == bootstrap) break()
+        propVec[pp] <- prop
+        hS <- do.call("heuristicSeg", c(list(sD = sD, aD = aMS, prop = prop, verbose = FALSE, cl = cl, getLikes = FALSE), heuristicSeg.args))
+    }
+
+    if(sd(repSep) > 0.1) warning(paste("Standard deviation of automatically inferred methylation thresholds over replicates is greater than", sd(repSep), "; you may wish to examine the distribution of methylation for each replicate and specify a threshold manually."))    
+    if(verbose) message("Automatically determined threshold for methylation locus; ", prop)
+    prop
+}
+
 .printIRangesMatrix <- function(x)
   {
     cat("Matrix with ", nrow(x), " rows.\n")
@@ -261,21 +365,23 @@
 
 
 normaliseNC <- function(mD, nonconversion) {
-    if(inherits(mD, "alignmentMeth") | inherits(mD, "segMeth")) {
+    if(inherits(mD, "alignmentMeth")) {
         nonconversion <- mD@nonconversion
         Cs <- mD@Cs
         Ts <- mD@Ts
-    } else {
-        Cs <- mD@data[,,1]
-        Ts <- mD@data[,,2]
+    } else if(inherits(mD, "countData")) {
+       if(missing(nonconversion) & "nonconversion" %in% names(mD@sampleObservables))
+           nonconversion <- mD@sampleObservables$nonconversion
+       Cs <- mD@data[,,1]
+       Ts <- mD@data[,,2]
     }
     
-    ks <- t(t(Ts) * nonconversion / (1 - nonconversion))
+    ks <- pmin(Cs, t(t(Ts) * nonconversion / (1 - nonconversion)))
 
     Cs <- Cs - ks
     Ts <- Ts + ks
     Cs[Cs < 0] <- 0
-    if(inherits(mD, "alignmentMeth") | inherits(mD, "segMeth")) {
+    if(inherits(mD, "alignmentMeth")) {
         mD@Cs <- Cs
         mD@Ts <- Ts
     } else {
@@ -289,9 +395,15 @@ normaliseNC <- function(mD, nonconversion) {
   {
     if(nrow(methD) == 0) return(matrix(nrow = 0, ncol = length(levels(methD@replicates))))
     nD <- normaliseNC(methD)
-    combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Cs[,methD@replicates == rep,drop = FALSE])))
-    combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Ts[,methD@replicates == rep,drop = FALSE])))
 
+    if(inherits(methD, "alignmentMeth")) {
+        combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Cs[,methD@replicates == rep,drop = FALSE])))
+        combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@Ts[,methD@replicates == rep,drop = FALSE])))
+    } else if(inherits(methD, "countData")) {
+        combCs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@data[,methD@replicates == rep,1,drop = FALSE])))
+        combTs <- as.vector(sapply(levels(methD@replicates), function(rep) rowSums(nD@data[,methD@replicates == rep,2,drop = FALSE])))
+    }
+    
     combDat <- cbind(combCs, combTs)
     rodDat <- order(combDat[,1], combDat[,2])
 
@@ -329,7 +441,7 @@ normaliseNC <- function(mD, nonconversion) {
     TF[rodDat] <- TF
     locM <- matrix(TF, ncol = length(levels(methD@replicates)))
     colnames(locM) <- levels(methD@replicates)
-    locM <- .matrix2Rle(locM)
+    #locM <- .matrix2Rle(locM)
     locM
   }
 

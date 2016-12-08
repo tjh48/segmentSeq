@@ -4,6 +4,7 @@
 \alias{methData-class}
 \alias{dim,methData-method}
 \alias{[,methData-method}
+\alias{[,methData,ANY,ANY,ANY-method}
 \alias{[,methData,ANY,ANY-method}
 \alias{[,methData,ANY-method}
 \alias{show,methData-method}

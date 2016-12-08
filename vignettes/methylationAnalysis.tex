@@ -8,9 +8,9 @@
 \title{segmentSeq: methods for detecting methylation loci and differential methylation}
 \author{Thomas J. Hardcastle}
 
-\RequirePackage{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/Bioconductor}
+\RequirePackage{/home/bioinf/tjh48/R/x86_64-pc-linux-gnu-library/3.3/BiocStyle/resources/tex/Bioconductor}
 
-\AtBeginDocument{\bibliographystyle{/applications/R/R-3.2.4/library/BiocStyle/resources/tex/unsrturl}}
+\AtBeginDocument{\bibliographystyle{/home/bioinf/tjh48/R/x86_64-pc-linux-gnu-library/3.3/BiocStyle/resources/tex/unsrturl}}
 
 \usepackage{Sweave}
 \begin{document}
@@ -45,15 +45,15 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 \end{Sinput}
 \end{Schunk}
 
-The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location.
+The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location. The files used here have been compressed to save space.
 
 \begin{Schunk}
 \begin{Sinput}
 > datadir <- system.file("extdata", package = "segmentSeq")
-> files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls",
-+ "short_Sample_17A_trimmed.fastq_CG_methCalls",
-+ "short_13_C24_col_trim.fastq_CG_methCalls",
-+ "short_Sample_28_trimmed.fastq_CG_methCalls")
+> files <- c("short_18B_C24_C24_trim.fastq_CG_methCalls.gz",
++ "short_Sample_17A_trimmed.fastq_CG_methCalls.gz",
++ "short_13_C24_col_trim.fastq_CG_methCalls.gz",
++ "short_Sample_28_trimmed.fastq_CG_methCalls.gz")
 > mD <- readMeths(files = files, dir = datadir,
 + libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
 + nonconversion = c(0.004777, 0.005903, 0.016514, 0.006134))
@@ -66,7 +66,9 @@ We can begin by plotting the distribution of methylation for these samples. The 
 \begin{Sinput}
 > par(mfrow = c(2,1))
 > dists <- plotMethDistribution(mD, main = "Distributions of methylation", chr = "Chr1")
-> plotMethDistribution(mD, subtract = rowMeans(sapply(dists, function(x) x[,2])), main = "Differences between distributions", chr = "Chr1")
+> plotMethDistribution(mD, 
++                      subtract = rowMeans(sapply(dists, function(x) x[,2])), 
++                      main = "Differences between distributions", chr = "Chr1")
 \end{Sinput}
 \end{Schunk}
 
@@ -85,16 +87,79 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 
 \begin{Schunk}
 \begin{Sinput}
-> sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, verbose = TRUE, strandSplit = TRUE, cl = cl)
+> sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, 
++                 verbose = TRUE, strandSplit = TRUE, cl = cl)
 \end{Sinput}
 \end{Schunk}
+
 
 We can now construct a segment map from these potential segments.
 
 \subsection*{Segmentation by heuristic Bayesian methods}
 
-A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
+A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value. This value may be determined by examining the data using the 'thresholdFinder' function, or supplied manually.
 
 \begin{Schunk}
 \begin{Sinput}
-> hS <- heuristicSeg(sD = sD, aD = mD, prop = "auto", cl = cl, gap = 100, getLikes = FALSE)
+> thresh <- thresholdFinder("beta", mD, cl = cl, bootstrap = 1)
+> hS <- heuristicSeg(sD = sD, aD = mD, prop = thresh, cl = cl, gap = 100, getLikes = FALSE)
+> hS
+\end{Sinput}
+\begin{Soutput}
+GRanges object with 2638 ranges and 0 metadata columns:
+         seqnames             ranges strand
+            <Rle>          <IRanges>  <Rle>
+     [1]     Chr1     [  108,   650]      +
+     [2]     Chr1     [  648,   648]      -
+     [3]     Chr1     [17541, 18715]      +
+     [4]     Chr1     [17545, 17573]      -
+     [5]     Chr1     [17603, 18541]      -
+     ...      ...                ...    ...
+  [2634]     Chr1 [1988049, 1988049]      -
+  [2635]     Chr1 [1988158, 1988165]      +
+  [2636]     Chr1 [1988245, 1988245]      +
+  [2637]     Chr1 [1990186, 1990298]      +
+  [2638]     Chr1 [1993335, 1993335]      +
+  -------
+  seqinfo: 1 sequence from an unspecified genome; no seqlengths
+An object of class "lociData"
+2638 rows and 4 columns
+
+Slot "replicates"
+A A B B
+Slot "groups":
+list()
+
+Slot "data":
+     [,1]     [,2]    [,3]   [,4]
+[1,] 156:50   137:76  104:43 22:8
+[2,] 24:1     12:2    13:1   2:0 
+[3,] 1808:309 852:184 387:31 31:6
+[4,] 210:43   82:37   28:7   4:1 
+[5,] 828:106  505:124 186:19 21:6
+2633 more rows...
+
+Slot "annotation":
+data frame with 0 columns and 2638 rows
+
+Slot "locLikelihoods" (stored on log scale):
+Matrix with  2638  rows.
+       A   B
+1      1   1
+2      1   1
+3      1   1
+4      1   1
+5      1   1
+...  ... ...
+2634   1   0
+2635   0   1
+2636   1   0
+2637   0   1
+2638   1   0
+
+Expected number of loci in each replicate group
+   A    B 
+1998 1659 
+\end{Soutput}
+\end{Schunk}
+

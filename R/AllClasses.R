@@ -3,9 +3,9 @@ setClass("alignmentData", representation(data = "matrix", libsizes = "numeric"),
 setClass("alignmentMeth", representation(Cs = "matrix", Ts = "matrix", nonconversion = "numeric"), contains = "alignmentClass")
 
 
-setClass("segClass", representation(coordinates = "GRanges", locLikelihoods = "DataFrame", replicates = "factor"))
-setClass("segData", representation(data = "matrix", libsizes = "numeric"), contains = "segClass")
-setClass("segMeth", representation(Cs = "matrix", Ts = "matrix", nonconversion = "numeric"), contains = "segClass")
+#setClass("segClass", representation(coordinates = "GRanges", locLikelihoods = "DataFrame", replicates = "factor"))
+#setClass("segData", representation(data = "matrix", libsizes = "numeric"), contains = "segClass")
+#setClass("segMeth", representation(Cs = "matrix", Ts = "matrix", nonconversion = "numeric"), contains = "segClass")
 
 #setClass("lociData", contains = "countData")
 

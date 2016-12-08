@@ -51,14 +51,14 @@
       message("Finding start-stop co-ordinates...", appendLF = FALSE)
     }
     if(length(chrSS) > 0) {
-      startstop <- reduce(chrSS@ranges, min.gapwidth = 0)
-      ssChunk <- values(chrSS)$chunk[match(start(startstop), start(chrSS))]
-      chunkDiff <- runLength(ssChunk)
+        startstop <- reduce(chrSS@ranges, min.gapwidth = 0)
+        ssChunk <- values(chrSS)$chunk[match(start(startstop), start(chrSS))]
+        chunkDiff <- runLength(ssChunk)
       
-      startRep <- (rep(cumsum(chunkDiff), chunkDiff) - 1:length(startstop) + 1)
-      endRep <- cbind(1:length(startstop), rep(cumsum(chunkDiff) + 1, chunkDiff) - 1)
+        startRep <- (rep(cumsum(chunkDiff), chunkDiff) - 1:length(startstop) + 1)
+        endRep <- cbind(1:length(startstop), rep(cumsum(chunkDiff) + 1, chunkDiff) - 1)
       
-      csegs <- GRanges(seqnames = cc, IRanges(start = rep(start(startstop), startRep),
+        csegs <- GRanges(seqnames = cc, IRanges(start = rep(start(startstop), startRep),
                          end = end(startstop)[unlist(lapply(1:nrow(endRep), function(ii) endRep[ii,1]:endRep[ii,2]))]), seqinfo = seqinfo(cTags))
       
       if(!missing(strand)) strand(csegs) <- strand
@@ -100,10 +100,9 @@
       filaD <- findChunks(aD@alignments, gap, checkDuplication = FALSE)      
     } else if(class(aD) == "alignmentMeth") {
       if(!missing(filterProp)) {
-        filaD <- aD@alignments[which(.rowSumDF(.methFunction(aD, prop = filterProp, locCutoff = NA)) > 0),]        
+          filaD <- aD@alignments[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA)) > 0),]        
       } else filaD <- aD[rowSums(aD@Cs) > 0,]
-      filaD <-
-        x <- .findMethChunks(filaD, gap)
+      filaD <- .findMethChunks(filaD, gap)
     }
     filaD <- filaD[!duplicated(filaD),]
     filaD
@@ -117,7 +116,7 @@ processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit 
                                         #      values(aD@alignments)$tag <- as.integer(as.factor(values(aD@alignments)$tag))
 #    } else values(aD@alignments)$tag <- 1:nrow(aD)
 
-    filaD <- .filterChunks(aD, gap, filterProp)
+      filaD <- .filterChunks(aD, gap, filterProp)
     
     if(squeeze > 0) {
       if(strandSplit) {
@@ -195,18 +194,19 @@ processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit 
 
     if(class(aD) == "alignmentData") {
       data <- do.call("rbind", lapply(chrDat, function(x) x$data))
-      tD <- new("segData", coordinates = coordinates, data = data, libsizes = aD@libsizes, replicates = aD@replicates)
+      tD <- new("lociData", coordinates = coordinates, data = data, libsizes = aD@libsizes, replicates = aD@replicates)
       colnames(tD@data) <- aD@libnames
     } else if(class(aD) == "alignmentMeth") {
       Cs <- do.call("rbind", lapply(chrDat, function(x) x$Cs))
       Ts <- do.call("rbind", lapply(chrDat, function(x) x$Ts))
       colnames(Cs) <- colnames(Ts) <- aD@libnames
-      tD <- new("segMeth")
-      tD@nonconversion <- aD@nonconversion
+      tD <- new("lociData")
+      tD@sampleObservables$nonconversion <- aD@nonconversion
       tD@replicates = aD@replicates
       tD@coordinates = coordinates
-      tD@Cs = Cs
-      tD@Ts = Ts
+      tD@data <- array(c(Cs, Ts), c(dim(Cs), 2))
+#      tD@Cs = Cs
+#      tD@Ts = Ts
     }
     tD
   }

@@ -60,7 +60,9 @@ We can begin by plotting the distribution of methylation for these samples. The 
 <<fig = FALSE, label=methDist, height = 10, width = 12>>=
 par(mfrow = c(2,1))
 dists <- plotMethDistribution(mD, main = "Distributions of methylation", chr = "Chr1")
-plotMethDistribution(mD, subtract = rowMeans(sapply(dists, function(x) x[,2])), main = "Differences between distributions", chr = "Chr1")
+plotMethDistribution(mD, 
+                     subtract = rowMeans(sapply(dists, function(x) x[,2])), 
+                     main = "Differences between distributions", chr = "Chr1")
 @ 
 
 %\begin{sidewaysfigure}[!ht]
@@ -79,19 +81,30 @@ plotMethDistribution(mD, subtract = rowMeans(sapply(dists, function(x) x[,2])), 
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
 
 <<>>=
-sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, verbose = TRUE, strandSplit = TRUE, cl = cl)
+sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, 
+                verbose = TRUE, strandSplit = TRUE, cl = cl)
+@ 
+
+<<echo = FALSE, results = hide>>=
+if(nrow(sD) != 133101) stop("sD object is the wrong size (should have 133101 rows). Failure.")
 @ 
 
 We can now construct a segment map from these potential segments.
 
 \subsection*{Segmentation by heuristic Bayesian methods}
 
-A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value.
+A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value. This value may be determined by examining the data using the 'thresholdFinder' function, or supplied manually.
 
 <<>>=
-hS <- heuristicSeg(sD = sD, aD = mD, prop = "auto", cl = cl, gap = 100, getLikes = FALSE)
+thresh <- thresholdFinder("beta", mD, cl = cl, bootstrap = 1)
+hS <- heuristicSeg(sD = sD, aD = mD, prop = thresh, cl = cl, gap = 100, getLikes = FALSE)
 hS
 @ 
+
+<<echo = FALSE, results = hide>>=
+if(nrow(hS) != 2638) stop("hS object is the wrong size (should have 2638 rows). Failure.")
+@ 
+
 
 Within a methylation locus, it is not uncommon to find completely unmethylated cytosines. If the coverage of these cytosines is too high, it is possible that these will cause the locus to be split into two or more fragments. The \verb'mergeMethSegs' function can be used to overcome this splitting by merging loci with identical patterns of expression that are not separated by too great a gap. Merging in this manner is optional, but recommended.
 
@@ -110,7 +123,7 @@ hSL <- lociLikelihoods(hS, mD, cl = cl)
 %Classification of the potential segments can also be carried out using empirical Bayesian methods. These are extremely computationally intensive, but allow %biological variation within replicates to be more accurately modelled, thus providing an improved identification of methylation loci. 
 
 %<<>>=
-%#eBS <- classifySeg(sD, hS, mD, cl = cl)
+%eBS <- classifySeg(sD, hS, mD, cl = cl)
 %@ 
 
 \subsection*{Visualising loci}

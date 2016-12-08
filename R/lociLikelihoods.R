@@ -1,49 +1,49 @@
 lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, cl)
   {
-    if(class(cD) == "methData")
+    if(class(aD) == "alignmentMeth")
       {
           mD <- .methLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, usePosteriors = usePosteriors, cl = cl)
-      } else if(class(cD) == "lociData")
+      } else if(class(aD) == "alignmentData")
             mD <- .lociLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, nasZero = nasZero, usePosteriors = usePosteriors, cl = cl)
     mD
   }
 
+.inferNulls <- function(cD, aD, cl = NULL) {
+    loci <- cD@coordinates
+    lociLens <- width(loci)
+    
+    nulls <- gaps(loci)
+    nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]
+    nulls <- nulls[strand(nulls) == "*",]
+    
+    nullLens <- width(nulls)
+    countNulls <- getCounts(aD = aD, segments = nulls, cl = cl)
+
+    mD <- new("lociData", data = abind(countNulls, cD@data, along = 1),
+              replicates = aD@replicates,
+              coordinates = c(nulls, loci),
+              seglens = c(nullLens, lociLens))
+    
+    if(nrow(cD@locLikelihoods) == nrow(cD))
+        mD@locLikelihoods <- rbind(matrix(-Inf, length(nulls), ncol(cD@locLikelihoods)), cD@locLikelihoods)
+    
+    if(nrow(cD@posteriors) == nrow(cD))
+        mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
+    mD@sampleObservables <- c(mD@sampleObservables)
+    mD
+}
+
 .lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, cl)
   {    
     loci <- cD@coordinates
-    lociLens <- width(loci)
-    if(newCounts) countLoci <- getCounts(aD = aD, segments = loci, useChunk = TRUE, cl = cl) else countLoci <- cD@data
-
+    if(newCounts) cD@data <- getCounts(aD = aD, segments = loci, useChunk = TRUE, cl = cl)
     if(inferNulls)
-      {                
-        nulls <- gaps(loci)
-        nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]
-        nulls <- nulls[strand(nulls) == "*",]
-
-        nullLens <- width(nulls)
-#        nulls[nullLens <= 0 | is.na(nullLens),] <- NA
-#        nullLens[nullLens <= 0 | is.na(nullLens)] <- NA
-#        nulls <- nulls[rowSums(is.na(nulls)) == 0,1:3,drop = FALSE]
-#        nullLens <- nulls$end - nulls$start + 1    
-        countNulls <- getCounts(aD = aD, segments = nulls, cl = cl)
-        
-        mD <- new("lociData", data = abind(countNulls, countLoci, along = 1),
-                  replicates = aD@replicates,
-                  coordinates = c(nulls, loci),
-                  seglens = c(nullLens, lociLens))
-
-        if(nrow(cD@locLikelihoods) == nrow(cD))
-          mD@locLikelihoods <- rbind(matrix(-Inf, length(nulls), ncol(cD@locLikelihoods)), cD@locLikelihoods)
-
-        if(nrow(cD@posteriors) == nrow(cD))
-          mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
-
-        
-        mD@sampleObservables <- c(mD@sampleObservables)        
-      } else {
-        mD <- cD
-        mD@data <- countLoci
-      }
+        {
+            mD <- .inferNulls(cD, aD)
+        } else {
+            mD <- cD
+            mD@data <- countLoci
+        }
 
     if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1))
         replicates(mD) <- rep(1, ncol(mD))
@@ -115,12 +115,49 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 
     mD@groups <- cD@groups
     mD@estProps <- cD@estProps
-    mD@posteriors <- oldPosteriors
-
-
+    #mD@posteriors <- oldPosteriors
+    
+    
     mD
   }
 
+
+.inferMethNulls <- function(cD, aD, cl = NULL) {
+
+    loci <- cD@coordinates
+    lociLens <- width(loci)
+    countLoci <- cD@data
+
+    nulls <- gaps(loci)
+    
+    nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]        
+    if(all(strand(loci) == "*")) {
+        nulls <- nulls[strand(nulls) == "*",]
+    }
+    removeNull <- c(which(strand(nulls) == "*")[getOverlaps(nulls[strand(nulls) == "*",], loci, whichOverlaps = FALSE)],
+                    which(strand(nulls) == "+")[getOverlaps(nulls[strand(nulls) == "+",], loci[strand(loci) %in% c("*", "+"),], whichOverlaps = FALSE)],
+                    which(strand(nulls) == "-")[getOverlaps(nulls[strand(nulls) == "-",], loci[strand(loci) %in% c("*", "-"),], whichOverlaps = FALSE)])
+    if(length(removeNull) > 0) nulls <- nulls[-removeNull,]
+    
+                                        #nulls <- nulls[strand(nulls) == "*",]
+    countNulls <- getCounts(segments = nulls, aD, cl = cl)
+    
+    mD <- new("lociData",
+              data = array(data = c(rbind(countNulls$Cs, countLoci[,,1]), rbind(countNulls$Ts, countLoci[,,2])), dim = c(nrow(countNulls$Cs) + nrow(countLoci), ncol(countLoci), 2)),
+              replicates = cD@replicates,
+              coordinates = c(nulls, loci),
+              sampleObservables = cD@sampleObservables
+              )
+    
+    if(nrow(cD@locLikelihoods) == nrow(cD))
+        mD@locLikelihoods <- rbind(matrix(-Inf, nrow(countNulls$Cs), ncol(cD@locLikelihoods)), cD@locLikelihoods)
+    
+    if(nrow(cD@posteriors) == nrow(cD))
+        mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
+
+    mD <- mD[which(rowSums(mD@data) > 0),]
+    mD
+}
 
 .methLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, usePosteriors = TRUE, cl)
   {
@@ -129,35 +166,9 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     countLoci <- cD@data
 
     if(inferNulls)
-      {
-        nulls <- gaps(loci)
-        
-        nulls <- nulls[seqnames(nulls) %in% unique(as.character(seqnames(cD@coordinates))),]        
-        if(all(strand(loci) == "*")) {
-          nulls <- nulls[strand(nulls) == "*",]
-        }
-        removeNull <- c(which(strand(nulls) == "*")[getOverlaps(nulls[strand(nulls) == "*",], loci, whichOverlaps = FALSE)],
-                        which(strand(nulls) == "+")[getOverlaps(nulls[strand(nulls) == "+",], loci[strand(loci) %in% c("*", "+"),], whichOverlaps = FALSE)],
-                        which(strand(nulls) == "-")[getOverlaps(nulls[strand(nulls) == "-",], loci[strand(loci) %in% c("*", "-"),], whichOverlaps = FALSE)])
-        if(length(removeNull) > 0) nulls <- nulls[-removeNull,]
-          
-                                        #nulls <- nulls[strand(nulls) == "*",]
-        countNulls <- getCounts(segments = nulls, aD, cl = cl)
-        
-        mD <- new("lociData",
-                  data = array(data = c(rbind(countNulls$Cs, countLoci[,,1]), rbind(countNulls$Ts, countLoci[,,2])), dim = c(nrow(countNulls$Cs) + nrow(countLoci), ncol(countLoci), 2)),
-                  replicates = cD@replicates,
-                  coordinates = c(nulls, loci),
-                  sampleObservables = cD@sampleObservables
-                  )
-
-        if(nrow(cD@locLikelihoods) == nrow(cD))
-            mD@locLikelihoods <- rbind(matrix(-Inf, nrow(countNulls$Cs), ncol(cD@locLikelihoods)), cD@locLikelihoods)
-
-        if(nrow(cD@posteriors) == nrow(cD))
-            mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
-
-      } else mD <- cD
+        {
+            mD <- .inferMethNulls(cD, aD)
+        } else mD <- cD
 
     mD <- mD[which(rowSums(mD@data) > 0),]
     mD@groups <- list(mD@replicates)

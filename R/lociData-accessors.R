@@ -28,3 +28,9 @@ setMethod("[", "lociData", function(x, i, j, ..., drop = FALSE) {
 
   x
 })
+
+setMethod("dim", "lociData", function(x) {
+    dim <- dim(x@data)
+    if(dim[1] == 0) dim[1] <- length(x@coordinates)
+    dim
+})

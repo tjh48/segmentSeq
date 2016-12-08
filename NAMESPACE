@@ -12,7 +12,7 @@ importFrom("grDevices", "rgb")
 importFrom("abind", "abind")
 importFrom("utils", "data", "read.delim")
 exportClasses("alignmentData")
-exportClasses("segData")
+#exportClasses("segData")
 exportMethods("dim", "[", "show")
 exportPattern("^[^\\.]")
 

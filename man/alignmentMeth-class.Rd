@@ -4,6 +4,7 @@
 \alias{alignmentMeth-class}
 \alias{alignmentMeth}
 \alias{[,alignmentMeth-method}
+\alias{[,alignmentMeth,ANY,ANY,ANY-method}
 \alias{[,alignmentMeth,ANY,ANY-method}
 \alias{[,alignmentMeth,ANY-method}
 \alias{dim,alignmentMeth-method}

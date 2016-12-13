@@ -13,7 +13,8 @@ methylation locus may be identified.
 }
 \usage{
 thresholdFinder(method, aM, subset, minprop = 0.05, bootstrap = 100,
-verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list())
+abstol = 1e-4, verbose = FALSE, cl = NULL, processAD.args = list(),
+heuristicSeg.args = list()) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -34,7 +35,8 @@ verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list())
   \item{bootstrap}{
     The maximum number of bootstraps to be permitted in estimating a
     threshold. Defaults to 100. See Details.
-    }
+  }
+  \item{abstol}{Minimum tolerance fro threshold estimation.}
   \item{verbose}{
     Verbose reporting. Defaults to FALSE.
   }
@@ -67,7 +69,10 @@ verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list())
     loci. Based on the defined loci, cytosines are then only included in
     a re-estimation of the thresholds if they are identified as
     belonging to an expressed locus within the current replicate group,
-    or if they are not expressed in any replicate group.
+    or if they are not expressed in any replicate group. Thresholds are
+    re-esimated until the maximum number of bootstraps is reached or the
+    difference between estimated thresholds drops below 'abstol',
+    whichever is the sooner.
 }
 \value{
 A numeric value defining a threshold on methylation.

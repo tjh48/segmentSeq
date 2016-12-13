@@ -1,5 +1,5 @@
 
-thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100, verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list()) {
+thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100, abstol = 1e-4, verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list()) {
     if(!missing(subset)) aMS <- aM[subset,] else aMS <- aM
     nD <- normaliseNC(aMS)
 
@@ -92,7 +92,7 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
         repSep <- findProp(method, nD, loci = mD, minprop = minprop, verbose = verbose, cl = cl)
         prop = mean(repSep)
         if(verbose) message("Currently estimated threshold: ", prop)
-        if(prop %in% propVec | pp == bootstrap) break()
+        if(any(abs(propVec - prop) < abstol) | pp == bootstrap) break()
         propVec[pp] <- prop
         hS <- do.call("heuristicSeg", c(list(sD = sD, aD = aMS, prop = prop, verbose = FALSE, cl = cl, getLikes = FALSE), heuristicSeg.args))
     }

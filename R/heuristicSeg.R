@@ -42,9 +42,9 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop, locCutoff = 0.99,
                       }
                   }
 # sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
-              if(!existingSDP) {
-                  sDP <- .partheuristicSeg(
-                      sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
+                if(!existingSDP) {
+                    sDP <- .partheuristicSeg(
+                        sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
                       aDP = aD,
                       bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
                   
@@ -119,7 +119,8 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop, locCutoff = 0.99,
 
     if(class(aDP) == "alignmentMeth") {
         #aDP <- normaliseNC(aDP)
-        breaks <- ceiling(prod(dim(sDP)) / largeness)
+                                        #breaks <- ceiling(prod(dim(sDP)) / largeness)
+        breaks <- 1
       if(breaks > 1) splitCalc <- split(1:nrow(sDP), cut(1:nrow(sDP), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(sDP))        
       
 #      sDP@locLikelihoods <- do.call("rbind", lapply(splitCalc, function(x) {

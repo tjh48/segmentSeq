@@ -433,7 +433,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
                               DataFrame(counts)
                           })
                           )
-    } else counts <- matrix(values(GTags[[1]])$count, ncol = 1)
+        counts <- do.call("cbind", lapply(counts, as.integer))
+    } else counts <- matrix(as.integer(values(GTags[[1]])$count), ncol = 1)
     
     colnames(counts) <- libnames
 
@@ -461,8 +462,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
 #    aD@libsizes = libsizes
     aD@replicates = as.factor(replicates)
     aD@alignments = unqTags
-    aD@data = do.call("cbind", lapply(counts, as.integer))
-
+    aD@data <- counts
+        
     libSet <- !duplicated(as.character(values(aD@alignments)$tag)) | is.na(aD@alignments$tag)
     repSizes <- do.call("rbind", lapply(levels(aD@replicates), function(rep) {
         whichRep <- which(aD@replicates == rep)

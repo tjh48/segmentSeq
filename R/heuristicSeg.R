@@ -119,47 +119,45 @@ heuristicSeg <- function(sD, aD, gap = 100, RKPM = 1000, prop, locCutoff = 0.99,
 
     if(class(aDP) == "alignmentMeth") {
         #aDP <- normaliseNC(aDP)
-                                        #breaks <- ceiling(prod(dim(sDP)) / largeness)
-        breaks <- 1
-      if(breaks > 1) splitCalc <- split(1:nrow(sDP), cut(1:nrow(sDP), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(sDP))        
+        breaks <- ceiling(prod(dim(sDP)) / largeness)
+        if(breaks > 1) splitCalc <- split(1:nrow(sDP), cut(1:nrow(sDP), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(sDP))        
       
-#      sDP@locLikelihoods <- do.call("rbind", lapply(splitCalc, function(x) {
-
         nullLikes <- NULL
         locLikes <- NULL
 
-      if(verbose & length(splitCalc) > 1) message("")
-      if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
-      
-      for(ii in 1:length(splitCalc)) {
-        if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
-        if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
-        sDPx <- sDP[splitCalc[[ii]],]
-        if(nrow(sDPx@data) == 0) {
-            counts <- getCounts(sDPx@coordinates, aD = aDP, cl = cl)
-            sDPx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
+        if(verbose & length(splitCalc) > 1) message("")
+        if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
+        
+        for(ii in 1:length(splitCalc)) {
+            if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
+            if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
+            sDPx <- sDP[splitCalc[[ii]],]
+            if(nrow(sDPx@data) == 0) {
+                counts <- getCounts(sDPx@coordinates, aD = aDP, cl = cl)
+                sDPx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
+            }
+            lL <- .methFunction(sDPx, prop = prop, locCutoff = locCutoff)
+            locLikes <- rbind(locLikes, lL)
+            nL <- !lL
+            nL[rowSums(nL) > 0,] <- .methFunction(sDPx[rowSums(nL) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+            nullLikes <- rbind(nullLikes, nL)
         }
-        locLikes <- rbind(locLikes, .methFunction(sDPx, prop = prop, locCutoff = locCutoff))
-        nL <- !locLikes
-        nL[rowSums(nL) > 0,] <- .methFunction(sDPx[rowSums(nL) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
-        nullLikes <- rbind(nullLikes, nL)
-      }
                                         # sDP@locLikelihoods <- locLikes      
-      
-#      internalNulls <- sDP[rowSums(!sDP@locLikelihoods, na.rm = TRUE) > 0 & width(sDP@coordinates) > gap,]
-
+        
+                                        #      internalNulls <- sDP[rowSums(!sDP@locLikelihoods, na.rm = TRUE) > 0 & width(sDP@coordinates) > gap,]
+        
         empties <- .zeroInMeth(aD = aDP, smallSegs = sDP@coordinates[sDPSmall])
-
+        
         if(length(empties) > 0) {
             potnullD <- .constructMethNulls(emptyNulls = empties, sDP = sDP, locDef = sDP@coordinates[which(rowSums(locLikes) > 0),], minlen = gap)
-          
+            
         if(verbose) message("Number of candidate nulls: ", nrow(potnullD), appendLF = FALSE)
         
         if(verbose) message(".", appendLF = FALSE)
 #        potnullD <- potnullD[width(potnullD@coordinates) > gap,]
 
-        breaks <- ceiling(prod(dim(potnullD)) / largeness)
-        if(breaks > 1) splitCalc <- split(1:nrow(potnullD), cut(1:nrow(potnullD), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(potnullD))        
+            breaks <- ceiling(prod(dim(potnullD)) / largeness)
+            if(breaks > 1) splitCalc <- split(1:nrow(potnullD), cut(1:nrow(potnullD), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(potnullD))        
 
         if(nrow(potnullD) > 0) {
           potnullD@locLikelihoods <- do.call("rbind", lapply(1:length(splitCalc), function(ii) {

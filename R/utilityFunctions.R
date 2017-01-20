@@ -39,14 +39,14 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
             xes <- dd$x[which(dd$y < c(dd$y[-1], Inf) & dd$y < c(Inf, dd$y[-length(dd$y)]))]
             return(min(xes[xes > quantile(z, minprop)]))
         }
-        if(method == "beta") {
+        if(method == "beta" | method == "betaVarsum") {
             meanbeta <- function(x, Cs, Ts, ovec) {
                 db <- dbeta(x, 0.5 + Cs, 0.5 + Ts)
                 mean(sapply(split(db, ovec), mean))
             }
                                         #nCs <- Cs[Cs >0]; nTs <- Ts[Cs > 0]
             nCs <- Cs; nTs <- Ts
-                
+            
             divisions <- 1000; samp <- 100000
             basamp <- sample(1:length(nCs), min(samp, length(nCs)))
             
@@ -57,11 +57,16 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
                                         #            lowdens <- which(mb / divisions < 1 / min(samp, length(nCs)))
 #            suppressWarnings(lowdens <- min(lowdens[lowdens / divisions > minprop]) / divisions)
                                         #            if(lowdens < 1) return(lowdens)
-                
             maxima <- c(which(mb > c(mb[-1], -Inf) & mb > c(-Inf, mb[-length(mb)])) / divisions, 1)
             minima <- c(which(mb < c(mb[-1], Inf) & mb < c(Inf, mb[-length(mb)])) / divisions)
             if(any(minima > minprop)) minmin <- min(minima[which(minima > minprop)]) else minmin <- max(minima)
-            return(optimise(meanbeta, interval = c(max(maxima[maxima < minmin]), min(maxima[maxima > minmin])), Cs = nCs, Ts = nTs, ovec = ovec)$minimum)            
+
+            if(method == "beta")
+                return(optimise(meanbeta, interval = c(max(maxima[maxima < minmin]), min(maxima[maxima > minmin])), Cs = nCs, Ts = nTs, ovec = ovec)$minimum)                        
+            if(method == "betaVarsum") {
+                fI <- findInterval(runif(1000000, min = 0, max = 1) , cumsum(mb) / divisions) / divisions
+                return(bimodalSeparator(fI[fI > max(maxima[maxima < minmin]) & fI < min(maxima[maxima > minmin])]))
+            }
         }
         if(method == "abc") {
             divisions <- 1000; samp <- 1000
@@ -97,7 +102,7 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
         hS <- do.call("heuristicSeg", c(list(sD = sD, aD = aMS, prop = prop, verbose = FALSE, cl = cl, getLikes = FALSE), heuristicSeg.args))
     }
 
-    if(sd(repSep) > 0.1) warning(paste("Standard deviation of automatically inferred methylation thresholds over replicates is greater than", sd(repSep), "; you may wish to examine the distribution of methylation for each replicate and specify a threshold manually."))    
+    if(length(repSep) > 1 && sd(repSep) > 0.1) warning(paste("Standard deviation of automatically inferred methylation thresholds over replicates is greater than", sd(repSep), "; you may wish to examine the distribution of methylation for each replicate and specify a threshold manually."))    
     if(verbose) message("Automatically determined threshold for methylation locus; ", prop)
     prop
 }

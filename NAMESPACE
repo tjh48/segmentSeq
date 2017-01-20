@@ -11,6 +11,12 @@ importFrom("graphics", "axis", "plot", "rect", "segments", "text")
 importFrom("grDevices", "rgb")
 importFrom("abind", "abind")
 importFrom("utils", "data", "read.delim")
+importFrom("grDevices", "dev.cur", "rainbow")
+importFrom("graphics", "abline", "lines", "par", "title")
+importFrom("stats", "dbeta", "dbinom", "density", "dnbinom",
+           "optimise", "pbeta", "rbeta", "rbinom", "runif",
+           "weighted.mean")
+importFrom("utils", "read.table", "write.table")
 exportClasses("alignmentData")
 #exportClasses("segData")
 exportMethods("dim", "[", "show")

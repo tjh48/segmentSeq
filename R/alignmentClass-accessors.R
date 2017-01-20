@@ -9,7 +9,7 @@ setMethod("[", "alignmentClass", function(x, i, j, ..., drop = FALSE) {
     {
       j <- as.vector(j)
       x@libnames <- x@libnames[j]
-      x@replicates <- x@replicates[j]
+      x@replicates <- droplevels(x@replicates[j])      
     }
   x
 })

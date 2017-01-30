@@ -12,8 +12,8 @@ criteria for being a null. These criteria can be defined by the user or
 inferred from the data. 
 }
 \usage{
-heuristicSeg(sD, aD, gap = 100, RKPM = 1000, prop, locCutoff =
-0.99, nullCutoff = 0.99, subRegion = NULL, largeness = 1e8, getLikes =
+heuristicSeg(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff =
+0.9, nullCutoff = 0.9, subRegion = NULL, largeness = 1e8, getLikes =
 TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp =
 FALSE, trimMeth = FALSE)
 }
@@ -40,10 +40,10 @@ FALSE, trimMeth = FALSE)
     locus and a null region? (see Details).}
   \item{locCutoff}{For analysis of a \code{\linkS4class{segMeth}}
     object, with what likelihood must the proportion of methylated
-    cytosines exceed the `prop' option to define a locus? Defaults to 0.99.}
+    cytosines exceed the `prop' option to define a locus? Defaults to 0.9.}
     \item{nullCutoff}{For analysis of a \code{\linkS4class{segMeth}}
     object, with what likelihood must the proportion of methylated
-    cytosines be less than the `prop' option to define a null region? Defaults to 0.99.}
+    cytosines be less than the `prop' option to define a null region? Defaults to 0.9.}
   \item{subRegion}{A \code{'data.frame'} object defining the subregions of
     the genome to be segmented. If NULL (default), the whole genome is
     segmented.}

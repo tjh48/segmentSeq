@@ -118,28 +118,28 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 
 \begin{Schunk}
 \begin{Sinput}
-> sD <- processAD(aD, gap = 100, cl = cl)
+> sD <- processAD(aD, cl = cl)
 > sD
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 14444 ranges and 0 metadata columns:
+GRanges object with 16321 ranges and 0 metadata columns:
           seqnames           ranges strand
              <Rle>        <IRanges>  <Rle>
       [1]    >Chr1       [265, 284]      *
-      [2]    >Chr1       [405, 427]      *
-      [3]    >Chr1       [600, 623]      *
-      [4]    >Chr1       [600, 688]      *
-      [5]    >Chr1       [600, 830]      *
+      [2]    >Chr1       [265, 420]      *
+      [3]    >Chr1       [265, 623]      *
+      [4]    >Chr1       [265, 688]      *
+      [5]    >Chr1       [265, 830]      *
       ...      ...              ...    ...
-  [14440]    >Chr2 [179708, 179872]      *
-  [14441]    >Chr2 [179708, 180037]      *
-  [14442]    >Chr2 [179738, 179872]      *
-  [14443]    >Chr2 [179738, 180037]      *
-  [14444]    >Chr2 [179923, 180037]      *
+  [16317]    >Chr2 [179708, 179872]      *
+  [16318]    >Chr2 [179708, 180037]      *
+  [16319]    >Chr2 [179738, 179872]      *
+  [16320]    >Chr2 [179738, 180037]      *
+  [16321]    >Chr2 [179923, 180037]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-14444 rows and 4 columns
+16321 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -196,24 +196,24 @@ overlap with any other such segments in defining our segmentation map.
 > cS
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 182 ranges and 0 metadata columns:
+GRanges object with 142 ranges and 0 metadata columns:
         seqnames           ranges strand
            <Rle>        <IRanges>  <Rle>
-    [1]    >Chr1   [    1,   599]      *
-    [2]    >Chr1   [  600,   967]      *
+    [1]    >Chr1   [    1,   264]      *
+    [2]    >Chr1   [  265,   967]      *
     [3]    >Chr1   [  968, 17054]      *
     [4]    >Chr1   [17055, 18728]      *
     [5]    >Chr1   [18729, 27656]      *
     ...      ...              ...    ...
-  [178]    >Chr2 [177100, 178343]      *
-  [179]    >Chr2 [178344, 178636]      *
-  [180]    >Chr2 [178637, 179707]      *
-  [181]    >Chr2 [179708, 180037]      *
-  [182]    >Chr2 [180038, 200000]      *
+  [138]    >Chr2 [177100, 178343]      *
+  [139]    >Chr2 [178344, 178636]      *
+  [140]    >Chr2 [178637, 179707]      *
+  [141]    >Chr2 [179708, 180037]      *
+  [142]    >Chr2 [180038, 200000]      *
   -------
   seqinfo: 2 sequences from an unspecified genome
 An object of class "lociData"
-182 rows and 4 columns
+142 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -222,44 +222,34 @@ list()
 
 Slot "data":
      AGO6.1 AGO6.2 AGO4.1 AGO4.2
-[1,]      1      1      0      2
-[2,]     54     46     65     83
+[1,]      0      0      0      0
+[2,]     55     47     65     85
 [3,]      2      3      0      0
 [4,]    682    621   1405   1103
 [5,]      0      3      0      0
-177 more rows...
+137 more rows...
 
 Slot "annotation":
-data frame with 0 columns and 182 rows
+data frame with 0 columns and 142 rows
 
 Slot "locLikelihoods" (stored on log scale):
-Matrix with  182  rows.
+Matrix with  142  rows.
         AGO4     AGO6
-1    0.33858  0.13432
-2    0.90306  0.99805
-3    0.03836 0.042551
-4    0.95123  0.99992
-5   0.040181 0.066448
+1   0.048078 0.051445
+2    0.88895  0.99061
+3   0.019059 0.044838
+4    0.99077  0.99993
+5    0.02082 0.066444
 ...      ...      ...
-178 0.052626 0.038104
-179  0.86804  0.99906
-180 0.054215 0.081754
-181  0.91839  0.99829
-182 0.037827 0.029708
+138 0.031576 0.033483
+139   0.8761  0.99925
+140 0.032784 0.086128
+141  0.96663   0.9982
+142 0.018525 0.021694
 
 Expected number of loci in each replicate group
     AGO4     AGO6 
-76.26509 95.41831 
+58.83255 73.01606 
 \end{Soutput}
 \end{Schunk}
 
-
-
-By one of these methods, we finally acquire an annotated \verb'lociData' object, with the annotations describing the co-ordinates of each segment.
-
-
-We can use this \verb'lociData' object, in combination with the \verb'alignmentData' object, to plot the segmented genome.
-
-\begin{Schunk}
-\begin{Sinput}
-> par(mfrow = c(2,1), mar = c(2,6,2,2))

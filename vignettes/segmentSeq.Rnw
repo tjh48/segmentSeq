@@ -69,13 +69,13 @@ aD
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
 
 <<>>=
-sD <- processAD(aD, gap = 100, cl = cl)
+sD <- processAD(aD, cl = cl)
 sD
 @ 
 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(sD) != 14444) stop("sD object is the wrong size (should have 14444 rows). Failure.")
+if(nrow(sD) != 16321) stop("sD object is the wrong size (should have 16321 rows). Failure.")
 @ 
 
 We can now construct a segment map from these potential segments.
@@ -89,8 +89,8 @@ hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TR
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 790) stop("hS object is the wrong size (should have 790 rows). Failure.")
-if(any(abs(colSums(exp(hS@locLikelihoods)) - c(179, 394)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
+if(nrow(hS) != 1029) stop("hS object is the wrong size (should have 1029 rows). Failure.")
+if(any(abs(colSums(exp(hS@locLikelihoods)) - c(242, 532)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
 @ 
 
 \subsection*{Segmentation by empirical Bayesian methods}
@@ -108,8 +108,8 @@ cS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(abs(nrow(cS) - 182) > 2) stop("cS object is the wrong size (should have ~182 rows). Likely failure.")
-if(any(abs(colSums(exp(cS@locLikelihoods)) - c(76,95)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
+if(abs(nrow(cS) - 142) > 2) stop("cS object is the wrong size (should have ~142 rows). Likely failure.")
+if(any(abs(colSums(exp(cS@locLikelihoods)) - c(58,73)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
 @ 
 
 

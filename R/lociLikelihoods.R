@@ -42,7 +42,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
             mD <- .inferNulls(cD, aD)
         } else {
             mD <- cD
-            mD@data <- countLoci
+            #mD@data <- countLoci
         }
 
     if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1))
@@ -178,8 +178,14 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 
     mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
     mD@data <- round(mD@data)
-    densityFunction(mD) <- bbNCDist
-    mD <- methObservables(mD)
+
+    if(all(mD@sampleObservables$nonconversion == 0)) {
+        densityFunction(mD) <- bbDensity
+        libsizes(mD) <- matrix(1, ncol = 2, nrow = ncol(mD))
+    } else {
+        densityFunction(mD) <- bbNCDist
+        mD <- methObservables(mD)
+    }
     
     mD <- getPriors(mD, samplesize = 1e4, verbose = TRUE, cl = cl)        
     

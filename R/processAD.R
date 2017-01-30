@@ -109,7 +109,7 @@
   }
 
 
-processAD <- function(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE, verbose = TRUE, getCounts = FALSE, cl)         
+processAD <- function(aD, gap = 300, squeeze = 2, filterProp = 0.05, strandSplit = FALSE, verbose = TRUE, getCounts = FALSE, cl)         
   {
 #    if("tag" %in% colnames(values(aD@alignments))) {      
 

@@ -81,12 +81,11 @@ plotMethDistribution(mD,
 Next, we process this \verb'alignmentData' object to produce a \verb'segData' object. This \verb'segData' object contains a set of potential segments on the genome defined by the start and end points of regions of overlapping alignments in the \verb'alignmentData' object. It then evaluates the number of tags that hit in each of these segments.
 
 <<>>=
-sD <- processAD(mD, gap = 300, squeeze = 10, filterProp = 0.05, 
-                verbose = TRUE, strandSplit = TRUE, cl = cl)
+sD <- processAD(mD, cl = cl)
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(sD) != 133101) stop("sD object is the wrong size (should have 133101 rows). Failure.")
+if(nrow(sD) != 215191) stop("sD object is the wrong size (should have 215191 rows). Failure.")
 @ 
 
 We can now construct a segment map from these potential segments.
@@ -102,7 +101,7 @@ hS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 2638) stop("hS object is the wrong size (should have 2638 rows). Failure.")
+if(nrow(hS) != 4335) stop("hS object is the wrong size (should have 4335 rows). Failure.")
 @ 
 
 

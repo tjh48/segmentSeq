@@ -10,7 +10,7 @@ containing a set of potential segments, together with the counts for
 each sample in each potential segment.
 }
 \usage{
-processAD(aD, gap = 200, squeeze = 0, filterProp = 0.1, strandSplit = FALSE,
+processAD(aD, gap = 300, squeeze = 2, filterProp = 0.05, strandSplit = FALSE,
 verbose = TRUE, getCounts = FALSE, cl)
 }
 \arguments{
@@ -20,7 +20,7 @@ verbose = TRUE, getCounts = FALSE, cl)
   }
   \item{gap}{
     The maximum gap between aligned tags that should be allowed in
-    constructing potential segments. Defaults to 200. See Details.
+    constructing potential segments. Defaults to 300. See Details.
   }
   \item{squeeze}{
     If greater than zero, the minimum gap between aligned tags that

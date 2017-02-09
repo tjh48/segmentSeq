@@ -89,7 +89,7 @@ hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TR
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 1029) stop("hS object is the wrong size (should have 1029 rows). Failure.")
+if(nrow(hS) != 1027) stop("hS object is the wrong size (should have 1027 rows). Failure.")
 if(any(abs(colSums(exp(hS@locLikelihoods)) - c(242, 532)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
 @ 
 

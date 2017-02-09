@@ -105,11 +105,15 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
                                     nrow = polyLength + 1, ncol = polyLength + 1), 1, paste, sep = "", collapse = ""))
     }))
     if(length(files) != length(replicates)) stop("The 'replicates' vector needs to be the same length as the 'files' vector")
+
+    if(missing(chrs)) chrs <- NULL else {
+        chrs <- as.character(chrs)
+        seqinf <- Seqinfo(seqnames = chrs)#, seqlengths = chrlens)
+    }
     
-    chrs <- as.character(chrs)
     replicates <- as.factor(replicates)
 
-    seqinf <- Seqinfo(seqnames = chrs)#, seqlengths = chrlens)
+    
 
     if(!all(levels(replicates) %in% replicates))
       stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
@@ -123,8 +127,8 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
 
     if(dir != "") files <- paste(dir, files, sep = "/")
 
-    if(class(chrs) != "character")
-      stop("'chrs' must be of type 'character'.")
+#    if(class(chrs) != "character")
+#      stop("'chrs' must be of type 'character'.")
 
     if(verbose)
       message("Reading files...", appendLF = FALSE)
@@ -165,9 +169,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
           } else return(NA)
       }
       
-      chrtags <- as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs)
-      filterTags[1] <- filterInfo(chrtags, "chrs")
-      aln <- aln[chrtags,]
+      if(!is.null(chrs)) {
+          chrtags <- as.integer(seqnames(aln)) %in% which(seqlevels(aln) %in% chrs)
+          filterTags[1] <- filterInfo(chrtags, "chrs")
+          aln <- aln[chrtags,]
+      } else filterTags[1] <- NA
       if(length(aln) == 0) warning(paste("There were no tags left in sample", ii, "after selection by chromosome. Are you sure you've got the right chromosome names?"))
 
       widths <- width(aln)
@@ -197,51 +203,52 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
       }
       
       message(".", appendLF = FALSE)
-      seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
+      if(!is.null(chrs)) seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
       aln
-      })
-
+  })
+    
     message(".done!")
-    #if(!missing(tempFile)) save(Tags, file = paste("tags_", tempFile, sep = ""))
+                                        #if(!missing(tempFile)) save(Tags, file = paste("tags_", tempFile, sep = ""))
+    if(is.null(chrs)) seqinf <- seqinfo(Tags[[1]])
     
     aD <- .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates, discardTags = discardTags)
     aD
     
-  }
+}
 
 
 readGeneric <-
-function(files, dir = ".", replicates, libnames, chrs, chrlens,
-         cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE, filterReport = NULL, ...)
-    {
-        if(discardTags) stop("readGeneric does not currently support discarding tag information. Either include this data, or switch to BAM files (recommended).")
-    if(missing(polyLength)) polyLength <- NULL
-    if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
-      suppressWarnings(apply(matrix(c(".", rep(polybase, polyLength + 1)),
-                                    nrow = polyLength + 1, ncol = polyLength + 1), 1, paste, sep = "", collapse = ""))
-    }))
+    function(files, dir = ".", replicates, libnames, chrs, chrlens,
+             cols, header = TRUE, minlen = 15, maxlen = 1000, multireads = 1000, polyLength, estimationType = "quantile", discardTags = FALSE, verbose = TRUE, filterReport = NULL, ...)
+        {
+            if(discardTags) stop("readGeneric does not currently support discarding tag information. Either include this data, or switch to BAM files (recommended).")
+            if(missing(polyLength)) polyLength <- NULL
+            if(!is.null(polyLength)) polyBase <- do.call("rbind", lapply(c("A", "C", "G", "T"), function(polybase) {
+                suppressWarnings(apply(matrix(c(".", rep(polybase, polyLength + 1)),
+                                              nrow = polyLength + 1, ncol = polyLength + 1), 1, paste, sep = "", collapse = ""))
+            }))
+            
+            if(missing(chrs)) chrs <- NULL else {
+                chrs <- as.character(chrs)
+                seqinf <- Seqinfo(seqnames = chrs)#, seqlengths = chrlens)
+            }
+            
+            replicates <- as.factor(replicates)
+            
+            if(!all(levels(replicates) %in% replicates))
+                stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
+
     
-    chrs <- as.character(chrs)
-                                        #    if(any(replicates != as.integer(replicates)))
-                                        #      stop("The 'replicates' vector must be castable as an integer")
-    replicates <- as.factor(replicates)
-
-    seqinf <- Seqinfo(seqnames = chrs, seqlengths = chrlens)
-    
-    if(!all(levels(replicates) %in% replicates))
-      stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
-
-    
-    if(any(chrlens != as.integer(chrlens)))
-      stop("The 'chrlens' vector must be castable as an integer")
-    chrlens <- as.integer(chrlens)    
-
-    countPresent <- TRUE
-    tagPresent <- TRUE
-    strandPresent <- TRUE
-
+            if(any(chrlens != as.integer(chrlens)))
+                stop("The 'chrlens' vector must be castable as an integer")
+            chrlens <- as.integer(chrlens)    
+            
+            countPresent <- TRUE
+            tagPresent <- TRUE
+            strandPresent <- TRUE
+            
     if(missing(cols)) cols <- NULL
-    
+            
     if(!is.null(cols))
       {
         if(!(all(c("chr", "start", "end") %in% names(cols))))
@@ -266,9 +273,6 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
         libnames <- sub(".*/", "", files)
 
     files <- paste(dir, files, sep = "/")
-
-    if(class(chrs) != "character")
-      stop("'chrs' must be of type 'character'.")
 
     if(verbose)
       message("Reading files...", appendLF = FALSE)
@@ -330,10 +334,12 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
           if(tagPresent) return(paste(length(unique(filetags[!seltags,tagcol])), sum(!seltags), sep = ":")) else return(sum(!seltags))
         } else return(NA)
       }
-      
-      chrtags <- filetags[,chrcol] %in% chrs        
-      filterTags[1] <- filterInfo(chrtags, "chrs")
-      filetags <- filetags[chrtags,]  
+
+      if(!is.null(chrs)) {
+          chrtags <- filetags[,chrcol] %in% chrs        
+          filterTags[1] <- filterInfo(chrtags, "chrs")
+          filetags <- filetags[chrtags,]  
+      } else filterTags[1] <- NA
       
       widths <- as.integer(filetags[, endcol]) - as.integer(filetags[,startcol]) + 1      
       goodwidths <- widths >= minlen & widths <= maxlen
@@ -383,13 +389,16 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens,
       rm(filetags)
       gc()
       message(".", appendLF = FALSE)
-      seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
+      if(!is.null(chrs)) seqinfo(aln, new2old = match(seqlevels(seqinf), seqlevels(aln))) <- seqinf
+      
       aln
     }, cols = cols, header = header)
 
     message(".done!")
     #if(!missing(tempFile)) save(Tags, paste("tags_", tempFile, sep = ""))
-    
+
+    if(is.null(chrs)) seqinf <- seqinfo(Tags[[1]])
+            
     aD <- .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates, discardTags = discardTags)
     aD
   }

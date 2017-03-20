@@ -101,7 +101,7 @@ hS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 4335) stop("hS object is the wrong size (should have 4335 rows). Failure.")
+if(nrow(hS) != 4298) stop("hS object is the wrong size (should have 4298 rows). Failure.")
 @ 
 
 

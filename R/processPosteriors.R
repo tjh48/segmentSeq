@@ -11,22 +11,22 @@
 
 .processPosteriors <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, extendLoci, getLikes = FALSE, verbose = TRUE, cl)
   {
-    if(missing(emptyPD)) emptyPD <- NULL
+      if(missing(emptyPD)) emptyPD <- NULL
     
-    strandSegs <- lapply(levels(strand(lociPD@coordinates)), function(ss)
-                         if(any(strand(lociPD@coordinates) == ss))
-                         {
-                           if(!is.null(emptyPD)) strandEmpty <- emptyPD[which(strand(emptyPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),] else strandEmpty <- NULL
-                           if(verbose) message("Strand ", ss)
-                           strandSegs <- .processPosts(
-                                           lociPD = lociPD[which(strand(lociPD@coordinates) == ss),],
-                                           nullPD = nullPD[which(strand(nullPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
-                                           emptyPD = strandEmpty,
-                                           aD, lociCutoff, nullCutoff, extendLoci = extendLoci, getLikes = FALSE,
-                                           verbose = verbose, cl = cl)
-                           strandSegs
-                         })
-    strandSegs <- strandSegs[which(!sapply(strandSegs, is.null))]
+      strandSegs <- lapply(levels(strand(lociPD@coordinates)), function(ss)
+          if(any(strand(lociPD@coordinates) == ss))
+              {
+                  if(!is.null(emptyPD)) strandEmpty <- emptyPD[which(strand(emptyPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),] else strandEmpty <- NULL
+                  if(verbose) message("Strand ", ss)
+                  strandSegs <- .processPosts(
+                      lociPD = lociPD[which(strand(lociPD@coordinates) == ss),],
+                      nullPD = nullPD[which(strand(nullPD@coordinates) %in% list("+", "-", c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
+                      emptyPD = strandEmpty,
+                      aD, lociCutoff, nullCutoff, extendLoci = extendLoci, getLikes = FALSE,
+                      verbose = verbose, cl = cl)
+                  strandSegs
+              })
+      strandSegs <- strandSegs[which(!sapply(strandSegs, is.null))]
 
     segs <- .mergeListLoci(strandSegs)
     
@@ -66,15 +66,19 @@
     if(verbose) message("Checking overlaps...", appendLF = FALSE)
     locAccept <- do.call("cbind", 
                          lapply(levels(selLoci@replicates), function(rep)
-                                {
-                                  repCol <- which(levels(selLoci@replicates) == rep)
-                                  accepts <- rep(FALSE, nrow(selLoci))
-                                  repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
-                                  accepts[repLoci] <- TRUE
-                                  if(nrow(selNull) > 0 && length(repLoci) > 0) accepts[repLoci] <- !getOverlaps(selLoci@coordinates[repLoci,], selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], overlapType = "contains", whichOverlaps = FALSE, cl = NULL)
-                                  if(verbose) message(".", appendLF = FALSE)
-                                  return(accepts)
-                                }))      
+                             {
+                                 repCol <- which(levels(selLoci@replicates) == rep)
+                                 accepts <- rep(FALSE, nrow(selLoci))
+                                 repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
+                                 accepts[repLoci] <- TRUE
+                                 if(nrow(selNull) > 0 && length(repLoci) > 0) {
+                                     whichCN <- sort(unique(subjectHits(findOverlaps(selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], selLoci@coordinates[repLoci,], type = "within"))))                                     
+                                     accepts[repLoci[whichCN]] <- FALSE
+                                 }
+                                                                  
+                                 if(verbose) message(".", appendLF = FALSE)
+                                 return(accepts)
+                             }))      
     if(verbose) message("done.", appendLF = TRUE)
     
     if(verbose) message("Selecting loci...", appendLF = FALSE)

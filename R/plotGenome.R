@@ -56,8 +56,10 @@ function(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pile
                      rectcpd <- cbind(start(cpd), uu, end(cpd), -runValue(cpd))
                    } else rectcpd <- matrix(c(NA, NA, NA, 1), nrow = 1, ncol = 4)
                  coverageOverlaps <- rbind(rectcpu, rectcpd)                 
-               } else {
-                 tagOverlaps <- getOverlaps(pAD@coordinates, sTags, overlapType = "contains", cl = NULL)
+             } else {
+
+                 tagFO <- findOverlaps(sTags, pAD@coordinates, type = "within")                 
+                 tagOverlaps <- split(queryHits(tagFO), factor(subjectHits(tagFO), levels = 1:length(pAD@coordinates)))
 
                  coverageOverlaps <- do.call("rbind", lapply(1:nrow(pAD), function(ii) {
                    tags <- tagOverlaps[[ii]]

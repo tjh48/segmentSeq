@@ -45,8 +45,13 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
             #mD@data <- countLoci
         }
 
-    if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1))
+    noReps <- FALSE
+    reps <- replicates(mD)
+    if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1)) {
         replicates(mD) <- rep(1, ncol(mD))
+        noReps <- TRUE
+    }
+    
     densityFunction(mD) <- nbinomDensity
     mD@groups <- list(mD@replicates)
     libsizes(mD) <- libsizes(cD)
@@ -80,6 +85,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD <- mD[,which(mD@replicates == rep)]
           replicates(repD) <- as.factor(rep(1, ncol(repD)))
           groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
+          if(noReps) repCol <- 1
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- locW
           
@@ -134,9 +140,9 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     if(all(strand(loci) == "*")) {
         nulls <- nulls[strand(nulls) == "*",]
     }
-    removeNull <- c(which(strand(nulls) == "*")[getOverlaps(nulls[strand(nulls) == "*",], loci, whichOverlaps = FALSE)],
-                    which(strand(nulls) == "+")[getOverlaps(nulls[strand(nulls) == "+",], loci[strand(loci) %in% c("*", "+"),], whichOverlaps = FALSE)],
-                    which(strand(nulls) == "-")[getOverlaps(nulls[strand(nulls) == "-",], loci[strand(loci) %in% c("*", "-"),], whichOverlaps = FALSE)])
+    removeNull <- c(which(strand(nulls) == "*")[!is.na(findOverlaps(nulls[strand(nulls) == "*",], loci, select = "first"))],
+                    which(strand(nulls) == "+")[!is.na(findOverlaps(nulls[strand(nulls) == "+",], loci[strand(loci) %in% c("*", "+"),], select = "first"))],
+                    which(strand(nulls) == "-")[!is.na(findOverlaps(nulls[strand(nulls) == "-",], loci[strand(loci) %in% c("*", "-"),], select = "first"))])
     if(length(removeNull) > 0) nulls <- nulls[-removeNull,]
     
                                         #nulls <- nulls[strand(nulls) == "*",]

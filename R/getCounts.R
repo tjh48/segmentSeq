@@ -42,8 +42,8 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
         environment(clusterAssign) <- getCountEnv
       }
 
-    alover <- getOverlaps(mD@alignments, segments, whichOverlaps = FALSE, cl = NULL)
-    mD <- mD[alover,]
+    
+    mD <- mD[!is.na(findOverlaps(mD@alignments, segments, select = "arbitrary")),,drop = FALSE]
         
     alignments <- mD@alignments
     dataCs <- mD@Cs
@@ -332,8 +332,10 @@ getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE
                                      dup <- which(!chralignments$chunkDup)
                                    } else dup <- which(chralignments$multireads > 1)
 
-                                   selNC <- dup[getOverlaps(chralignments[dup,],
-                                                            GRanges(seqnames = cc, chrsegs), whichOverlaps = FALSE, cl = NULL)]
+                                   
+                                   
+                                   selNC <- dup[!is.na(findOverlaps(chralignments[dup], GRanges(seqnames = cc, chrsegs), select = "arbitrary"))]
+
                                    dupTags <- ranges(chralignments)[selNC,]
                                    dupTagID <- values(chralignments)$tag[selNC]
                                    dupTagID <- match(dupTagID, unique(dupTagID))

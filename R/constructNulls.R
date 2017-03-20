@@ -1,6 +1,8 @@
 .zeroInMeth <- function(aD, smallSegs)
-  {
-    zeroCs <- !getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
+    {
+
+        
+    zeroCs <- !is.na(findOverlaps(aD@alignments, smallSegs, select = "arbitrary")) #getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
 #    zeroCs <- rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) == 0
     
     chrBreaks <- which(seqnames(aD@alignments)[-nrow(aD)] != seqnames(aD@alignments)[-1])
@@ -25,50 +27,53 @@
 
 
 .constructMethNulls <- function(emptyNulls, sDP, locDef, minlen)
-  {
-    overLoc <- sDP@coordinates[getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
+    {
+        
+        overLoc <- sDP@coordinates[!is.na(findOverlaps(sDP@coordinates, locDef, type = "within", select = "arbitrary")),]
+                                        #getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
+                     
     
-    
-    leftRight <- do.call("rbind", lapply(seqlevels(overLoc), function(chr) {
-      leftids <- Rle(findInterval(start(overLoc[seqnames(overLoc) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,])))
-      leftids[leftids <= 0] <- NA      
-      left <- Rle(start(overLoc[which(seqnames(overLoc) == chr),]) - rep(start(emptyNulls[seqnames(emptyNulls) == chr])[runValue(leftids)], runLength(leftids)))
-
-      rightids <- Rle(findInterval(end(overLoc[which(seqnames(overLoc) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1)
-      rightids[rightids > sum(seqnames(emptyNulls) == chr)] <- NA
-      right = Rle(rep(end(emptyNulls[seqnames(emptyNulls) == chr])[runValue(rightids)], runLength(rightids)) - end(overLoc[which(seqnames(overLoc) == chr),]))
-      
-      DataFrame(left, right)
-    }))
-
-    leftGood <- (!is.na(leftRight[,'left']))
-    rightGood <- (!is.na(leftRight[,'right']))
-    
-    nullCoords = GRanges(
-      seqnames = c(seqnames(emptyNulls), seqnames(overLoc)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
-      IRanges(
-        start = as.integer(c(Rle(start(emptyNulls)),
-          (start(overLoc) - leftRight[,"left"])[which(leftGood & rightGood)],
-          (start(overLoc) - leftRight[,"left"])[which(leftGood)],
-          start(overLoc)[which(rightGood)])),
-        end = as.integer(c(Rle(end(emptyNulls)),
-          (end(overLoc) + leftRight[,"right"])[which(leftGood & rightGood)],
-          (end(overLoc))[which(leftGood)],
-          (end(overLoc) + leftRight[,'right'])[which(rightGood)]))
-              )
-      )
-    rm(leftRight)
-    if(!missing(minlen)) nullCoords <- nullCoords[width(nullCoords) >= minlen,]
-    
-    nullCoords <- nullCoords[order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))]
-    nullCoords <- nullCoords[.fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords)))]
-    nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
-
-    potnullD <- new("lociData",
-                    replicates = sDP@replicates,
-                    coordinates = nullCoords, locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
-    potnullD
-  }
+        leftRight <- do.call("rbind", lapply(seqlevels(overLoc), function(chr) {
+            leftids <- Rle(findInterval(start(overLoc[seqnames(overLoc) == chr,]), end(emptyNulls[seqnames(emptyNulls) == chr,])))
+            leftids[leftids <= 0] <- NA      
+            left <- Rle(start(overLoc[which(seqnames(overLoc) == chr),]) - rep(start(emptyNulls[seqnames(emptyNulls) == chr])[runValue(leftids)], runLength(leftids)))
+            
+            rightids <- Rle(findInterval(end(overLoc[which(seqnames(overLoc) == chr)]), end(emptyNulls[seqnames(emptyNulls) == chr,])) + 1)
+            rightids[rightids > sum(seqnames(emptyNulls) == chr)] <- NA
+            right = Rle(rep(end(emptyNulls[seqnames(emptyNulls) == chr])[runValue(rightids)], runLength(rightids)) - end(overLoc[which(seqnames(overLoc) == chr),]))
+            
+            DataFrame(left, right)
+        }))
+        
+        leftGood <- (!is.na(leftRight[,'left']))
+        rightGood <- (!is.na(leftRight[,'right']))
+        
+        nullCoords = GRanges(
+            seqnames = c(seqnames(emptyNulls), seqnames(overLoc)[c(which(leftGood & rightGood), which(leftGood), which(rightGood))]),
+            IRanges(
+                start = as.integer(c(Rle(start(emptyNulls)),
+                    (start(overLoc) - leftRight[,"left"])[which(leftGood & rightGood)],
+                    (start(overLoc) - leftRight[,"left"])[which(leftGood)],
+                    start(overLoc)[which(rightGood)])),
+                end = as.integer(c(Rle(end(emptyNulls)),
+                    (end(overLoc) + leftRight[,"right"])[which(leftGood & rightGood)],
+                    (end(overLoc))[which(leftGood)],
+                    (end(overLoc) + leftRight[,'right'])[which(rightGood)]))
+            )
+        )
+        rm(leftRight)
+        if(!missing(minlen)) nullCoords <- nullCoords[width(nullCoords) >= minlen,]
+        
+        nullCoords <- nullCoords[order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))]
+        nullCoords <- nullCoords[.fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords)))]
+                                        #nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
+        nullCoords <- nullCoords[which(!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")))]
+        
+        potnullD <- new("lociData",
+                        replicates = sDP@replicates,
+                        coordinates = nullCoords, locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
+        potnullD
+    }
 
 .constructNulls <- function(emptyNulls, sDWithin, locDef, forPriors = FALSE, samplesize, aD = aD, cl = NULL)
   {
@@ -89,7 +94,7 @@
 
     # select from the empty regions those within or adjacent (unless looking to construct priors) to a potential locus
     
-    empties <- which(getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL))
+    empties <- which(!is.na(findOverlaps(emptyNulls, sDWithin@coordinates, type = "within", select = "first")))
 
     if(!forPriors) empties <- union(empties,
                                     unlist(lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
@@ -126,7 +131,7 @@
       
 
     # which constructed coordinates lie within a locus?    
-    nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL)),]
+    nullCoords <- nullCoords[!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")),]
 
     if(forPriors) {
       nullCoords <- nullCoords[.filterSegments(nullCoords, runif(length(nullCoords)), maxReport = samplesize),]
@@ -169,7 +174,7 @@
       cbind(left, right)
     }))
 
-    empover <- getOverlaps(emptyNulls, sDWithin@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
+    empover <- !is.na(findOverlaps(emptyNulls, sDWithin@coordinates, type = "within", select = "first"))
     if(any(empover)) emptyNulls <- emptyNulls[which(empover),] else emptyNulls <- emptyNulls[FALSE,]
     
     leftGood <- !is.na(leftRight[,'left'])
@@ -193,7 +198,7 @@
                         (end(sDWithin@coordinates) + leftRight[,'right'])[rightGood])
                       ))
     
-    overLoci <- which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))        
+    overLoci <- which(!is.na(findOverlaps(coordinates = nullCoords, segments = locDef, type = "within", select = "first")))
     filNulls <- sort(overLoci[.filterSegments(nullCoords[overLoci], runif(length(overLoci)), maxReport = samplesize)])
     splitNulls <- c(length(emptyNulls), sum(leftGood & rightGood), sum(leftGood), sum(rightGood))
     emptyData <- do.call("cbind", lapply(1:ncol(sDWithin), function(x) (rep(0L, sum(filNulls <= splitNulls[1])))))    

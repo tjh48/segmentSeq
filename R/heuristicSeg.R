@@ -56,7 +56,7 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
               }
               return(sDP)
           })
-          if(length(strandSeg) == 1) sDP <- strandSeg[[1]] else sDP <- .mergeListLoci(strandSeg)
+            if(length(strandSeg) == 1) sDP <- strandSeg[[1]] else sDP <- .mergeListLoci(strandSeg)
           return(sDP)
       })        
         lD <- .mergeListLoci(splitSeg)
@@ -84,50 +84,50 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
 
 .partheuristicSeg <- function(sDP, aDP, bimodality = FALSE, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, verbose = TRUE, locCutoff, nullCutoff, largeness = 1e8, tempDir = tempDir, cl)
   {
-    fastUniques <- function(x)
-      if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
-
-    if(nrow(sDP) == 0) {
-        #sDP <- .convertSegToLoci(sDP)
-        sDP@locLikelihoods <- matrix(nrow = 0, ncol = length(levels(sDP@replicates)))
-      return(sDP)
-    }
-    sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
-    if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = TRUE)
-    sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
-    
-    dupStarts <- which(fastUniques(cbind(as.character(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)))))
-
-    replicates <- sDP@replicates
-
-    seglens <- matrix(width(ranges(sDP@coordinates)), ncol = 1)
-
-    densityFunction <- function(rep, sDP, seglens, RKPM, gap, bimodality)
-      {
-        locDens <- rowSums(sapply(which(sDP@replicates == rep), function(jj)
-                       as.integer(sDP@data[,jj]) / seglens[,1] / libsizes(sDP)[jj])) / sum(sDP@replicates == rep)
-        #if(verbose) message(".", appendLF = FALSE)
-        
-        if(!bimodality) return(locDens * 1e9 > RKPM) else {
-          logDens <- log10(locDens)          
-          nzlocs <- which(logDens != -Inf)
-          bimodalSeparator(logDens[nzlocs], minperc = 10)
-          if(verbose) message("...done!")
-          return(Rle(logDens > locCutoff))
-        }
-      }
-
-    if(class(aDP) == "alignmentMeth") {
-        #aDP <- normaliseNC(aDP)
-        breaks <- ceiling(prod(dim(sDP)) / largeness)
-        if(breaks > 1) splitCalc <- split(1:nrow(sDP), cut(1:nrow(sDP), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(sDP))        
+      fastUniques <- function(x)
+          if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
       
-        nullLikes <- NULL
-        locLikes <- NULL
+      if(nrow(sDP) == 0) {
+                                        #sDP <- .convertSegToLoci(sDP)
+          sDP@locLikelihoods <- matrix(nrow = 0, ncol = length(levels(sDP@replicates)))
+          return(sDP)
+      }
+      sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
+      if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = TRUE)
+      sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
+      
+      dupStarts <- which(fastUniques(cbind(as.character(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)))))
 
-        if(verbose & length(splitCalc) > 1) message("")
-        if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
-        
+      replicates <- sDP@replicates
+
+      seglens <- matrix(width(ranges(sDP@coordinates)), ncol = 1)
+
+      densityFunction <- function(rep, sDP, seglens, RKPM, gap, bimodality)
+          {
+              locDens <- rowSums(sapply(which(sDP@replicates == rep), function(jj)
+                  as.integer(sDP@data[,jj]) / seglens[,1] / libsizes(sDP)[jj])) / sum(sDP@replicates == rep)
+                                        #if(verbose) message(".", appendLF = FALSE)
+              
+              if(!bimodality) return(locDens * 1e9 > RKPM) else {
+                  logDens <- log10(locDens)          
+                  nzlocs <- which(logDens != -Inf)
+                  bimodalSeparator(logDens[nzlocs], minperc = 10)
+                  if(verbose) message("...done!")
+                  return(Rle(logDens > locCutoff))
+              }
+          }
+      
+      if(class(aDP) == "alignmentMeth") {
+                                        #aDP <- normaliseNC(aDP)
+          breaks <- ceiling(prod(dim(sDP)) / largeness)
+          if(breaks > 1) splitCalc <- split(1:nrow(sDP), cut(1:nrow(sDP), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(sDP))        
+          
+          nullLikes <- NULL
+          locLikes <- NULL
+          
+          if(verbose & length(splitCalc) > 1) message("")
+          if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
+          
         for(ii in 1:length(splitCalc)) {
             if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
             if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
@@ -151,53 +151,53 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
         if(length(empties) > 0) {
             potnullD <- .constructMethNulls(emptyNulls = empties, sDP = sDP, locDef = sDP@coordinates[which(rowSums(locLikes) > 0),], minlen = gap)
             
-        if(verbose) message("Number of candidate nulls: ", nrow(potnullD), appendLF = FALSE)
-        
-        if(verbose) message(".", appendLF = FALSE)
-#        potnullD <- potnullD[width(potnullD@coordinates) > gap,]
-
+            if(verbose) message("Number of candidate nulls: ", nrow(potnullD), appendLF = FALSE)
+            
+            if(verbose) message(".", appendLF = FALSE)
+                                        #        potnullD <- potnullD[width(potnullD@coordinates) > gap,]
+            
             breaks <- ceiling(prod(dim(potnullD)) / largeness)
             if(breaks > 1) splitCalc <- split(1:nrow(potnullD), cut(1:nrow(potnullD), breaks = breaks, labels = FALSE)) else splitCalc <- list(1:nrow(potnullD))        
 
-        if(nrow(potnullD) > 0) {
-          potnullD@locLikelihoods <- do.call("rbind", lapply(1:length(splitCalc), function(ii) {
-            if(verbose) message(".", appendLF = FALSE)
-            potnullDx <- potnullD[splitCalc[[ii]],]
-            if(nrow(potnullDx@data) == 0) {
-              counts <- getCounts(potnullDx@coordinates, aD = aDP, cl = cl)
-              potnullDx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
-          }          
-            
-            colnames(potnullDx@data) <- colnames(sDP@data)
-            potnullDx@sampleObservables$nonconversion <- aDP@nonconversion
-            ll <- .methFunction(potnullDx, prop = prop, locCutoff = nullCutoff, nullP = TRUE)
-          }))
-          colnames(potnullD@locLikelihoods) <- colnames(nullLikes)        
-        }                                             
-      } else potnullD <- new("lociData", locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
+            if(nrow(potnullD) > 0) {
+                potnullD@locLikelihoods <- do.call("rbind", lapply(1:length(splitCalc), function(ii) {
+                    if(verbose) message(".", appendLF = FALSE)
+                    potnullDx <- potnullD[splitCalc[[ii]],]
+                    if(nrow(potnullDx@data) == 0) {
+                        counts <- getCounts(potnullDx@coordinates, aD = aDP, cl = cl)
+                        potnullDx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
+                    }          
+                    
+                    colnames(potnullDx@data) <- colnames(sDP@data)
+                    potnullDx@sampleObservables$nonconversion <- aDP@nonconversion
+                    ll <- .methFunction(potnullDx, prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+                }))
+                colnames(potnullD@locLikelihoods) <- colnames(nullLikes)        
+            }                                             
+        } else potnullD <- new("lociData", locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
       
-      if(verbose) message(".", appendLF = FALSE)
-      potnullD <- new("lociData",
-                      replicates = sDP@replicates,
-                      coordinates = c(sDP@coordinates, potnullD@coordinates), sampleObservables = sDP@sampleObservables, locLikelihoods = log(rbind(nullLikes, potnullD@locLikelihoods)))
+          if(verbose) message(".", appendLF = FALSE)
+          potnullD <- new("lociData",
+                          replicates = sDP@replicates,
+                          coordinates = c(sDP@coordinates, potnullD@coordinates), sampleObservables = sDP@sampleObservables, locLikelihoods = log(rbind(nullLikes, potnullD@locLikelihoods)))
 
         #potnullD@locLikelihoods <- #do.call("cbind", lapply(as.list(potnullD@locLikelihoods), function(x) log(x)))
-      sDP@locLikelihoods <- log(locLikes) #do.call("cbind", lapply(as.list(locLikes), function(x) log(x)))      
-
-      if(!is.null(tempDir))
-          save(sDP, potnullD,
-               file = paste(tempDir, "/processPosteriorVariables.RData", sep = ""))
-      
-      if(verbose) message("...done!")
-      seg <- .processPosteriors(lociPD = sDP, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, extendLoci = FALSE, verbose = verbose, cl = cl)
-      seg@sampleObservables <- sDP@sampleObservables
-      gc()
-      
-      return(seg)
-
-    } else {
-      if(nrow(sDP@data) == 0)
-        sDP@data <- getCounts(sDP@coordinates, aDP, cl = cl)
+          sDP@locLikelihoods <- log(locLikes) #do.call("cbind", lapply(as.list(locLikes), function(x) log(x)))      
+          
+          if(!is.null(tempDir))
+              save(sDP, potnullD,
+                   file = paste(tempDir, "/processPosteriorVariables.RData", sep = ""))
+          
+          if(verbose) message("...done!")
+          seg <- .processPosteriors(lociPD = sDP, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, extendLoci = FALSE, verbose = verbose, cl = cl)
+          seg@sampleObservables <- sDP@sampleObservables
+          gc()
+          
+          return(seg)
+          
+      } else {
+          if(nrow(sDP@data) == 0)
+              sDP@data <- getCounts(sDP@coordinates, aDP, cl = cl)
 
       if(verbose) message("Evaluating candidate loci...", appendLF = FALSE)
       
@@ -223,7 +223,9 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
       emptyNulls <- emptyNulls[strand(emptyNulls) == "*",]    
       
       if(bimodality) {
-        emptyNulls <- emptyNulls[getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
+                                        
+          emptyNulls <- emptyNulls[!is.na(findOverlaps(emptyNulls, potlociD@coordinates, type = "within", select = "first")),]
+                                        #getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL),]
         gap <- 10^(bimodalSeparator(log10(end(emptyNulls) - start(emptyNulls) + 1)))
       }
         
@@ -234,7 +236,8 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
       emptyPD@data <- (matrix(0, ncol = length(sDP@replicates), nrow = length(emptyPD@coordinates)))
       
       emptyNulls <- emptyNulls[width(emptyNulls) > as.integer(floor(gap)),]
-      whover <- getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
+      whover <- !is.na(findOverlaps(emptyNulls, potlociD@coordinates, type = "within", select = "first"))
+                                        #whover <- getOverlaps(emptyNulls, potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)
       emptyNulls <- emptyNulls[whover,]
       
       expandRanges <- suppressWarnings(do.call("c", lapply(seqlevels(sDP@coordinates), function(ii) {
@@ -257,20 +260,23 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
       })))
         
       whSDboth <- which(start(expandRanges) != start(sDP@coordinates) & end(expandRanges) != end(sDP@coordinates))
-      whSDboth <- whSDboth[getOverlaps(expandRanges[whSDboth,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+                                        #whSDboth <- whSDboth[getOverlaps(expandRanges[whSDboth,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+      whSDboth <- whSDboth[!is.na(findOverlaps(expandRanges[whSDboth,], potlociD@coordinates, type = "within", select = "first"))]
       bothAnn <- expandRanges[whSDboth,]
       whSDboth <- whSDboth[width(bothAnn) > gap]
       bothAnn <- bothAnn[width(bothAnn) > gap,]
         
       whSDleft <- which(start(expandRanges) != start(sDP@coordinates))
-      whSDleft <- whSDleft[getOverlaps(sDP@coordinates[whSDleft,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+                                        #whSDleft <- whSDleft[getOverlaps(sDP@coordinates[whSDleft,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+      whSDleft <- whSDleft[!is.na(findOverlaps(sDP@coordinates[whSDleft,], potlociD@coordinates, type = "within", select = "first"))]
       leftAnn <- expandRanges[whSDleft,]
       end(leftAnn) <- end(sDP@coordinates[whSDleft])
       whSDleft <- whSDleft[width(leftAnn) > gap]
       leftAnn <- leftAnn[width(leftAnn) > gap,]
       
       whSDright <- which(end(expandRanges) != end(sDP@coordinates))
-      whSDright <- whSDright[getOverlaps(sDP@coordinates[whSDright,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+                                        #whSDright <- whSDright[getOverlaps(sDP@coordinates[whSDright,], potlociD@coordinates, overlapType = "within", whichOverlaps = FALSE, cl = NULL)]
+      whSDright <- whSDright[!is.na(findOverlaps(sDP@coordinates[whSDright,], potlociD@coordinates, type = "within", select = "first"))]
       rightAnn <- expandRanges[whSDright,]
       start(rightAnn) <- start(sDP@coordinates[whSDright])
       whSDright <- whSDright[width(rightAnn) > gap]

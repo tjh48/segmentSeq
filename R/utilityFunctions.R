@@ -10,8 +10,9 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
             Cs <- rowSums(nD@Cs[,nD@replicates == rep, drop = FALSE])
             Ts <- rowSums(nD@Ts[,nD@replicates == rep, drop = FALSE])
             if(!is.null(loci))
-            {
-                ov <- getOverlaps(loci@coordinates, nD@alignments)
+                {
+                    fO <- findOverlaps(loci@coordinates, nD@alignments)                    
+                    ov <- split(subjectHits(fO), factor(queryHits(fO), levels = 1:nrow(loci)))
                 if(any(loci@locLikelihoods < 0)) ll <- exp(loci@locLikelihoods) else ll <- loci@locLikelihoods
                 sel <- ll[,rep] == 1 | rowSums(ll) == 0
                 llsamp <- unlist(ov[sel])

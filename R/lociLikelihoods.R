@@ -62,6 +62,8 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     mD <- getPriors.NB(mD, verbose = TRUE, cl = cl)
 #    print("stop here!")
 #    return(mD)
+
+    if(noReps) mD@replicates <- reps
     
     if(usePosteriors)
       {

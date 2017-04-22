@@ -48,26 +48,25 @@ Note that because the experiments that \verb'segmentSeq' is designed to analyse 
 
 
 
+
 The \verb'readGeneric' function is able to read in tab-delimited files which have appropriate column names, and create an \verb'alignmentData' object. Alternatively, if the appropriate column names are not present, we can specify which columns to use for the data. In either case, to use this function we pass a character vector of files, together with information on which data are to be treated as replicates to the function. We also need to define the lengths of the chromosome and specifiy the chromosome names as a character. The data here, drawn from text files in the 'data' directory of the \verb'segmentSeq' package are taken from the first million bases of an alignment to chromosome 1 and the first five hundred thousand bases of an alignment to chromosome 2 of \textsl{Arabidopsis thaliana} in a sequencing experiment where libraries `SL9' and `SL10' are replicates, as are `SL26' and `SL32'. Libraries `SL9' and `SL10' are sequenced from an Argonaute 6 IP, while `SL26' and `SL32' are an Argonaute 4 IP.
 
 A similar function, \verb'readBAM' performs the same operation on files in the BAM format. Please consult the help page for further details.
 
 \begin{Schunk}
 \begin{Sinput}
-> chrlens <- c(1e6, 2e5)
 > datadir <- system.file("extdata", package = "segmentSeq")
 > libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 > libnames <- c("SL9", "SL10", "SL26", "SL32")
 > replicates <- c("AGO6", "AGO6", "AGO4", "AGO4")
 > aD <- readGeneric(files = libfiles, dir = datadir,
-+                   replicates = replicates, libnames = libnames, 
-+                   chrs = c(">Chr1", ">Chr2"), chrlens = chrlens,
++                   replicates = replicates, libnames = libnames,                   
 +                   polyLength = 10, header = TRUE, gap = 200)
 > aD
 \end{Sinput}
 \begin{Soutput}
 An object of class "alignmentData"
-13765 rows and 4 columns
+3149 rows and 4 columns
 
 Slot "libnames":
 [1] "SL9"  "SL10" "SL26" "SL32"
@@ -77,40 +76,40 @@ Slot "replicates":
 Levels: AGO4 AGO6
 
 Slot "alignments":
-GRanges object with 13765 ranges and 2 metadata columns:
-          seqnames           ranges strand |                      tag multireads
-             <Rle>        <IRanges>  <Rle> |              <character>  <numeric>
-      [1]    >Chr1       [265, 284]      - |     AAATGAAGATAAACCATCCA          1
-      [2]    >Chr1       [405, 427]      - |  AAGGAGTAAGAATGACAATAAAT          1
-      [3]    >Chr1       [406, 420]      - |          AAGAATGACAATAAA          1
-      [4]    >Chr1       [600, 623]      + | AAGGATTGGTGGTTTGAAGACACA          1
-      [5]    >Chr1       [665, 688]      + | ATCCTTGTAGCACACATTTTGGCA          1
-      ...      ...              ...    ... .                      ...        ...
-  [13761]    >Chr2 [179972, 179993]      + |   ATGAATGGCTCTCTCTAGCGGA          1
-  [13762]    >Chr2 [179978, 180000]      - |  GAGATTCTCCGCTAGAGAGAGCC          1
-  [13763]    >Chr2 [179999, 180022]      - | ATTAATATTAATTCATCGGGAAGA          1
-  [13764]    >Chr2 [180002, 180022]      - |    ATTAATATTAATTCATCGGGA          1
-  [13765]    >Chr2 [180014, 180037]      + | AATATTAATGGTATTTGTGGAAAA          1
+GRanges object with 3149 ranges and 2 metadata columns:
+         seqnames           ranges strand |                      tag multireads
+            <Rle>        <IRanges>  <Rle> |              <character>  <numeric>
+     [1]    >Chr1       [265, 284]      - |     AAATGAAGATAAACCATCCA          1
+     [2]    >Chr1       [405, 427]      - |  AAGGAGTAAGAATGACAATAAAT          1
+     [3]    >Chr1       [406, 420]      - |          AAGAATGACAATAAA          1
+     [4]    >Chr1       [600, 623]      + | AAGGATTGGTGGTTTGAAGACACA          1
+     [5]    >Chr1       [665, 688]      + | ATCCTTGTAGCACACATTTTGGCA          1
+     ...      ...              ...    ... .                      ...        ...
+  [3145]    >Chr1 [991569, 991589]      - |    CCGATAAACGCATACTTCCCT          1
+  [3146]    >Chr1 [992039, 992054]      - |         AAGGAAATTAGAAAAT          1
+  [3147]    >Chr1 [995357, 995372]      + |         AGAGACATGGGCGACA          1
+  [3148]    >Chr1 [995493, 995507]      + |          AAACTCGTGAAGAAG          1
+  [3149]    >Chr1 [995817, 995840]      - | AGAGATCAAGTATATAGAATTAAG          1
   -------
-  seqinfo: 2 sequences from an unspecified genome; no seqlengths
+  seqinfo: 1 sequence from an unspecified genome; no seqlengths
 
 Slot "data":
-Matrix with  13765  rows.
-      SL9 SL10 SL26 SL32
-1       1    0    0    0
-2       0    0    0    2
-3       0    1    0    0
-4       0    1    0    0
-5       7    1    0    0
-...   ...  ...  ...  ...
-13761   2    7    0    0
-13762   0    1    0    0
-13763   0    1    0    0
-13764   0    1    0    0
-13765   1    0    0    0
+Matrix with  3149  rows.
+     SL9 SL10 SL26 SL32
+1      1    0    0    0
+2      0    0    0    2
+3      0    1    0    0
+4      0    1    0    0
+5      7    1    0    0
+...  ...  ...  ...  ...
+3145   1    0    0    0
+3146   0    1    0    0
+3147   0    1    0    0
+3148   0    1    0    0
+3149   1    0    0    0
 
 Slot "libsizes":
-[1] 4447 6531 9666 6675
+[1] 1193 1598 1818 1417
 \end{Soutput}
 \end{Schunk}
 
@@ -122,24 +121,24 @@ Next, we process this \verb'alignmentData' object to produce a \verb'segData' ob
 > sD
 \end{Sinput}
 \begin{Soutput}
-GRanges object with 16321 ranges and 0 metadata columns:
-          seqnames           ranges strand
-             <Rle>        <IRanges>  <Rle>
-      [1]    >Chr1       [265, 284]      *
-      [2]    >Chr1       [265, 420]      *
-      [3]    >Chr1       [265, 623]      *
-      [4]    >Chr1       [265, 688]      *
-      [5]    >Chr1       [265, 830]      *
-      ...      ...              ...    ...
-  [16317]    >Chr2 [179708, 179872]      *
-  [16318]    >Chr2 [179708, 180037]      *
-  [16319]    >Chr2 [179738, 179872]      *
-  [16320]    >Chr2 [179738, 180037]      *
-  [16321]    >Chr2 [179923, 180037]      *
+GRanges object with 1452 ranges and 0 metadata columns:
+         seqnames           ranges strand
+            <Rle>        <IRanges>  <Rle>
+     [1]    >Chr1       [265, 284]      *
+     [2]    >Chr1       [265, 420]      *
+     [3]    >Chr1       [265, 623]      *
+     [4]    >Chr1       [265, 688]      *
+     [5]    >Chr1       [265, 830]      *
+     ...      ...              ...    ...
+  [1448]    >Chr1 [992039, 992054]      *
+  [1449]    >Chr1 [995357, 995372]      *
+  [1450]    >Chr1 [995357, 995507]      *
+  [1451]    >Chr1 [995493, 995507]      *
+  [1452]    >Chr1 [995817, 995840]      *
   -------
-  seqinfo: 2 sequences from an unspecified genome; no seqlengths
+  seqinfo: 1 sequence from an unspecified genome; no seqlengths
 An object of class "lociData"
-16321 rows and 4 columns
+1452 rows and 4 columns
 
 Slot "replicates"
 AGO6 AGO6 AGO4 AGO4
@@ -159,32 +158,3 @@ Matrix with  0  rows.
 \end{Schunk}
 
 
-
-We can now construct a segment map from these potential segments.
-
-\subsection*{Segmentation by heuristic methods}
-
-A fast method of segmentation can be achieved by exploiting the bimodality of the densities of small RNAs in the potential segments. In this approach, we assign each potential segment to one of two clusters for each replicate group, either as a segment or a null based on the density of sequence tags within that segment. We then combine these clusterings for each replicate group to gain a consensus segmentation map.
-
-\begin{Schunk}
-\begin{Sinput}
-> hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TRUE, cl = cl)
-\end{Sinput}
-\begin{Soutput}
-......
-\end{Soutput}
-\end{Schunk}
-
-
-\subsection*{Segmentation by empirical Bayesian methods}
-
-A more refined approach to the problem uses an existing segment map (or, if not provided, a segment map defined by the \verb'hS' function) to acquire empirical distributions on the density of sequence tags within a segment. We can then estimate posterior likelihoods for each potential segment as being either a true segment or a null. We then identify all
-potential segments in the with a posterior likelihood of being a segment
-greater than some value 'lociCutoff' and containing no subregion with a posterior
-likelihood of being a null greater than 'nullCutoff'. We then greedily
-select the longest segments satisfying these criteria that do not
-overlap with any other such segments in defining our segmentation map.
-
-\begin{Schunk}
-\begin{Sinput}
-> cS <- classifySeg(sD = sD, aD = aD, cD = hS, cl = cl)      

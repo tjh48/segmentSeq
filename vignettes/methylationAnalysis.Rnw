@@ -41,6 +41,10 @@ if(require("parallel"))
 }
 @
 
+<<echo = FALSE, eval = FALSE>>=
+cl <- NULL
+@ 
+
 The \verb'segmentSeq' package is designed to read in output from the YAMA (Yet Another Methylome Aligner) program. This is a perl-based package using either bowtie or bowtie2 to align bisulphite treated reads (in an unbiased manner) to a reference and identify the number of times each cytosine is identified as methylated or unmethylated. Unlike most other aligners, YAMA does not require that reads that map to more than one location are discarded, instead it reports the number of alternate matches to the reference for each cytosine. This is then used by \verb'segmentSeq' to weight the observed number of methylated/un-methylated cytosines at a location. The files used here have been compressed to save space.
 
 <<>>=
@@ -113,8 +117,12 @@ hS <- mergeMethSegs(hS, mD, gap = 5000, cl = cl)
 
 We can then estimate posterior likelihoods on the defined loci by applying empirical Bayesian methods. These will not change the locus definition, but will assign likelihoods that the identified loci represent a true methylation locus in each replicate group.
 
-<<>>=
+<<eval = FALSE>>=
 hSL <- lociLikelihoods(hS, mD, cl = cl)
+@ 
+
+<<echo = FALSE>>=
+data(hSL)
 @ 
 
 %\subsection*{Segmentation by empirical Bayesian Methods}

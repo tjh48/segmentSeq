@@ -171,7 +171,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
   {
     loci <- cD@coordinates
     lociLens <- width(loci)
-    countLoci <- cD@data
+    countLoci <- round(cD@data)
 
     if(inferNulls)
         {

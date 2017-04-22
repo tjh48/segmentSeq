@@ -238,10 +238,12 @@ readGeneric <-
             if(!all(levels(replicates) %in% replicates))
                 stop("There appear to be additional levels in your (factor) replicates specification which are not present in the replicates vector.")
 
-    
-            if(any(chrlens != as.integer(chrlens)))
-                stop("The 'chrlens' vector must be castable as an integer")
-            chrlens <- as.integer(chrlens)    
+
+            if(!missing(chrlens) & !missing(chrs)) {
+                if(any(chrlens != as.integer(chrlens)))
+                    stop("The 'chrlens' vector must be castable as an integer")
+                chrlens <- as.integer(chrlens)
+            }
             
             countPresent <- TRUE
             tagPresent <- TRUE

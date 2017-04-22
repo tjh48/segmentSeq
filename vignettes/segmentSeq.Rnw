@@ -42,6 +42,10 @@ if(require("parallel"))
 }
 @
 
+<<echo = FALSE, results = hide, eval = FALSE>>=
+cl <- NULL
+@
+
 <<echo = FALSE, results = hide>>=
 set.seed(1)
 @ 
@@ -52,16 +56,13 @@ The \verb'readGeneric' function is able to read in tab-delimited files which hav
 A similar function, \verb'readBAM' performs the same operation on files in the BAM format. Please consult the help page for further details.
 
 <<>>=
-chrlens <- c(1e6, 2e5)
-
 datadir <- system.file("extdata", package = "segmentSeq")
 libfiles <- c("SL9.txt", "SL10.txt", "SL26.txt", "SL32.txt")
 libnames <- c("SL9", "SL10", "SL26", "SL32")
 replicates <- c("AGO6", "AGO6", "AGO4", "AGO4")
 
 aD <- readGeneric(files = libfiles, dir = datadir,
-                  replicates = replicates, libnames = libnames, 
-                  chrs = c(">Chr1", ">Chr2"), chrlens = chrlens,
+                  replicates = replicates, libnames = libnames,                   
                   polyLength = 10, header = TRUE, gap = 200)
 aD
 @ 
@@ -75,7 +76,7 @@ sD
 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(sD) != 16321) stop("sD object is the wrong size (should have 16321 rows). Failure.")
+if(nrow(sD) != 1452) stop("sD object is the wrong size (should have 1452 rows). Failure.")
 @ 
 
 We can now construct a segment map from these potential segments.
@@ -89,8 +90,8 @@ hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TR
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 1027) stop("hS object is the wrong size (should have 1027 rows). Failure.")
-if(any(abs(colSums(exp(hS@locLikelihoods)) - c(242, 532)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
+if(nrow(hS) != 507) stop("hS object is the wrong size (should have 507 rows). Failure.")
+if(any(abs(colSums(exp(hS@locLikelihoods)) - c(88, 227)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
 @ 
 
 \subsection*{Segmentation by empirical Bayesian methods}
@@ -108,8 +109,8 @@ cS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(abs(nrow(cS) - 142) > 2) stop("cS object is the wrong size (should have ~142 rows). Likely failure.")
-if(any(abs(colSums(exp(cS@locLikelihoods)) - c(58,73)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
+if(abs(nrow(cS) - 64) > 2) stop("cS object is the wrong size (should have ~142 rows). Likely failure.")
+if(any(abs(colSums(exp(cS@locLikelihoods)) - c(29,31)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
 @ 
 
 

@@ -139,8 +139,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
               if(class(curNullsWithin) == "lociData")
                   {
                       curNullsWithin <- getPriors.NB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
-                  } else if(class(curNullsWithin) == "methData")
-                        curNullsWithin <- getPriors.BB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
+                  } #else if(class(curNullsWithin) == "methData")
+                    #    curNullsWithin <- getPriors.BB(curNullsWithin, samplesize = samplesize, verbose = FALSE, cl = cl)
               
               curNullsWithin@priors$weights <- matrix(0, nrow = nrow(curNullsWithin@priors$sampled), ncol = length(unique(curNullsWithin@replicates)))
               
@@ -149,8 +149,8 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
               groups(nullSegPriors) <- list(replicates(nullSegPriors))
               if(class(nullSegPriors) == "lociData") {
                   nullSegPriors <- getPriors.NB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
-              } else if(class(nullSegPriors) == "methData")
-                    nullSegPriors <- getPriors.BB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
+              } #else if(class(nullSegPriors) == "methData")
+                #    nullSegPriors <- getPriors.BB(nullSegPriors, samplesize = samplesize, verbose = FALSE, cl = cl)
           
               nullSampled = list(list(nullSegPriors@priors$sampled), list(curNullsWithin@priors$sampled))        
               nullPriors <- lapply(levels(sD@replicates), function(rep) {

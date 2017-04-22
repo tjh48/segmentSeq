@@ -41,10 +41,12 @@ readBAM(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL,
 }
   \item{chrs}{
     A chracter vector defining (a selection of) the chromosome names
-    used in the alignment files.
+    used in the alignment files; optional, will be inferred from data if
+    not given.
 }
   \item{chrlens}{
-    Lengths of the chromosomes to which the alignments were made.
+    Lengths of the chromosomes to which the alignments were made;
+    optional, will be inferred from data if not given.
   }
   \item{cols}{
     A named character vector which describes which column of the input
@@ -145,11 +147,6 @@ Thomas J. Hardcastle
   \code{\link{alignmentData}}
 }
 \examples{
-
-# Define the chromosome lengths for the genome of interest.
-
-chrlens <- c(2e6, 1e6)
-
 # Define the files containing sample information.
 
 datadir <- system.file("extdata", package = "segmentSeq")
@@ -163,8 +160,7 @@ replicates <- c(1,1,2,2)
 # Process the files to produce an `alignmentData' object.
 
 alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
-replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens)
+replicates, libnames = libnames)
 
 }
 \keyword{files}

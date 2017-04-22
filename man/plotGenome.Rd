@@ -68,12 +68,6 @@ Thomas J. Hardcastle
 \code{\linkS4class{alignmentData}}, \code{\link{heuristicSeg}}, \code{\link{classifySeg}}
 }
 \examples{
-
-
-# Define the chromosome lengths for the genome of interest.
-
-chrlens <- c(2e6, 1e6)
-
 # Define the files containing sample information.
 
 datadir <- system.file("extdata", package = "segmentSeq")
@@ -87,8 +81,7 @@ replicates <- c(1,1,2,2)
 # Process the files to produce an `alignmentData' object.
 
 alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
-replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens, gap = 100)
+replicates, libnames = libnames, gap = 100)
 
 # Plot the alignments to the genome on chromosome 1 between bases 1 and 10000
 

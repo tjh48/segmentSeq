@@ -50,10 +50,6 @@ Thomas J. Hardcastle
 }
 
 \examples{
-# Define the chromosome lengths for the genome of interest.
-
-chrlens <- c(2e6, 1e6)
-
 # Define the files containing sample information.
 
 datadir <- system.file("extdata", package = "segmentSeq")
@@ -67,8 +63,7 @@ replicates <- c(1,1,2,2)
 # Process the files to produce an `alignmentData' object.
 
 alignData <- readGeneric(file = libfiles, dir = datadir, replicates =
-replicates, libnames = libnames, chrs = c(">Chr1", ">Chr2"), chrlens =
-chrlens)
+replicates, libnames = libnames, gap = 100)
 
 # Process the alignmentData object to produce a `segData' object.
 

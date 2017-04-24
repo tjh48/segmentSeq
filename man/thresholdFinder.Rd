@@ -95,7 +95,7 @@ mD <- readMeths(files = files, dir = datadir,
 libnames = c("A1", "A2", "B1", "B2"), replicates = c("A","A","B","B"),
 nonconversion = c(0.004777, 0.005903, 0.016514, 0.006134))
 
-thresholdFinder("beta", mD, cl = NULL)
+\dontrun{thresholdFinder("beta", mD, cl = NULL)}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

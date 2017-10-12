@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, tail = 0.1, subset = NULL, cl)
   {
     if(class(aD) == "alignmentMeth")

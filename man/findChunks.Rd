@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{findChunks}
 \alias{findChunks}
 \title{Identifies `chunks' of data within a set of aligned reads.}

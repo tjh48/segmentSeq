@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{alignmentMeth-class}
 \Rdversion{1.1}
 \docType{class}

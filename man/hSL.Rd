@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{hSL}
 \docType{data}
 \alias{hSL}

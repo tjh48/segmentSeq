@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{getCounts}
 \alias{getCounts}
 \title{Gets counts from alignment data from a set of genome segments.}

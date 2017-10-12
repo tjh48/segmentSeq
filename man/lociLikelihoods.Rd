@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{lociLikelihoods}
 \alias{lociLikelihoods}
 \title{Evaluates the posterior likelihoods of each region defined by a

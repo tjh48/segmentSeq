@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{processAD}
 \alias{processAD}
 \title{Processes an `alignmentData' or `alignmentMeth' object into a

@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{plotGenome}
 \alias{plotGenome}
 \title{Plots the alignment of sequence tags on the genome given an

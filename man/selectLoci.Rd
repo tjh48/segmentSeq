@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{selectLoci}
 \alias{selectLoci}
 %- Also NEED an '\alias' for EACH other topic documented here.

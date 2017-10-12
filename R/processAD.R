@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 .findMethChunks <- function(alignments, gap)
 {
   chunks <- Rle(rep(NA, length(alignments)))

@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 
 thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100, abstol = 1e-4, verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list()) {
     if(!missing(subset)) aMS <- aM[subset,] else aMS <- aM

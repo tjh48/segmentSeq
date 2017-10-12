@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 .extractStrand <- function(sD, strand) {
   sDPlus <- sD[,grep(strand, colnames(sD@Cs))]
   sDPlus@replicates <- as.factor(gsub(paste("\\.", strand, sep = ""), "", as.character(sDPlus@replicates[grep(strand, sDPlus@replicates)])))

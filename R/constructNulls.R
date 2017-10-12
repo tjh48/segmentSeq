@@ -1,9 +1,9 @@
-% modification on git from copied files
+# modification on git from copied files
 .zeroInMeth <- function(aD, smallSegs)
     {
 
         
-    zeroCs <- !is.na(findOverlaps(aD@alignments, smallSegs, select = "arbitrary")) #.getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
+    zeroCs <- !is.na(findOverlaps(aD@alignments, smallSegs, select = "arbitrary")) #getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
 #    zeroCs <- rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) == 0
     
     chrBreaks <- which(seqnames(aD@alignments)[-nrow(aD)] != seqnames(aD@alignments)[-1])
@@ -31,7 +31,7 @@
     {
         
         overLoc <- sDP@coordinates[!is.na(findOverlaps(sDP@coordinates, locDef, type = "within", select = "arbitrary")),]
-                                        #.getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
+                                        #getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
                      
     
         leftRight <- do.call("rbind", lapply(seqlevels(overLoc), function(chr) {

@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 setMethod("c", "lociData", function(x, ..., recursive = FALSE) {
     cdl <- list(...)
     catLD <- callNextMethod()

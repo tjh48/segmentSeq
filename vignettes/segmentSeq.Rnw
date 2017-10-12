@@ -1,3 +1,4 @@
+% modification on git from copied files
 %\VignetteIndexEntry{segmentSeq: small RNA locus detection}
 %\VignettePackage{segmentSeq}
 

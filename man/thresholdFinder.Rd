@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{thresholdFinder}
 \alias{thresholdFinder}
 %- Also NEED an '\alias' for EACH other topic documented here.

@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{segClass-class}
 \Rdversion{1.1}
 \docType{class}

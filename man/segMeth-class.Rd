@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{segMeth-class}
 \Rdversion{1.1}
 \docType{class}

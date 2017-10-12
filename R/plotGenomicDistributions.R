@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 .averageMethylationRegions <- function (redMD, subcoord, redOvers, position, samples, lenMod, cuts, surrounding)
 {
   uus <- unique(unlist(samples))

@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp = FALSE, trimMeth = FALSE)
   {
     if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)

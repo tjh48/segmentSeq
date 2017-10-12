@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 .tagDuplicated <- function(x)
     if(!"tag" %in% colnames(values(x))) duplicatedIntegerQuads(seqnames(x), start(x), strand(x), end(x)) else duplicatedIntegerQuads(seqnames(x), start(x), strand(x), match(x$tag, unique(x$tag)))
 

@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{segmentSeq-package}
 \alias{segmentSeq-package}
 \alias{segmentSeq}

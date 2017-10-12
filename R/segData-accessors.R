@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 #setMethod("[", "segData", function(x, i, j, ..., drop = FALSE) {
 #  x <- callNextMethod(x, i, j, ..., drop = FALSE)
 #  if(!missing(i))

@@ -1,3 +1,4 @@
+% modification on git from copied files
 %\VignetteIndexEntry{segmentsSeq: Methylation locus identification}
 %\VignettePackage{segmentSeq}
 

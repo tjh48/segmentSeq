@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{methData-class}
 \docType{class}
 \alias{methData}

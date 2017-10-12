@@ -1,3 +1,4 @@
+% modification on git from copied files
 \name{readMethods}
 \alias{readGeneric}
 \alias{readBAM}

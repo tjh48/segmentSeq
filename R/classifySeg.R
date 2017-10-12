@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 .constructPriorNulls <- function(sD, aD, samplesize, cl)
     {
         if(inherits(sD, "lociData")) sD <- list(sD)
@@ -181,7 +181,7 @@ classifySeg <- function(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegio
           message("Finding candidate priors...", appendLF = FALSE)
           
           subLoc <- !is.na(findOverlaps(sD@coordinates, cD@coordinates, type = "within", select = "first"))
-                                        #    subLoc <- .getOverlaps(coordinates = sD@coordinates,
+                                        #    subLoc <- getOverlaps(coordinates = sD@coordinates,
                                         #                          segments = cD@coordinates, overlapType = "within", 
                                         #                          whichOverlaps = FALSE, cl = NULL)
           subLoc <- which(subLoc)[.filterSegments(sD@coordinates[subLoc,], runif(sum(subLoc)))]

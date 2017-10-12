@@ -1,4 +1,4 @@
-% modification on git from copied files
+# modification on git from copied files
 #setMethod("[", "segClass", function(x, i, j, ..., drop = FALSE) {
 #  if(!missing(i))
 #    {

@@ -1,3 +1,4 @@
+% modification on git from copied files
 setMethod("show", "alignmentMeth", function(object) {
   callNextMethod(object)
 

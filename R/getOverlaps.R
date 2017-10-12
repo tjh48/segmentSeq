@@ -1,17 +1,18 @@
-#getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whichOverlaps = TRUE, ignoreStrand = FALSE, cl)
-#  {
-#    overlaps <- c()
-#    if(ignoreStrand) {
-#      overlaps <- .getOverlaps(coordinates, segments, overlapType = overlapType, whichOverlaps = whichOverlaps, cl = cl)
-#    } else {
-#      for (ss in levels(strand(segments)))
-#        overlaps[which(strand(coordinates) == ss)] <- .getOverlaps(
-#                               coordinates = coordinates[which(strand(coordinates) == ss),],
-#                               segments = segments[which(strand(segments) %in% list(c("+", "*"), c("-", "*"), c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
-#                               overlapType = overlapType, whichOverlaps = whichOverlaps, cl = cl)
-#    }
-#    overlaps      
-#  }
+% modification on git from copied files
+getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whichOverlaps = TRUE, ignoreStrand = FALSE, cl)
+  {
+    overlaps <- c()
+    if(ignoreStrand) {
+      overlaps <- .getOverlaps(coordinates, segments, overlapType = overlapType, whichOverlaps = whichOverlaps, cl = cl)
+    } else {
+      for (ss in levels(strand(segments)))
+        overlaps[which(strand(coordinates) == ss)] <- .getOverlaps(
+                               coordinates = coordinates[which(strand(coordinates) == ss),],
+                               segments = segments[which(strand(segments) %in% list(c("+", "*"), c("-", "*"), c("+", "-", "*"))[[which(c("+", "-", "*") == ss)]]),],
+                               overlapType = overlapType, whichOverlaps = whichOverlaps, cl = cl)
+    }
+    overlaps      
+  }
 
 
 .getOverlaps <- function(coordinates, segments, overlapType = "overlapping", whichOverlaps = TRUE, cl)

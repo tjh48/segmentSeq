@@ -3,6 +3,7 @@
 \alias{lociData}
 \alias{lociData-class}
 \alias{dim,lociData-method}
+\alias{c,lociData-method}
 \alias{[,lociData-method}
 \alias{[,lociData,ANY,ANY,ANY-method}
 \alias{[,lociData,ANY,ANY-method}
@@ -71,7 +72,7 @@ Class \code{"\linkS4class{countData}"}, directly.
 }
 
 \section{Methods}{
-  Methods `new', `dim', `[' and `show' have been defined for this class.
+  Methods `new', `dim', `[', `c' and `show' have been defined for this class.
 }
 
 \author{Thomas J. Hardcastle}

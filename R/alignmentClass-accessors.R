@@ -1,3 +1,4 @@
+% modification on git from copied files
 setMethod("[", "alignmentClass", function(x, i, j, ..., drop = FALSE) {
   if(!missing(i))
     {

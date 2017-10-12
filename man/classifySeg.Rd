@@ -13,7 +13,7 @@ order to define a new (and improved) segment map.
 \usage{
 classifySeg(sD, cD, aD, lociCutoff = 0.9, nullCutoff = 0.9, subRegion =
 NULL, getLikes = TRUE, lR = FALSE, samplesize = 1e5, largeness = 1e8,
-tempDir = NULL, cl) 
+tempDir = NULL, recoverFromTemp = FALSE, cl) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -45,6 +45,8 @@ tempDir = NULL, cl)
   \item{largeness}{The maximum size for a split analysis.}
   \item{tempDir}{A directory for storing temporary files produced during
     the segmentation.}
+  \item{recoverFromTemp}{If TRUE, will attempt to recover the position
+    saved in 'tempDir'. Defaults to FALSE. See Details.}
   \item{cl}{A SNOW cluster object, or NULL. See Details.}
 }
 \details{
@@ -54,7 +56,14 @@ or missing, then the \code{\link{heuristicSeg}} function is used to
 define a segmentation map. It uses these empirical distributions to
 acquire posterior likelihoods on each potential segment being either a
 true segment or a null region. These posterior likelihoods are then used
-to define the segment map. 
+to define the segment map.
+
+If \code{recoverFromTemp = TRUE}, the function will attempt to recover
+a crashed position from the temporary files in \code{tempDir}. At
+present, the function assumes you know what you are doing, and will
+perform no checking that these files are suitable for the specified
+recovery. Use with caution.
+
 }
 \value{
   A \code{\link{lociData}} object, containing the

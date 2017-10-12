@@ -1,8 +1,9 @@
+% modification on git from copied files
 .zeroInMeth <- function(aD, smallSegs)
     {
 
         
-    zeroCs <- !is.na(findOverlaps(aD@alignments, smallSegs, select = "arbitrary")) #getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
+    zeroCs <- !is.na(findOverlaps(aD@alignments, smallSegs, select = "arbitrary")) #.getOverlaps(aD@alignments, smallSegs, whichOverlaps = FALSE)
 #    zeroCs <- rowSums(sapply(1:ncol(aD), function(ii) as.integer(aD@Cs[,ii]))) == 0
     
     chrBreaks <- which(seqnames(aD@alignments)[-nrow(aD)] != seqnames(aD@alignments)[-1])
@@ -30,7 +31,7 @@
     {
         
         overLoc <- sDP@coordinates[!is.na(findOverlaps(sDP@coordinates, locDef, type = "within", select = "arbitrary")),]
-                                        #getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
+                                        #.getOverlaps(sDP@coordinates, locDef, overlapType = "within", whichOverlaps = FALSE, ignoreStrand = FALSE, cl = NULL),]
                      
     
         leftRight <- do.call("rbind", lapply(seqlevels(overLoc), function(chr) {
@@ -63,12 +64,13 @@
         )
         rm(leftRight)
         if(!missing(minlen)) nullCoords <- nullCoords[width(nullCoords) >= minlen,]
-        
-        nullCoords <- nullCoords[order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))]
-        nullCoords <- nullCoords[.fastUniques(cbind(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords)))]
-                                        #nullCoords <- nullCoords[which(getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
-        nullCoords <- nullCoords[which(!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")))]
-        
+        if(length(nullCoords) > 0) {
+            nullCoords <- unique(nullCoords)
+            nullCoords <- nullCoords[order(as.integer(seqnames(nullCoords)), start(nullCoords), end(nullCoords))]
+            nullCoords <- nullCoords[which(.getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
+            # for some reason this is incredibly slow using findOverlaps
+            #nullCoords <- nullCoords[which(!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")))]
+        }
         potnullD <- new("lociData",
                         replicates = sDP@replicates,
                         coordinates = nullCoords, locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
@@ -81,28 +83,29 @@
     leftRight <- matrix(NA, ncol = 2, nrow = nrow(sDWithin))
     colnames(leftRight) <- c("left", "right")
 
-    for(ss in levels(strand(sDWithin@coordinates)))      
-      leftRight[which(strand(sDWithin@coordinates) == ss),] <- do.call("rbind", lapply(seqlevels(sDWithin@coordinates), function(chr) {
-        sDsel <- which(seqnames(sDWithin@coordinates) == chr & strand(sDWithin@coordinates) == ss)
-        empsel <- which(seqnames(emptyNulls) == chr & strand(emptyNulls) == ss)
-        left <- start(sDWithin@coordinates[sDsel,]) -
-          start(emptyNulls[empsel])[match(start(sDWithin@coordinates[sDsel,]), (end(emptyNulls[empsel,]) + 1))]
-        right <- end(emptyNulls[empsel])[match(end(sDWithin@coordinates[sDsel,]), (start(emptyNulls[empsel,]) - 1))] - end(sDWithin@coordinates[sDsel,])
-        cbind(left, right)
-      }))
-      
+    for(ss in unique(strand(sDWithin@coordinates)))      
+        leftRight[which(strand(sDWithin@coordinates) == ss),] <- do.call("rbind",
+                                  lapply(unique(seqnames(sDWithin@coordinates)), function(chr) {
+                                      sDsel <- which(seqnames(sDWithin@coordinates) == chr & strand(sDWithin@coordinates) == ss)
+                                      empsel <- which(seqnames(emptyNulls) == chr & strand(emptyNulls) == ss)
+                                      left <- start(sDWithin@coordinates[sDsel,]) -
+                                          start(emptyNulls[empsel])[match(start(sDWithin@coordinates[sDsel,]), (end(emptyNulls[empsel,]) + 1))]
+                                      right <- end(emptyNulls[empsel])[match(end(sDWithin@coordinates[sDsel,]), (start(emptyNulls[empsel,]) - 1))] -
+                                          end(sDWithin@coordinates[sDsel,])
+                                      cbind(left, right)
+                                  }))
 
     # select from the empty regions those within or adjacent (unless looking to construct priors) to a potential locus
     
     empties <- which(!is.na(findOverlaps(emptyNulls, sDWithin@coordinates, type = "within", select = "first")))
 
-    if(!forPriors) empties <- union(empties,
-                                    unlist(lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
-                                      leftEmpties <- match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))
-                                      rightEmpties <- match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))
-                                      which(seqnames(emptyNulls) == chr)[union(leftEmpties, rightEmpties)]
-                       }))
-                                    )    
+    if(is.na(forPriors) || !forPriors) empties <- union(empties,
+                                                         unlist(lapply(levels(seqnames(sDWithin@coordinates)), function(chr) {
+                                                             leftEmpties <- match(start(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (end(emptyNulls[seqnames(emptyNulls) == chr,]) + 1))
+                                                             rightEmpties <- match(end(sDWithin@coordinates[which(seqnames(sDWithin@coordinates) == chr),]), (start(emptyNulls[seqnames(emptyNulls) == chr,]) - 1))
+                                                             which(seqnames(emptyNulls) == chr)[union(leftEmpties, rightEmpties)]
+                                                         }))
+                                                         )    
     empties <- empties[!is.na(empties)]
 
     leftGood <- (!is.na(leftRight[,'left']))
@@ -130,24 +133,29 @@
       )
       
 
-    # which constructed coordinates lie within a locus?    
-    nullCoords <- nullCoords[!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")),]
+                                        # which constructed coordinates lie within a locus?
+    nullCoords <- nullCoords[which(.getOverlaps(coordinates = nullCoords, segments = locDef, overlapType = "within", whichOverlaps = FALSE, cl = NULL))]
+    #nullCoords <- nullCoords[!is.na(findOverlaps(nullCoords, locDef, type = "within", select = "first")),]
 
+
+    if(is.na(forPriors)) {
+        if(length(nullCoords) == 0) return(nullCoords) else return(nullCoords[sample(1:length(nullCoords), 1)])        
+    }
     if(forPriors) {
-      nullCoords <- nullCoords[.filterSegments(nullCoords, runif(length(nullCoords)), maxReport = samplesize),]
+        nullCoords <- nullCoords[.filterSegments(nullCoords, runif(length(nullCoords)), maxReport = samplesize),]
     }
                                         # empty regions carry no data    
     
     if(class(aD) == "alignmentData") {
       nullData <- matrix(0L, nrow = length(nullCoords), ncol = ncol(sDWithin))
       colnames(nullData) <- colnames(sDWithin@data)
-      nullData[nullCoords$sDID > 0,] <- sDWithin@data[nullCoords$sDID[nullCoords$sDID > 0],]
+      if(nrow(sDWithin@data) > 0) nullData[nullCoords$sDID > 0,] <- sDWithin@data[nullCoords$sDID[nullCoords$sDID > 0],]
       values(nullCoords) <- NULL
       potnullD <- new("lociData", data = nullData,
                       libsizes = libsizes(sDWithin),
                       replicates = sDWithin@replicates,
                       coordinates = nullCoords)
-    } else if(class(sDWithin) == "alignmentMeth") {
+    } else if(class(aD) == "alignmentMeth") {
       values(nullCoords) <- NULL
       potnullD <- new("lociData",
                       data = list(matrix(NA, ncol = ncol(sDWithin), nrow = length(nullCoords)), 

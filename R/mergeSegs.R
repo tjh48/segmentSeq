@@ -1,3 +1,4 @@
+% modification on git from copied files
 mergeMethSegs <- function(segs, aD, gap, cl) {
 
   strandMerge <- function(strandSegs) {

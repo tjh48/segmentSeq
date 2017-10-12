@@ -1,3 +1,4 @@
+% modification on git from copied files
 #setMethod("dim", "segMeth", function(x) {
 #  nrows <- c(nrow(x@Cs), nrow(x@Ts), length(x@coordinates), nrow(x@locLikelihoods))
 #  ncols <- c(length(x@replicates), ncol(x@Cs), ncol(x@Ts))

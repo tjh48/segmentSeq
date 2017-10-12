@@ -1,3 +1,4 @@
+% modification on git from copied files
 .extractStrand <- function(sD, strand) {
   sDPlus <- sD[,grep(strand, colnames(sD@Cs))]
   sDPlus@replicates <- as.factor(gsub(paste("\\.", strand, sep = ""), "", as.character(sDPlus@replicates[grep(strand, sDPlus@replicates)])))
@@ -54,40 +55,51 @@
 
 .processPosts <- function(lociPD, nullPD, emptyPD, aD, lociCutoff = 0.9, nullCutoff = 0.9, getLikes = FALSE, verbose = TRUE, extendLoci, cl)
   {
-    if(!is.null(cl))
-      clusterEvalQ(cl, rm(list = ls()))
+      if(!is.null(cl))
+          clusterEvalQ(cl, rm(list = ls()))
 
-    if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
-    if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
-    
+      if(nrow(lociPD) > 0) selLoci <- lociPD[which(rowSums(lociPD@locLikelihoods >= log(lociCutoff), na.rm = TRUE) > 0),] else selLoci <- lociPD
+      if(nrow(nullPD) > 0) selNull <- nullPD[which(rowSums(nullPD@locLikelihoods >= log(nullCutoff), na.rm = TRUE) > 0),] else selNull <- nullPD
+      
 #    if(missing(emptyPD) & class(lociPD) == "segData")
 #      emptyPD <- nullPD[rowSums(sapply(1:ncol(nullPD), function(jj) as.integer(nullPD@data[,jj]))) == 0,]
 
     if(verbose) message("Checking overlaps...", appendLF = FALSE)
-    locAccept <- do.call("cbind", 
-                         lapply(levels(selLoci@replicates), function(rep)
-                             {
-                                 repCol <- which(levels(selLoci@replicates) == rep)
-                                 accepts <- rep(FALSE, nrow(selLoci))
-                                 repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
-                                 accepts[repLoci] <- TRUE
-                                 if(nrow(selNull) > 0 && length(repLoci) > 0) {
-                                     whichCN <- sort(unique(subjectHits(findOverlaps(selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),], selLoci@coordinates[repLoci,], type = "within"))))                                     
-                                     accepts[repLoci[whichCN]] <- FALSE
-                                 }
-                                                                  
-                                 if(verbose) message(".", appendLF = FALSE)
-                                 return(accepts)
-                             }))      
-    if(verbose) message("done.", appendLF = TRUE)
+#      locAccept <- do.call("cbind", 
+#                           lapply(levels(selLoci@replicates), function(rep)
+      for(rep in levels(selLoci@replicates))
+          {
+              if(verbose) message(".", appendLF = FALSE)
+              repCol <- which(levels(selLoci@replicates) == rep)
+              accepts <- rep(FALSE, nrow(selLoci))
+              repLoci <- which(selLoci@locLikelihoods[,repCol] >= log(lociCutoff))
+              accepts[repLoci] <- TRUE
+              if(nrow(selNull) > 0 && length(repLoci) > 0)
+                  {
+                      repNull <- sort(selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),])
+                      if(length(repNull) > 1) repNull <- repNull[c(1, which(diff(start(repNull)) != 0))+1,]
+                      accepts[repLoci] <- !.getOverlaps(selLoci@coordinates[repLoci,], repNull, overlapType = "contains", whichOverlaps = FALSE, cl = NULL)
+                  }
+
+#              if(nrow(selNull) > 0 && length(repLoci) > 0) {
+#                  repNull <- sort(selNull@coordinates[which(selNull@locLikelihoods[,repCol] >= log(nullCutoff)),])
+#                  if(length(repNull) > 1) repNull <- repNull[c(1, which(diff(start(repNull)) != 0))+1,]
+#                  
+#                  repNull <- repNull[c(which(diff(end(repNull)) != 0), length(repNull)),]
+#                  whichCN <- sort(unique(subjectHits(findOverlaps(repNull, selLoci@coordinates[repLoci,], type = "within"))))                                     
+#                  accepts[repLoci[whichCN]] <- FALSE
+#              }
+              selLoci@locLikelihoods[,which(levels(replicates(selLoci)) == rep)] <- log(as.integer(accepts))
+          }
+      if(verbose) message("done.", appendLF = TRUE)
     
     if(verbose) message("Selecting loci...", appendLF = FALSE)
 
-    locTrue <- sort(unique(unlist(lapply(1:ncol(locAccept), function(rep) which(locAccept[,rep])))))
+    locTrue <- unique(which(selLoci@locLikelihoods == 0, arr.ind = TRUE)[,1])
     selLoci <- selLoci[locTrue,]
-    segAccept <- locAccept[locTrue,,drop = FALSE]
+      segAccept <- selLoci@locLikelihoods == 0
     
-    rm(selNull, locAccept, locTrue)
+    rm(selNull, locTrue)
     
     gc()
 

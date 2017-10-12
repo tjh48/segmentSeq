@@ -10,7 +10,7 @@
 \usage{
 lociLikelihoods(cD, aD, newCounts = FALSE, bootStraps = 3,
                 inferNulls = TRUE, nasZero = FALSE, usePosteriors =
-TRUE, cl)
+TRUE, tail = 0.1, subset = NULL, cl)
 }
 \arguments{
   \item{cD}{
@@ -33,6 +33,10 @@ TRUE, cl)
   \item{usePosteriors}{If TRUE, the function uses the existing
     likelihoods to weight the prior estimation of parameters. Defaults
     to TRUE.}
+  \item{tail}{The cutoff for the tail of the distribution to be used in
+    pre-calculating data for methylation analysis. See
+    \code{\link[baySeq:methObservables]{methObservables}}.}
+  \item{subset}{A subset of the data on which to calculate the likelihoods.}
   \item{cl}{
     A SNOW cluster object, or NULL. See Details.
 }

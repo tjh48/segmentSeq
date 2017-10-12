@@ -1,3 +1,4 @@
+% modification on git from copied files
 plotGenome <-
 function(aD, loci, chr = 1, limits = c(0, 1e4), samples = NULL, plotType = "pileup", plotDuplicated = FALSE, density = 0, showNumber = TRUE, logScale = FALSE, cap = Inf, ...)
 {

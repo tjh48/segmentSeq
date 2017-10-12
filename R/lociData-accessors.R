@@ -1,3 +1,15 @@
+% modification on git from copied files
+setMethod("c", "lociData", function(x, ..., recursive = FALSE) {
+    cdl <- list(...)
+    catLD <- callNextMethod()
+    
+    if(all(sapply(cdl, function(z) all.equal(z@replicates, current = x@replicates)))) {
+        nLL <- do.call("rbind", (c(list(x@locLikelihoods), lapply(cdl, function(x) x@locLikelihoods))))
+    }
+    nCoord <- do.call("c", c(list(x@coordinates), lapply(cdl, function(x) x@coordinates)))
+    new("lociData", catLD, locLikelihoods = nLL, coordinates = nCoord)
+})
+
 setMethod("show", "lociData", function(object) {  
   show(object@coordinates)
   callNextMethod()  

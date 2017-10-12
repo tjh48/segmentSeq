@@ -91,7 +91,7 @@ hS <- heuristicSeg(sD = sD, aD = aD, RKPM = 1000, largeness = 1e8, getLikes = TR
 
 <<echo = FALSE, results = hide>>=
 if(nrow(hS) != 507) stop("hS object is the wrong size (should have 507 rows). Failure.")
-if(any(abs(colSums(exp(hS@locLikelihoods)) - c(88, 227)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
+if(any(abs(colSums(exp(hS@locLikelihoods)) - c(88, 208)) > 2)) stop("hS object contains wrong number of loci. Likely failure.")
 @ 
 
 \subsection*{Segmentation by empirical Bayesian methods}
@@ -110,7 +110,7 @@ cS
 
 <<echo = FALSE, results = hide>>=
 if(abs(nrow(cS) - 64) > 2) stop("cS object is the wrong size (should have ~142 rows). Likely failure.")
-if(any(abs(colSums(exp(cS@locLikelihoods)) - c(29,31)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
+if(any(abs(colSums(exp(cS@locLikelihoods)) - c(29,36)) > 2)) stop("cS object contains wrong number of loci. Likely failure.")
 @ 
 
 

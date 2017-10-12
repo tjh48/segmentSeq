@@ -1,3 +1,4 @@
+% modification on git from copied files
 setClass("alignmentClass", representation(alignments = "GRanges", libnames = "character", replicates = "factor"))
 setClass("alignmentData", representation(data = "matrix", libsizes = "numeric"), contains = "alignmentClass")
 setClass("alignmentMeth", representation(Cs = "matrix", Ts = "matrix", nonconversion = "numeric"), contains = "alignmentClass")

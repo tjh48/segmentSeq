@@ -1,3 +1,4 @@
+% modification on git from copied files
 
 thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100, abstol = 1e-4, verbose = FALSE, cl = NULL, processAD.args = list(), heuristicSeg.args = list()) {
     if(!missing(subset)) aMS <- aM[subset,] else aMS <- aM
@@ -136,7 +137,7 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
   {
     chrfilter <- function(chrsegs, suborderOn, ...)
       {
-        message(".", appendLF = FALSE)
+        #message(".", appendLF = FALSE)
         cummaxEnd <- cummax(end(chrsegs))
         cumminStart <- cummax(start(chrsegs))
         
@@ -174,7 +175,7 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
 
     newchrfilter <- function(chrsegs, suborderOn, ...)
       {
-        message(".", appendLF = FALSE)
+          #message(".", appendLF = FALSE)
         
         filtsegs <- order(suborderOn, ...)
     
@@ -205,7 +206,7 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
       }
 
     
-    chrs <- levels(seqnames(segs))
+    chrs <- unique(seqnames(segs))
 
     filtlist <- unlist(lapply(chrs, function(cc, orderOn, ...)
                               {
@@ -294,24 +295,24 @@ thresholdFinder <- function(method, aM, subset, minprop = 0.05, bootstrap = 100,
 #  }
 
 
-.splitSD <- function(sD, largeness = 1e8)
+.splitSD <- function(sD, chunkSD, largeness = 1e8)
   {
-    winsize <- ceiling(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
+      winsize <- ceiling(nrow(sD) / ceiling(prod(dim(sD)) / largeness))
     
-    chunkSD <- findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE, justChunks = TRUE)
-    chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
-    winchunks <- ceiling(chunkWindows[,2] / winsize)
-    dupWin <- sort(c(which(!duplicated(winchunks)), which(diff(winchunks) > 1) + 2))
-    dupWin <- cbind(dupWin, c(dupWin[-1] - 1, nrow(chunkWindows)))
-    dupWin <- dupWin[dupWin[,2] >= dupWin[,1],,drop = FALSE]
-                     
-    windowChunks <- lapply(1:nrow(dupWin), function(ii) {
-      unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]]
-    })
-    
-    sDsplit <- lapply(windowChunks, function(wc) {
-      which(chunkSD %in% wc)
-    })
+    if(missing(chunkSD)) chunkSD <- findChunks(sD@coordinates, gap = 0, checkDuplication = FALSE, justChunks = TRUE)
+      chunkWindows <- cbind(1:length(runLength(chunkSD)), cumsum(runLength(chunkSD)))    
+      winchunks <- ceiling(chunkWindows[,2] / winsize)
+      dupWin <- sort(c(which(!duplicated(winchunks)), which(diff(winchunks) > 1) + 2))
+      dupWin <- cbind(dupWin, c(dupWin[-1] - 1, nrow(chunkWindows)))
+      dupWin <- dupWin[dupWin[,2] >= dupWin[,1],,drop = FALSE]
+      
+      windowChunks <- lapply(1:nrow(dupWin), function(ii) {
+          unique(chunkSD)[chunkWindows[dupWin[ii,1]:dupWin[ii,2],1L]]
+      })
+      
+      sDsplit <- lapply(windowChunks, function(wc) {
+          which(chunkSD %in% wc)
+      })
 
     sDsplit
   }

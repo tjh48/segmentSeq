@@ -1,3 +1,4 @@
+% modification on git from copied files
 givenExpression <- function(cD) {
     nelik = exp(rowSums(log(1 - exp(cD@locLikelihoods)), na.rm = TRUE))
     cD@posteriors <- (cD@posteriors) + log(1 - nelik)

@@ -1,15 +1,17 @@
-lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, cl)
+% modification on git from copied files
+lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, tail = 0.1, subset = NULL, cl)
   {
     if(class(aD) == "alignmentMeth")
       {
-          mD <- .methLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, usePosteriors = usePosteriors, cl = cl)
+          mD <- .methLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, usePosteriors = usePosteriors, tail = tail, subset = subset, cl = cl)
       } else if(class(aD) == "alignmentData")
-            mD <- .lociLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, nasZero = nasZero, usePosteriors = usePosteriors, cl = cl)
+            mD <- .lociLikelihoods(cD = cD, aD = aD, newCounts = newCounts, bootStraps = bootStraps, inferNulls = inferNulls, nasZero = nasZero, usePosteriors = usePosteriors, subset = subset, cl = cl)
     mD
   }
 
 .inferNulls <- function(cD, aD, cl = NULL) {
     loci <- cD@coordinates
+    values(loci) <- NULL
     lociLens <- width(loci)
     
     nulls <- gaps(loci)
@@ -33,13 +35,18 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     mD
 }
 
-.lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, cl)
+.lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNulls = TRUE, nasZero = FALSE, usePosteriors = TRUE, subset = NULL,  cl)
   {    
     loci <- cD@coordinates
     if(newCounts) cD@data <- getCounts(aD = aD, segments = loci, useChunk = TRUE, cl = cl)
     if(inferNulls)
         {
+            if(!is.null(subset)) {
+                warning("Subsetting rules are invalid if inferring null regions")
+                subset <- NULL
+            }
             mD <- .inferNulls(cD, aD)
+            mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
         } else {
             mD <- cD
             #mD@data <- countLoci
@@ -47,7 +54,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
 
     noReps <- FALSE
     reps <- replicates(mD)
-    if(all(sapply(split(replicates(mD), levels(replicates(mD))), length) == 1)) {
+    if(all(sapply(split(replicates(mD), replicates(mD)), length) == 1)) {
         replicates(mD) <- rep(1, ncol(mD))
         noReps <- TRUE
     }
@@ -90,9 +97,14 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           if(noReps) repCol <- 1
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- locW
-          
-          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
-          
+
+          repSubset <- 1:nrow(repD)
+          if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
+
+          if(length(repSubset) > 0) {
+              repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl, subset = repSubset)
+          } else return(rep(NA, nrow(cD)))
+                              
           message("...done!", appendLF = TRUE)
           repD@posteriors[,2]
         })
@@ -107,8 +119,13 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]))
           repD@priors$weights <- NULL
           
-          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, nullData = TRUE, verbose = FALSE, cl = cl)
+          repSubset <- 1:nrow(repD)
+          if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
           
+          if(length(repSubset) > 0) {
+              repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl, subset = repSubset)
+          } else return(rep(NA, nrow(cD)))
+
           message("done!", appendLF = TRUE)
           repD@posteriors[,1]
         })
@@ -117,9 +134,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
     mD@locLikelihoods <- lociWeights
     colnames(mD@locLikelihoods) <- levels(mD@replicates)
 
-    #mD@annotation <- subset(mD@annotation, select = c("chr", "start", "end"))
-
-    mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
+    #mD@annotation <- subset(mD@annotation, select = c("chr", "start", "end")) 
 
     mD@groups <- cD@groups
     mD@estProps <- cD@estProps
@@ -164,27 +179,31 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
         mD@posteriors <- rbind(matrix(NA, length(nulls), ncol(cD@posteriors)), cD@posteriors)
 
     mD <- mD[which(rowSums(mD@data) > 0),]
+    mD <- mD[order(start(mD@coordinates)),]
     mD
 }
 
-.methLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, usePosteriors = TRUE, cl)
+.methLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 1, inferNulls = TRUE, usePosteriors = TRUE, tail = 0.1, subset = NULL, cl)
   {
     loci <- cD@coordinates
     lociLens <- width(loci)
-    countLoci <- round(cD@data)
 
     if(inferNulls)
         {
+            if(!is.null(subset)) {
+                warning("Subsetting rules are invalid if inferring null regions")
+                subset <- NULL
+            }
             mD <- .inferMethNulls(cD, aD)
+            mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
         } else mD <- cD
 
-    mD <- mD[which(rowSums(mD@data) > 0),]
+    #mD <- mD[which(rowSums(mD@data) > 0),]
     mD@groups <- list(mD@replicates)
     oldPosteriors <- mD@posteriors
     mD@posteriors <- matrix(nrow = 0, ncol = length(groups(mD)))
     mD@estProps <- numeric(0)
 
-    mD <- mD[order(as.factor(seqnames(mD@coordinates)), start(mD@coordinates), end(mD@coordinates)),]
     mD@data <- round(mD@data)
 
     if(all(mD@sampleObservables$nonconversion == 0)) {
@@ -192,56 +211,72 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
         libsizes(mD) <- matrix(1, ncol = 2, nrow = ncol(mD))
     } else {
         densityFunction(mD) <- bbNCDist
-        mD <- methObservables(mD)
+        mD <- methObservables(mD, tail = tail)
     }
+
+    threshold <- 10
+    aboveThresh <- sapply(levels(mD@replicates), function(rep) {
+        repCol <- which(levels(mD@replicates) == rep)
+        rowSums(mD@data[,repCol,]) > threshold
+    })
+
     
-    mD <- getPriors(mD, samplesize = 1e4, verbose = TRUE, cl = cl)        
+    mD <- getPriors(mD, samplesize = 1e4, verbose = TRUE, cl = cl, samplingSubset = which(rowSums(!aboveThresh) == 0))
     
 
     if(usePosteriors)
       {
-        lociWeights <- sapply(levels(mD@replicates), function(rep) {
-          repCol <- which(levels(mD@replicates) == rep)
-          locW <- 1 - exp(mD@locLikelihoods[mD@priors$sampled[,1],repCol])
-          locW <- list(list(locW), list(1 - locW))
-          
-          locW <- lapply(locW, function(x) {
-            y <- x[[1]]
-            y[is.na(y)] <- 0
-            list(y)
-          })
-            
-          message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
-          repD <- mD[,mD@replicates == rep]
-          replicates(repD) <- as.factor(rep(1, ncol(repD)))
-          groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
-          repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
-          repD@priors$weights <- locW
-          
-          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl)
-          
-          
-          message("...done!", appendLF = TRUE)
-          repD@posteriors[,2]
-        })
-      } else {        
-        lociWeights <- sapply(levels(mD@replicates), function(rep) {
-          
-          message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
-          repD <- mD[,mD@replicates == rep]
-          replicates(repD) <- rep(1, ncol(repD))
-          groups(repD) <- list(rep(1, ncol(repD)))
-          repCol <- which(levels(mD@replicates) == rep)
-          repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]))
-          repD@priors$weights <- NULL
-          
-          repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, nullData = TRUE, verbose = FALSE, cl = cl)
-          
-          message("done!", appendLF = TRUE)
-          repD@posteriors[,1]
-        })
-      }    
+          lociWeights <- sapply(levels(mD@replicates), function(rep) {
+              repCol <- which(levels(mD@replicates) == rep)
+              locW <- 1 - exp(mD@locLikelihoods[mD@priors$sampled[,1],repCol])
+              locW <- list(list(locW), list(1 - locW))
+              
+              locW <- lapply(locW, function(x) {
+                  y <- x[[1]]
+                  y[is.na(y)] <- 0
+                  list(y)
+              })
+              
+              message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
+              repD <- mD[,mD@replicates == rep]
+              replicates(repD) <- as.factor(rep(1, ncol(repD)))
+              groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
+              repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]), list(mD@priors$priors[[1]][[repCol]]))
+              repD@priors$weights <- locW
 
+              repSubset <- which(rowSums(repD@data) > 0) 
+              if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
+
+              if(length(repSubset) > 0) {
+                  repD <- getLikelihoods(cD = repD, bootStraps = 2, verbose = TRUE, cl = cl, subset = repSubset, largeness = 1e8)
+              } else return(rep(NA, nrow(cD)))
+              
+              message("...done!", appendLF = TRUE)
+              repD@posteriors[,2]
+          })
+      } else {        
+          lociWeights <- sapply(levels(mD@replicates), function(rep) {
+              
+              message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
+              repD <- mD[,mD@replicates == rep]
+              replicates(repD) <- rep(1, ncol(repD))
+              groups(repD) <- list(rep(1, ncol(repD)))
+              repCol <- which(levels(mD@replicates) == rep)
+              repD@priors$priors <- list(list(mD@priors$priors[[1]][[repCol]]))
+              repD@priors$weights <- NULL
+              
+              repSubset <- which(rowSums(repD@data) > 0) 
+              if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
+              
+              if(length(repSubset) > 0) {
+                  repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = TRUE, cl = cl, subset = repSubset, largeness = 1e6)
+              } else return(rep(NA, nrow(cD)))              
+              
+              message("done!", appendLF = TRUE)
+              repD@posteriors[,1]
+          })
+      }    
+    
     mD@locLikelihoods <- lociWeights
     colnames(mD@locLikelihoods) <- levels(mD@replicates)
 

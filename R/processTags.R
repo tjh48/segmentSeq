@@ -1,5 +1,6 @@
+% modification on git from copied files
 .tagDuplicated <- function(x)
-    if(!"tag" %in% colnames(values(x))) return(duplicated(x)) else duplicatedIntegerQuads(seqnames(x), start(x), strand(x), match(x$tag, unique(x$tag)))
+    if(!"tag" %in% colnames(values(x))) duplicatedIntegerQuads(seqnames(x), start(x), strand(x), end(x)) else duplicatedIntegerQuads(seqnames(x), start(x), strand(x), match(x$tag, unique(x$tag)))
 
 readMeths <- function(files, dir = ".", libnames, replicates, nonconversion, chrs)#, splitStrands = TRUE)#, duplicateFiles)
   {
@@ -136,10 +137,12 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
     sampleNumbers <- 1:length(files)
 
     Tags <- lapply(sampleNumbers, function(ii) {
-      tags <- scanBam(files[ii])[[1]]
+        scanWhat = c("strand", "rname", "pos", "qwidth", "flag")
+        if(!discardTags) scanWhat = c(scanWhat, "seq")
+        tags <- scanBam(files[ii], param = ScanBamParam(what = scanWhat))[[1]]
       if(!is.null(countID)) {
           counts <- as.integer(scanBam(files[ii], param = ScanBamParam(tag=countID))[[1]][[1]][[1]])
-      } else counts <- (rep(1L, length(tags$seq)))
+      } else counts <- (rep(1L, length(tags$pos)))
            
       keepReads <- which(!is.na(tags$pos))      
       ir <- IRanges(start = as.integer(tags$pos[keepReads]), width = tags$qwidth[keepReads])
@@ -152,7 +155,7 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
           aln <- aln[order(as.factor(seqnames(aln)), as.integer(start(aln)), as.factor(values(aln)$tag)),]
       } else aln <- sort(aln)
 
-      dupTags <- .tagDuplicated(aln)
+        dupTags <- .tagDuplicated(aln)
       if(any(dupTags)) {
           count <- diff(c(which(!dupTags), length(dupTags) + 1))
           if(!is.null(countID)) count <- sapply(split(aln$count, rep(1:length(count), count)), sum)
@@ -207,9 +210,11 @@ function(files, dir = ".", replicates, libnames, chrs, chrlens, countID = NULL, 
       aln
   })
     
-    message(".done!")
+    if(verbose) message(".done!")
                                         #if(!missing(tempFile)) save(Tags, file = paste("tags_", tempFile, sep = ""))
     if(is.null(chrs)) seqinf <- seqinfo(Tags[[1]])
+
+    save(Tags, file = "tempTags.RData")
     
     aD <- .processTags(Tags, verbose = verbose, estimationType = estimationType, seqinf = seqinf, libnames = libnames, replicates = replicates, discardTags = discardTags)
     aD
@@ -419,7 +424,8 @@ readGeneric <-
                                IRanges(start = c(start(unqTags), start(GTags[[ii]])), end = c(end(unqTags), end(GTags[[ii]]))),
                                strand = c(strand(unqTags), strand(GTags[[ii]])),
                                tag = c(values(unqTags)$tag, values(GTags[[ii]])$tag))
-            unqTags <- sort(unqTags[!.tagDuplicated(unqTags)])
+            unqTags <- sort(unqTags)
+            unqTags <- (unqTags[!.tagDuplicated(unqTags)])
             unqTags
         }      
     }                    
@@ -429,6 +435,7 @@ readGeneric <-
         #values(unqTags)$count <- Rle(0, length(unqTags))
         counts <- do.call("cbind",
                           lapply(GTags, function(GTag) {
+                              message(".", appendLF = FALSE)
                               GTag <- sort(GTag)
 
                               if(!discardTags) {
@@ -483,7 +490,6 @@ readGeneric <-
     }))
     
     aD@libsizes[repSizes[,1]] <- repSizes[,2]
-    
     chrmatch <- which(seqlevels(aD@alignments) %in% seqlevels(seqinf))[match(seqlevels(aD@alignments), seqlevels(seqinf))]
     chrmatch <- chrmatch[!is.na(chrmatch)]
     

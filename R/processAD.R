@@ -1,3 +1,4 @@
+% modification on git from copied files
 .findMethChunks <- function(alignments, gap)
 {
   chunks <- Rle(rep(NA, length(alignments)))
@@ -100,7 +101,7 @@
       filaD <- findChunks(aD@alignments, gap, checkDuplication = FALSE)      
     } else if(class(aD) == "alignmentMeth") {
       if(!missing(filterProp)) {
-          filaD <- aD@alignments[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA)) > 0),]        
+          filaD <- aD@alignments[which(rowSums(.methFunction(aD, prop = filterProp, locCutoff = NA), na.rm = TRUE) > 0),]        
       } else filaD <- aD[rowSums(aD@Cs) > 0,]
       filaD <- .findMethChunks(filaD, gap)
     }
@@ -150,7 +151,7 @@ processAD <- function(aD, gap = 300, squeeze = 2, filterProp = 0.05, strandSplit
         {
           if(strandSplit) {
             cs <- c(.chrProcessing(cTags, cc, strand = "+", verbose = verbose),
-                      .chrProcessing(cTags, cc, strand = "-", verbose = verbose))              
+                    .chrProcessing(cTags, cc, strand = "-", verbose = verbose))              
           } else {
             cs <- .chrProcessing(cTags, cc, verbose = verbose)
           }
@@ -207,6 +208,7 @@ processAD <- function(aD, gap = 300, squeeze = 2, filterProp = 0.05, strandSplit
       tD@data <- array(c(Cs, Ts), c(dim(Cs), 2))
 #      tD@Cs = Cs
 #      tD@Ts = Ts
-    }
+  }
+      tD@coordinates$chunk <- findChunks(tD@coordinates, gap = gap, checkDuplication = FALSE, justChunks = TRUE)
     tD
   }

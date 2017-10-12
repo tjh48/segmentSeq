@@ -89,7 +89,7 @@ sD <- processAD(mD, cl = cl)
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(sD) != 215191) stop("sD object is the wrong size (should have 215191 rows). Failure.")
+if(nrow(sD) != 249271) stop("sD object is the wrong size (should have 249271 rows). Failure.")
 @ 
 
 We can now construct a segment map from these potential segments.
@@ -105,7 +105,7 @@ hS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 4298) stop("hS object is the wrong size (should have 4298 rows). Failure.")
+if(nrow(hS) != 4421) stop("hS object is the wrong size (should have 4421 rows). Failure.")
 @ 
 
 

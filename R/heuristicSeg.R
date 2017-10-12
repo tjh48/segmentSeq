@@ -1,3 +1,4 @@
+% modification on git from copied files
 heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp = FALSE, trimMeth = FALSE)
   {
     if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
@@ -14,51 +15,64 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
                               
     if(prod(dim(sD)) > largeness)
       {
-        if(recoverFromTemp & !is.null(tempDir) & file.exists(paste(tempDir, "/sDsplit.RData", sep = ""))) {
-          if(verbose) message("Recovering splitting from temporary file...")
-          load(paste(tempDir, "/sDsplit.RData", sep = ""))
+          if(recoverFromTemp & !is.null(tempDir) & file.exists(paste(tempDir, "/sDsplit.RData", sep = ""))) {
+              if(verbose) message("Recovering splitting from temporary file...")
+              load(paste(tempDir, "/sDsplit.RData", sep = ""))
         } else {
-            sDsplit <- .splitSD(sD, largeness)
+            sDsplit <- .splitSD(sD, largeness = largeness)
             if(!is.null(tempDir))
                 save(sDsplit, file = paste(tempDir, "/sDsplit.RData", sep = ""))
         }
         
         if(verbose) message("Segmentation split into ", length(sDsplit), " parts.")
 
-        splitSeg <- lapply(1:length(sDsplit), function(ii) {
+        splitSeg <- sapply(1:length(sDsplit), function(ii) {
             if(verbose) message("Segmenting; Part ", ii, " of ", length(sDsplit))
             
-            strandSeg <- lapply(unique(strand(sD@coordinates)), function(strand) {
+            strandSeg <- sapply(unique(strand(sD@coordinates)), function(strand) {
                 if(verbose) message("Strand: ", strand)
                 existingSDP <- FALSE
-                                        # better name recognition for temporary files from sD[sDsplit[[ii]]] ranges needed              
-              if(recoverFromTemp & !is.null(tempDir))
-                  {
-                      existingTemp <- dir(tempDir, pattern = paste("seg", ii, "_\\", strand, "_", sep = ""), full.names = TRUE)
-                      if(length(existingTemp) == 1) {
-                          if(verbose) message("Recovering from temporary file...")
-                          load(existingTemp)
-                          existingSDP = TRUE
-                      }
-                  }
-# sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
+                                        # better name recognition for temporary files from sD[sDsplit[[ii]]] ranges needed
+
+                if(!is.null(tempDir)) {
+                    tempFile <- paste(tempDir, "/seg", ii, "_", strand, "_", "largeness_", largeness, "_locLikes.RData", sep = "")
+                }
+                if(recoverFromTemp & !is.null(tempDir))
+                {
+                    if(file.exists(tempFile)) {
+                        if(verbose) message("Temporary file already exists...")
+                                        #          load(existingTemp)
+                        existingSDP = TRUE
+                        return(tempFile)
+                    }
+                }
+                                        # sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
                 if(!existingSDP) {
                     sDP <- .partheuristicSeg(
                         sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
                       aDP = aD,
-                      bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
+                        bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
                   
-                  if(!is.null(tempDir)) save(sDP,
-                                             file = paste(tempDir, "/seg", ii, "_", strand, "_", "largeness_", largeness,
+                    if(!is.null(tempDir)) {                        
+                        save(sDP, file = tempFile)
+                        return(tempFile)
+                    }
                                         #paste(apply(apply(as.data.frame(range(sDP@coordinates, ignore.strand = FALSE))[,1:3], 1, as.character), 2, function(x) paste(gsub(" ", "", x), collapse = "_")), collapse = "__"),
-                                                 "_locLikes.RData", sep = "")
-                                             )
-              }
-              return(sDP)
-          })
+                }
+                return(sDP)
+            })
+            if(is.character(strandSeg)) return(strandSeg)
             if(length(strandSeg) == 1) sDP <- strandSeg[[1]] else sDP <- .mergeListLoci(strandSeg)
-          return(sDP)
-      })        
+            return(sDP)
+        })
+
+          if(is.character(splitSeg))
+              splitSeg <- lapply(splitSeg, function(sdpfile) {
+                  load(sdpfile)
+                  return(sDP)
+              })
+
+          
         lD <- .mergeListLoci(splitSeg)
     } else {
         lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
@@ -139,17 +153,17 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
             lL <- .methFunction(sDPx, prop = prop, locCutoff = locCutoff)
             locLikes <- rbind(locLikes, lL)
             nL <- !lL
-            nL[rowSums(nL) > 0,] <- .methFunction(sDPx[rowSums(nL) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+            nL[rowSums(nL, na.rm = TRUE) > 0,] <- .methFunction(sDPx[rowSums(nL,na.rm = TRUE) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
             nullLikes <- rbind(nullLikes, nL)
         }
                                         # sDP@locLikelihoods <- locLikes      
         
                                         #      internalNulls <- sDP[rowSums(!sDP@locLikelihoods, na.rm = TRUE) > 0 & width(sDP@coordinates) > gap,]
         
-        empties <- .zeroInMeth(aD = aDP, smallSegs = sDP@coordinates[sDPSmall])
+          empties <- .zeroInMeth(aD = aDP, smallSegs = sDP@coordinates[sDPSmall])
         
         if(length(empties) > 0) {
-            potnullD <- .constructMethNulls(emptyNulls = empties, sDP = sDP, locDef = sDP@coordinates[which(rowSums(locLikes) > 0),], minlen = gap)
+            potnullD <- .constructMethNulls(emptyNulls = empties, sDP = sDP, locDef = sDP@coordinates[which(rowSums(locLikes, na.rm = TRUE) > 0),], minlen = gap)
             
             if(verbose) message("Number of candidate nulls: ", nrow(potnullD), appendLF = FALSE)
             
@@ -175,7 +189,8 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
                 colnames(potnullD@locLikelihoods) <- colnames(nullLikes)        
             }                                             
         } else potnullD <- new("lociData", locLikelihoods = matrix(NA, nrow = 0, ncol = nlevels(sDP@replicates)))
-      
+
+          values(sDP@coordinates) <- NULL
           if(verbose) message(".", appendLF = FALSE)
           potnullD <- new("lociData",
                           replicates = sDP@replicates,
@@ -186,12 +201,12 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
           
           if(!is.null(tempDir))
               save(sDP, potnullD,
-                   file = paste(tempDir, "/processPosteriorVariables.RData", sep = ""))
-          
+                   file = paste0(tempDir, "/processPosteriorVariables.RData"))
+
+
           if(verbose) message("...done!")
           seg <- .processPosteriors(lociPD = sDP, nullPD = potnullD, lociCutoff = 1, nullCutoff = 1, getLikes = FALSE, extendLoci = FALSE, verbose = verbose, cl = cl)
           seg@sampleObservables <- sDP@sampleObservables
-          gc()
           
           return(seg)
           
@@ -380,12 +395,12 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
         trimS <- rowSums(sapply(1:nlevels(hSut@replicates), function(rr) {
             mFSrr <- as.vector(mFS[,rr])
             mFSrr[is.na(mFSrr)] <- (hSut@locLikelihoods[is.na(mFSrr),rr] == 0)
-            (mFSrr & hSut@locLikelihoods[,rr] == 0)})) == rowSums(hSut@locLikelihoods == 0)
+            (mFSrr & hSut@locLikelihoods[,rr] == 0)})) == rowSums(hSut@locLikelihoods == 0, na.rm = TRUE)
 
         trimE <- rowSums(sapply(1:nlevels(hSut@replicates), function(rr) {
             mFErr <- as.vector(mFE[,rr])
             mFErr[is.na(mFErr)] <- (hSut@locLikelihoods[is.na(mFErr),rr] == 0)
-            (mFErr & hSut@locLikelihoods[,rr] == 0)})) == rowSums(hSut@locLikelihoods == 0)    
+            (mFErr & hSut@locLikelihoods[,rr] == 0)})) == rowSums(hSut@locLikelihoods == 0, na.rm = TRUE)    
         
         if(sum(trimS) > 0)
             start(hSut@coordinates)[which(trimS)] <-

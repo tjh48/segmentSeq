@@ -1,3 +1,4 @@
+% modification on git from copied files
 getCounts <- function(segments, aD, preFiltered = FALSE, adjustMultireads = TRUE, useChunk = FALSE, cl = cl)
   {    
     if(class(aD) == "alignmentData") {

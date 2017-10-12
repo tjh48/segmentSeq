@@ -1,3 +1,4 @@
+% modification on git from copied files
 findChunks <- function(alignments, gap, checkDuplication = TRUE, justChunks = FALSE)
 {
   chunks <- Rle(rep(NA, length(alignments)))

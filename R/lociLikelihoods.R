@@ -90,7 +90,7 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
               list(y)
             })
             
-          message(paste("Getting likelihoods for replicate group", rep), appendLF = FALSE)
+          message(paste0("Getting likelihoods for replicate group ", rep, "..."), appendLF = TRUE)
           repD <- mD[,which(mD@replicates == rep)]
           replicates(repD) <- as.factor(rep(1, ncol(repD)))
           groups(repD) <- list(rep(1, ncol(repD)), rep(1, ncol(repD)))
@@ -99,7 +99,8 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD@priors$weights <- locW
 
           repSubset <- 1:nrow(repD)
-          if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
+          if(is.list(subset)) userSub <- subset[[which(levels(mD@replicates) == rep)]] else userSub <- subset
+          if(!is.null(userSub)) repSubset <- intersect(userSub, repSubset)
 
           if(length(repSubset) > 0) {
               repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl, subset = repSubset)
@@ -120,7 +121,8 @@ lociLikelihoods <- function(cD, aD, newCounts = FALSE, bootStraps = 3, inferNull
           repD@priors$weights <- NULL
           
           repSubset <- 1:nrow(repD)
-          if(!is.null(subset)) repSubset <- intersect(subset, repSubset)
+          if(is.list(subset)) userSub <- subset[[which(levels(mD@replicates) == rep)]] else userSub <- subset
+          if(!is.null(userSub)) repSubset <- intersect(userSub, repSubset)
           
           if(length(repSubset) > 0) {
               repD <- getLikelihoods(cD = repD, bootStraps = bootStraps, verbose = FALSE, cl = cl, subset = repSubset)

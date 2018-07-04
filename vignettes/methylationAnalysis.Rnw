@@ -97,16 +97,16 @@ We can now construct a segment map from these potential segments.
 
 \subsection*{Segmentation by heuristic Bayesian methods}
 
-A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value. This value may be determined by examining the data using the 'thresholdFinder' function, or supplied manually.
+A fast method of segmentation can be achieved by assuming a binomial distribution on the data with an uninformative beta prior, and identifying those potential segments which have a sufficiently large posterior likelihood that the proportion of methylation exceeds some critical value. This value can be determined by examining the data using the 'thresholdFinder' function, but expert knowledge is likely to provide a better guess as to where methylation becomes biologically significant.
 
 <<>>=
-thresh <- thresholdFinder("beta", mD, cl = cl, bootstrap = 1)
+thresh = 0.2
 hS <- heuristicSeg(sD = sD, aD = mD, prop = thresh, cl = cl, gap = 100, getLikes = FALSE)
 hS
 @ 
 
 <<echo = FALSE, results = hide>>=
-if(nrow(hS) != 4421) stop("hS object is the wrong size (should have 4421 rows). Failure.")
+if(nrow(hS) != 2955) stop("hS object is the wrong size (should have 2955 rows). Failure.")
 @ 
 
 

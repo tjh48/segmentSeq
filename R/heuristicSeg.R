@@ -1,17 +1,17 @@
 # modification on git from copied files
-heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp = FALSE, trimMeth = FALSE)
+heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, coverage = 1, locCutoff = 0.9, nullCutoff = 0.9, subRegion = NULL, largeness = 1e8, getLikes = TRUE, verbose = TRUE, tempDir = NULL, cl = NULL, recoverFromTemp = FALSE, trimMeth = FALSE)
   {
-    if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
+      if(!is.null(tempDir)) dir.create(tempDir, showWarnings = FALSE)
 
     if(inherits(aD, "alignmentMeth") && (missing(prop) || !is.numeric(prop)))
         stop("'prop variable must be defined as a numeric variable; see 'thresholdFinder' function.")
         
     
-    if(!is.null(subRegion))
-      {
-        sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
-        aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
-      }
+      if(!is.null(subRegion))
+          {
+              sD <- sD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(sD@coordinates)) == subRegion$chr[ii] & end(sD@coordinates) >= subRegion$start[ii] & start(sD@coordinates) <= subRegion$end[ii]))),]
+              aD <- aD[unlist(lapply(1:nrow(subRegion), function(ii) which(as.character(seqnames(aD@alignments)) == subRegion$chr[ii] & end(aD@alignments) >= subRegion$start[ii] & start(aD@alignments) <= subRegion$end[ii]))),]
+          }
                               
     if(prod(dim(sD)) > largeness)
       {
@@ -48,10 +48,12 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
                 }
                                         # sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),]; aDP = aD[strand(aD@alignments) == strand,]; bimodality = FALSE; verbose = verbose; cl = NULL; RKPM = RKPM; gap = gap; prop = prop; locCutoff = locCutoff; largeness = largeness; tempDir = tempDir
                 if(!existingSDP) {
+                    subSplit <- intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]])
+                    if(length(subSplit) == 0) subSplit <- 0
                     sDP <- .partheuristicSeg(
-                        sDP = sD[intersect(which(strand(sD@coordinates) == strand), sDsplit[[ii]]),],
+                        sDP = sD[subSplit,],
                       aDP = aD,
-                        bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
+                        bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, coverage = coverage, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
                   
                     if(!is.null(tempDir)) {                        
                         save(sDP, file = tempFile)
@@ -75,7 +77,7 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
           
         lD <- .mergeListLoci(splitSeg)
     } else {
-        lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
+        lD <- .partheuristicSeg(sDP = sD, aDP = aD, bimodality = FALSE, verbose = verbose, cl = cl, RKPM = RKPM, gap = gap, prop = prop, coverage = coverage, locCutoff = locCutoff, nullCutoff = nullCutoff, largeness = largeness, tempDir = tempDir)
     }
     if(class(aD) == "alignmentMeth")
         {
@@ -96,7 +98,7 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
   }
 
 
-.partheuristicSeg <- function(sDP, aDP, bimodality = FALSE, RKPM = 1000, gap = 100, prop = 0.2, subRegion = NULL, verbose = TRUE, locCutoff, nullCutoff, largeness = 1e8, tempDir = tempDir, cl)
+.partheuristicSeg <- function(sDP, aDP, bimodality = FALSE, RKPM = 1000, gap = 100, prop = 0.2, coverage, subRegion = NULL, verbose = TRUE, locCutoff, nullCutoff, largeness = 1e8, tempDir = tempDir, cl)
   {
       fastUniques <- function(x)
           if(nrow(x) > 1) return(c(TRUE, rowSums(x[-1L,, drop = FALSE] == x[-nrow(x),,drop = FALSE]) != ncol(x))) else return(TRUE)
@@ -108,7 +110,7 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
       }
       sDP <- sDP[order(as.factor(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)), as.integer(end(sDP@coordinates))),]
       if(verbose) message("Number of candidate loci: ", nrow(sDP), appendLF = TRUE)
-      sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))
+      sDPSmall <- which(fastUniques(data.frame(chr = as.character(seqnames(sDP@coordinates)), start = as.numeric(start(sDP@coordinates)))))      
       
       dupStarts <- which(fastUniques(cbind(as.character(seqnames(sDP@coordinates)), as.integer(start(sDP@coordinates)))))
 
@@ -142,19 +144,25 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
           if(verbose & length(splitCalc) > 1) message("")
           if(verbose & length(splitCalc) > 1) message("Splitting calculation into ", length(splitCalc), " steps...", appendLF = FALSE)
           
-        for(ii in 1:length(splitCalc)) {
-            if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
-            if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
-            sDPx <- sDP[splitCalc[[ii]],]
-            if(nrow(sDPx@data) == 0) {
-                counts <- getCounts(sDPx@coordinates, aD = aDP, cl = cl)
-                sDPx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
-            }
-            lL <- .methFunction(sDPx, prop = prop, locCutoff = locCutoff)
-            locLikes <- rbind(locLikes, lL)
-            nL <- !lL
-            nL[rowSums(nL, na.rm = TRUE) > 0,] <- .methFunction(sDPx[rowSums(nL,na.rm = TRUE) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
-            nullLikes <- rbind(nullLikes, nL)
+          for(ii in 1:length(splitCalc)) {
+              if(verbose & length(splitCalc) > 1) message(ii, appendLF = FALSE)
+              if(verbose & length(splitCalc) > 1) message(".", appendLF = FALSE)
+              sDPx <- sDP[splitCalc[[ii]],]
+              if(!is.na(coverage)) selCov <- which(getOverlaps(sDPx@coordinates, aDP@alignments[rowSums(aDP@Cs + aDP@Ts) / ncol(aDP) > coverage], whichOverlaps = FALSE)) else selCov <- 1:nrow(sDPx)
+              
+              lL <- matrix(NA, nrow = nrow(sDPx), ncol = nlevels(sDPx@replicates))
+              if(length(selCov) > 0) {
+                  counts <- getCounts(sDPx@coordinates[selCov,], aD = aDP, cl = cl)
+                  sDPx@data <- array(NA, dim = dim(sDPx))
+                  sDPx@data[selCov,,] <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
+              }
+            
+              lL[selCov,] <- .methFunction(sDPx[selCov,], prop = prop, locCutoff = locCutoff)
+              
+              locLikes <- rbind(locLikes, lL)
+              nL <- !lL
+              nL[rowSums(nL, na.rm = TRUE) > 0,] <- .methFunction(sDPx[rowSums(nL,na.rm = TRUE) > 0,], prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+              nullLikes <- rbind(nullLikes, nL)
         }
                                         # sDP@locLikelihoods <- locLikes      
         
@@ -177,6 +185,11 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
                 potnullD@locLikelihoods <- do.call("rbind", lapply(1:length(splitCalc), function(ii) {
                     if(verbose) message(".", appendLF = FALSE)
                     potnullDx <- potnullD[splitCalc[[ii]],]
+
+                    if(!is.na(coverage)) selCov <- which(getOverlaps(potnullDx@coordinates, aDP@alignments[rowSums(aDP@Cs + aDP@Ts) / ncol(aDP) > coverage], whichOverlaps = FALSE)) else selCov <- 1:nrow(potnullDx)
+                    
+                    ll <- matrix(NA, nrow = nrow(potnullDx), ncol = nlevels(potnullDx@replicates))
+                    potnullDx <- potnullDx[selCov,]
                     if(nrow(potnullDx@data) == 0) {
                         counts <- getCounts(potnullDx@coordinates, aD = aDP, cl = cl)
                         potnullDx@data <- array(c(counts$Cs, counts$Ts), dim = c(dim(counts$Cs), 2))
@@ -184,7 +197,8 @@ heuristicSeg <- function(sD, aD, gap = 50, RKPM = 1000, prop, locCutoff = 0.9, n
                     
                     colnames(potnullDx@data) <- colnames(sDP@data)
                     potnullDx@sampleObservables$nonconversion <- aDP@nonconversion
-                    ll <- .methFunction(potnullDx, prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+                    ll[selCov,] <- .methFunction(potnullDx, prop = prop, locCutoff = nullCutoff, nullP = TRUE)
+                    ll
                 }))
                 colnames(potnullD@locLikelihoods) <- colnames(nullLikes)        
             }                                             
